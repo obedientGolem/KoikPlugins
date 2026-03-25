@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>7514a7bb-f7e8-4fe2-a4a5-2a1404449901</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Shared_Blink</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BlinkCharaController.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BlinkEffector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BlinkGui.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BlinkHooks.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BlinkPlugin.cs" />
+  </ItemGroup>
+</Project>

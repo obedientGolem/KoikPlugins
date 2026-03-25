@@ -1,0 +1,2 @@
+# Birb's Excitement Gauge
+A simple BepInEx plugin for Koikatsu and Koikatsu Sunshine that in H mode of main game links excitement gauge to the speed of animation, making the excitement gain slower on low speed of animation.

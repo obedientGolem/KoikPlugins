@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>5f77bfa3-418c-4b13-9e77-31a6a3531b4b</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Shared_AniMorph</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)AniMorphPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AniMorphCharaController.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BoneData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AniMorphEffector.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Hooks.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Modifiers\Effects\Tethering.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Modifiers\MotionModifier.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Modifiers\MotionModifierMaster.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Modifiers\MotionModifierSlave.cs" />
+  </ItemGroup>
+</Project>
