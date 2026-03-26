@@ -26,7 +26,7 @@ namespace KK_MaleBreath
         public const string Name = "KK_MaleBreath";
         // There is a rare nullref "crash", preventing this to be 1.0
         // Haven't seen it in a while though, no clue how to catch it.
-        public const string Version = "1.0.1";
+        public const string Version = "1.1.0";
 
 
         // public new static PluginInfo Info;
