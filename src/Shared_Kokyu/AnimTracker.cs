@@ -22,7 +22,8 @@ namespace Kokyu
         private static Harmony _harmonyPatch;
         private KokyuCharaController _component;
 
-        internal static bool IsHScene => _hFlag != null;
+        internal static bool IsHScene => KKAPI.SceneApi.GetAddSceneName().Equals("HProc");
+
 
         internal AnimTracker(KokyuCharaController component)
         {

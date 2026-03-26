@@ -343,9 +343,9 @@ namespace Kokyu
                     CaressPatch.TryEnable(boneController, this);
                 }
             }
-//#if DEBUG
-//            KokyuPlugin.Logger.LogDebug($"{GetType().Name}.{MethodInfo.GetCurrentMethod().Name}: isH[{AnimTracker.IsHScene}] isMainChara[{GameAPI.GetCurrentHeroine().chaCtrl == chara}]");
-//#endif
+#if DEBUG
+            KokyuPlugin.Logger.LogDebug($"{GetType().Name}.{MethodInfo.GetCurrentMethod().Name}: isH[{AnimTracker.IsHScene}] isMainChara[{GameAPI.GetCurrentHeroine().chaCtrl == chara}]");
+#endif
         }
 
         internal void OnRestart()
