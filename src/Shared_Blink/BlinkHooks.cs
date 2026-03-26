@@ -6,7 +6,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
 
-namespace BetterBlink
+namespace Blink
 {
     internal static class BlinkHooks
     {

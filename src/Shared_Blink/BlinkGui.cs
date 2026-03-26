@@ -11,7 +11,7 @@ using System.Text;
 using UnityEngine;
 using static ADV.CommandController;
 
-namespace BetterBlink
+namespace Blink
 {
     internal class BlinkGui
     {

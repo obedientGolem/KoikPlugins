@@ -15,7 +15,7 @@ using UnityEngine.SceneManagement;
 using static Studio.AnimeGroupList;
 using Random = UnityEngine.Random;
 
-namespace BetterBlink
+namespace Blink
 {
     [BepInPlugin(GUID, Name, Version)]
 

@@ -3,10 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
-using static BetterBlink.BlinkCharaController;
+using static Blink.BlinkCharaController;
 using Random = UnityEngine.Random;
 
-namespace BetterBlink
+namespace Blink
 {
     internal class BlinkEffector
     {

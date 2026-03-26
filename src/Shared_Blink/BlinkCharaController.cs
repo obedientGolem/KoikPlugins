@@ -7,7 +7,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace BetterBlink
+namespace Blink
 {
     public class BlinkCharaController : CharaCustomFunctionController
     {
