@@ -10,15 +10,14 @@ namespace Kokyu
     internal class CaressPatch
     {
         private static Harmony _harmonyPatch;
-        private static BoneController _controller;
-        private static KokyuEffector _effector;
+        // Can be only by the main heroine, no need for extra checks.
+        private static KokyuCharaController _customChaCtrl;
 
-        public static void TryEnable(BoneController controller, KokyuEffector effector)
+        public static void TryEnable(KokyuCharaController customChaCtrl)
         {
-            if (controller == null || effector == null) throw new ArgumentNullException();
+            if (customChaCtrl == null) throw new ArgumentNullException();
 
-            _effector = effector;
-            _controller = controller;
+            _customChaCtrl = customChaCtrl;
             _harmonyPatch ??= Harmony.CreateAndPatchAll(typeof(CaressPatch));
         }
 
@@ -26,43 +25,29 @@ namespace Kokyu
         [HarmonyPatch(typeof(HandCtrl), nameof(HandCtrl.SetItem))]
         public static void HandCtrlSetItemPostfix(HandCtrl __instance)
         {
+            if (_customChaCtrl == null) return;
 #if DEBUG
             KokyuPlugin.Logger.LogDebug($"HandCtrl.SetItem.Postfix: left[{__instance.useAreaItems[0] != null}] right[{__instance.useAreaItems[1] != null}]");
 #endif
-            var controller = _controller;
-            if (controller == null || _effector == null) return;
-
             var left = __instance.useAreaItems[0] != null;
             var right = __instance.useAreaItems[1] != null;
 
-            if (left)
-            {
-                var mod = controller.GetModifier("cf_j_bust01_L", BoneLocation.BodyTop);
-
-                if (mod != null)
-                    controller.RemoveModifier(mod);
-            }
-            if (right)
-            {
-                var mod = controller.GetModifier("cf_j_bust01_R", BoneLocation.BodyTop);
-
-                if (mod != null)
-                    controller.RemoveModifier(mod);
-            }
-            _effector.UpdateCaress(controller, left, right);
+            _customChaCtrl.UpdateCaress(left, right);
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(HandCtrl), nameof(HandCtrl.DetachItem))]
         public static void DetachItemPostfix(HandCtrl __instance)
         {
+            if (_customChaCtrl == null) return;
+
             var left = __instance.useAreaItems[0] != null;
             var right = __instance.useAreaItems[1] != null;
 
 #if DEBUG
             KokyuPlugin.Logger.LogDebug($"HandCtrl.SetItem.Postfix: left[{left}] right[{right}]");
 #endif
-            _effector?.UpdateCaress(_controller, left, right);
+            _customChaCtrl.UpdateCaress(left, right);
         }
     }
 }

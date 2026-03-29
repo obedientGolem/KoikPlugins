@@ -27,6 +27,7 @@ namespace Kokyu
         private float _breathSpeed;
         private float _rotationFactorData;
         private AnimTracker _animTracker;
+        private BoneController _boneCtr;
 
 
         #region ExtendedData Properties 
@@ -244,21 +245,24 @@ namespace Kokyu
             do yield return CoroutineUtils.WaitForEndOfFrame;
             while (ChaControl.animBody == null || frameWait-- > 0);
 
-            var boneController = ChaControl.transform.GetComponent<BoneController>();
 
-            if (boneController == null)
+            if (_boneCtr == null)
             {
-                KokyuPlugin.Logger.LogWarning($"{ChaControl.name}'s ABMX component is absent. Can't start.");
-                yield break;
+                _boneCtr = ChaControl.transform.GetComponent<BoneController>();
+                if (_boneCtr == null)
+                {
+                    KokyuPlugin.Logger.LogWarning($"{ChaControl.name}'s ABMX component is absent. Can't start.");
+                    yield break;
+                }
             }
 
             if (_effector == null)
             {
-                _effector = new KokyuEffector(ChaControl, boneController);
-                boneController.AddBoneEffect(_effector);
+                _effector = new KokyuEffector(ChaControl, _boneCtr);
+                _boneCtr.AddBoneEffect(_effector);
             }
             _effector.UpdateBreathExData(_breathMagFactorData, _breathSpeed, _rotationFactorData);
-            _effector.OnReload(ChaControl, boneController);
+            _effector.OnReload(this, _boneCtr);
 
             if (!StudioAPI.InsideStudio)
             {
@@ -268,6 +272,39 @@ namespace Kokyu
 #if DEBUG
             KokyuPlugin.Logger.LogDebug($"{ChaControl.name}: StartCo[Finish]");
 #endif
+        }
+
+        /// <summary>
+        /// Disables breast movements when something wants to interfere.
+        /// </summary>
+        internal void UpdateCaress(bool bustL, bool bustR)
+        {
+#if DEBUG
+            KokyuPlugin.Logger.LogDebug($"[{ChaControl.name} - UpdateCaress] bustL[{bustL}] bustR[{bustR}]");
+#endif
+            if (_effector == null) return;
+
+            if (_boneCtr == null)
+            {
+                _boneCtr = ChaControl.transform.GetComponent<BoneController>();
+                if (_boneCtr == null) return;
+            }
+            
+            if (bustL)
+            {
+                var mod = _boneCtr.GetModifier("cf_j_bust01_L", BoneLocation.BodyTop);
+
+                if (mod != null)
+                    _boneCtr.RemoveModifier(mod);
+            }
+            if (bustR)
+            {
+                var mod = _boneCtr.GetModifier("cf_j_bust01_R", BoneLocation.BodyTop);
+
+                if (mod != null)
+                    _boneCtr.RemoveModifier(mod);
+            }
+            _effector.OnUpdateCaress(_boneCtr, bustL, bustR);
         }
 
         public enum Pattern

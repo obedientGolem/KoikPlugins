@@ -178,8 +178,8 @@ namespace Kokyu
         // Dev
         private bool _devForceExhale;
         //private readonly Vector3[] _devCoefs;
-        private Vector3 _devNeckRot = new(1f, 1f, 1f);
-        private Vector3 _devSpineRot = new(-2f, 0.33f, 0.33f);
+        //private Vector3 _devNeckRot = new(1f, 1f, 1f);
+        //private Vector3 _devSpineRot = new(-2f, 0.33f, 0.33f);
 
 
         #region Init
@@ -202,9 +202,9 @@ namespace Kokyu
 
             foreach (Bone eVal in eValues)
             {
-                var index = (int)eVal;
-                _params[index].scaleMod = GetScaleModifier(eVal);
-                _params[index].modifierData = new();
+                var idx = (int)eVal;
+                _params[idx].scaleMod = GetScaleModifier(eVal);
+                _params[idx].modifierData = new();
             }
 
             // Find and add bones.
@@ -307,9 +307,9 @@ namespace Kokyu
             }
         }
 
-        internal void OnReload(ChaControl chara, BoneController boneController)
+        internal void OnReload(KokyuCharaController customChaCtrl, BoneController boneController)
         {
-            if (chara == null || boneController == null) throw new ArgumentNullException();
+            if (customChaCtrl == null || boneController == null) throw new ArgumentNullException();
 
             // Animated bones require special treatment by the ABMX.
             // Reset by the ABMX on reload and has to be set again.
@@ -328,7 +328,7 @@ namespace Kokyu
                 param.SaveScale();
             }
 
-            _pregnant = Helpers.GetPregnancyWeek(chara) >= 15;
+            _pregnant = Helpers.GetPregnancyWeek(customChaCtrl.ChaControl) >= 15;
 
             OnRestart();
 
@@ -338,13 +338,14 @@ namespace Kokyu
             {
                 var mainHeroine = GameAPI.GetCurrentHeroine();
 
-                if (mainHeroine != null && chara == mainHeroine.chaCtrl)
+                if (mainHeroine != null && customChaCtrl.ChaControl == mainHeroine.chaCtrl)
                 {
-                    CaressPatch.TryEnable(boneController, this);
+                    CaressPatch.TryEnable(customChaCtrl);
                 }
             }
 #if DEBUG
-            KokyuPlugin.Logger.LogDebug($"{GetType().Name}.{MethodInfo.GetCurrentMethod().Name}: isH[{AnimTracker.IsHScene}] isMainChara[{GameAPI.GetCurrentHeroine().chaCtrl == chara}]");
+            KokyuPlugin.Logger.LogDebug($"{GetType().Name}.{MethodInfo.GetCurrentMethod().Name}: " +
+                $"isH[{AnimTracker.IsHScene}] isMainChara[{GameAPI.GetCurrentHeroine().chaCtrl == customChaCtrl.ChaControl}]");
 #endif
         }
 
@@ -479,7 +480,9 @@ namespace Kokyu
             var idx = (int)f;
             var frac = f - idx;
 
-            var cyclePos = Mathf.Lerp(_breathCurve[idx], _breathCurve[idx + 1], frac);
+            // Without Mathf.Min() it's possible to get OutOfRange exception on very high fps,
+            // not really relevant to koik, though.
+            var cyclePos = Mathf.Lerp(_breathCurve[idx], _breathCurve[Mathf.Min(idx + 1, BreathSamples - 1)], frac);
 
             //KokyuPlugin.Logger.LogDebug($"Update: t[{tNorm:F2}] pos[{cyclePos:F2}] f[{f:F2}] idx[{idx}] frac[{frac:F2}])");
 
@@ -692,9 +695,9 @@ namespace Kokyu
                 expInfRibLow + (expInfAbs - expInfRibLow) * Random.Range(0.5f, 1f),
                 expInfTotal * Random.Range(-1f, 1f),
                 expInfTotal * Random.Range(-1f, 1f));
-            breath.spineRot.Scale(_devSpineRot);
+            breath.spineRot.Scale(new(-2f, 0.33f, 0.33f));
 
-            breath.neckRot = _devNeckRot;
+            breath.neckRot = new(1f, 1f, 1f);
             breath.neckRot = new Vector3(
                 // Compensate pitch with ± 10% deviation and add random.
                 -breath.spineRot.x * Random.Range(0.9f, 1.1f) + (breath.neckRot.x * (Random.Range(-1f, 1f) * expInfTotal)),
@@ -806,23 +809,23 @@ namespace Kokyu
 
             // Prepare indexes
 
-            var inhaleEndIndex = (int)(inEnd * (BreathSamples - 1));
-            var domeEndIndex = (int)(inLen * (BreathSamples - 1));
-            var exhaleEndIndex = (int)(outEnd * (BreathSamples - 1));
-            var craterHalfIndex = (int)((1f - outEnd) * 0.5f * (BreathSamples - 1));
+            var inhaleEndIdx = (int)(inEnd * (BreathSamples - 1));
+            var domeEndIdx = (int)(inLen * (BreathSamples - 1));
+            var exhaleEndIdx = (int)(outEnd * (BreathSamples - 1));
+            var craterHalfIdx = (int)((1f - outEnd) * 0.5f * (BreathSamples - 1));
 
             var t = 0f;
             var i = 0;
 
             // INHALE
-            for (; i <= inhaleEndIndex; i++, t += Step)
+            for (; i <= inhaleEndIdx; i++, t += Step)
             {
                 var x = t * inhaleEndInv;
                 _breathCurve[i] = ApplyInterpolation(x, interpIn, inhaleP1, inhaleP2);
             }
 
             // DOME
-            for (; i <= domeEndIndex; i++, t += Step)
+            for (; i <= domeEndIdx; i++, t += Step)
             {
                 if (sharpDome)
                 {
@@ -837,14 +840,14 @@ namespace Kokyu
             }
 
             // EXHALE
-            for (; i <= exhaleEndIndex; i++, t += Step)
+            for (; i <= exhaleEndIdx; i++, t += Step)
             {
                 var x = 1f - ((t - inLen) * exhaleEndInv);
                 _breathCurve[i] = ApplyInterpolation(x, interpOut, exhaleP1, exhaleP2);
             }
 
             // CRATER first half
-            for (; i <= craterHalfIndex; i++, t += Step)
+            for (; i <= craterHalfIdx; i++, t += Step)
             {
                 var x = (t - outEnd) * craterLenInv;
                 if (sharpCraterL)
@@ -921,7 +924,7 @@ namespace Kokyu
                 return 3 * u * u * t * p1 +
                        3 * u * t * t * p2;
             }
-            static float BumpSmoothStep(float t) => 4f * t * t * (3f - 2f * t) * (1 - t * t * (3 - 2 * t));
+            static float BumpSmoothStep(float t) => 4f * t * t * (3f - 2f * t) * (1f - t * t * (3f - 2f * t));
             static float BumpParabola(float t) => 4f * t * (1f - t);
         }
 
@@ -970,7 +973,7 @@ namespace Kokyu
         #region UpdateOnDemand
 
 
-        internal void UpdateCaress(BoneController controller, bool bustL, bool bustR)
+        internal void OnUpdateCaress(BoneController controller, bool bustL, bool bustR)
         {
             // If caress just stopped
             if (_caressBustL && !bustL)

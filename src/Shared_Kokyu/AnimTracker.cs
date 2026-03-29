@@ -1,17 +1,17 @@
-﻿using HarmonyLib;
-using System;
-using System.Collections.Generic;
-using ExtensibleSaveFormat;
+﻿using ExtensibleSaveFormat;
+using HarmonyLib;
 using KKABMX.Core;
 using KKAPI;
 using KKAPI.Chara;
+using KKAPI.MainGame;
 using KKAPI.Utilities;
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
 using static Kokyu.KokyuCharaController;
-using KKAPI.MainGame;
 
 namespace Kokyu
 {
@@ -20,14 +20,14 @@ namespace Kokyu
         private static readonly List<AnimTracker> _instances = [];
         private static HFlag _hFlag;
         private static Harmony _harmonyPatch;
-        private KokyuCharaController _component;
+        private readonly KokyuCharaController _customChaCtrl;
 
         internal static bool IsHScene => KKAPI.SceneApi.GetAddSceneName().Equals("HProc");
 
 
-        internal AnimTracker(KokyuCharaController component)
+        internal AnimTracker(KokyuCharaController customChaCtrl)
         {
-            _component = component;
+            _customChaCtrl = customChaCtrl;
             _instances.Add(this);
             TryEnable();
         }
@@ -39,18 +39,13 @@ namespace Kokyu
 
         internal void OnReload(ChaControl chara)
         {
-            if (chara == null || chara.animBody == null) throw new ArgumentNullException();
+            if (chara == null) throw new ArgumentNullException();
 
             if (_hFlag == null)
-            {
-                var proc = GameObject.Find("HSceneProc");
-
-                if (proc != null)
-                    _hFlag = proc.GetComponent<HFlag>();
-            }
+                _hFlag = Component.FindObjectOfType<HFlag>();
         }
 
-        private void OnAnimatorStateChange(string stateName)
+        private void OnSetPlay(string stateName)
         {
             var anim = stateName switch
             {
@@ -130,18 +125,18 @@ namespace Kokyu
                 Anim.AfterOrgasmIn => Pattern.Exhaustion,
                 _ => Pattern.Anxiety,
             };
-            _component.OnAnimatorStateChange(pattern);
+            _customChaCtrl.OnAnimatorStateChange(pattern);
         }
 
         [HarmonyPostfix]
 #if KK
         [HarmonyPatch(typeof(ChaControl), nameof(ChaControl.setPlay))]
-        public static void ChaControl_setPlayPostfix(string _strAnmName, ChaControl __instance)
+        public static void OnChaControl_setPlayPostfix(string _strAnmName, ChaControl __instance)
         {
             var animName = _strAnmName;
 #elif KKS
         [HarmonyPatch(typeof(ChaControl), nameof(ChaControl.syncPlay), [typeof(string), typeof(int), typeof(float)])]
-        public static void ChaControl_setPlayPostfix(string _strameHash, ChaControl __instance)
+        public static void OnChaControl_setPlayPostfix(string _strameHash, ChaControl __instance)
         {
             var animName = _strameHash;
 #endif
@@ -150,11 +145,33 @@ namespace Kokyu
 #endif
             foreach (var inst in _instances)
             {
-                if (inst?._component.ChaControl == __instance)
+                if (inst?._customChaCtrl.ChaControl == __instance)
                 {
-                    inst.OnAnimatorStateChange(animName);
+                    inst.OnSetPlay(animName);
                     break;
                 }
+            }
+        }
+
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(HSceneProc), nameof(HSceneProc.ChangeAnimator))]
+        public static void OnChangeAnimatorPostfix(HSceneProc.AnimationListInfo _nextAinmInfo)
+        {
+#if DEBUG
+            KokyuPlugin.Logger.LogDebug($"OnChangeAnimatorPostfix:AnimInfo: mode[{_nextAinmInfo.mode}]" +
+                $"kindHoushi[{_nextAinmInfo.kindHoushi}]");
+#endif
+            // If not service tit related position – false.
+            var boobsPos = _nextAinmInfo.mode == HFlag.EMode.houshi && _nextAinmInfo.kindHoushi == 2;
+
+            // Should give the HSceneProc.lstFemale[0].
+            var mainHeroine = GameAPI.GetCurrentHeroine();
+            if (mainHeroine == null || mainHeroine.chaCtrl == null) return;
+
+            foreach (var inst in _instances)
+            {
+                if (inst._customChaCtrl != null && inst._customChaCtrl.ChaControl == mainHeroine.chaCtrl)
+                    inst._customChaCtrl.UpdateCaress(boobsPos, boobsPos);
             }
         }
 
