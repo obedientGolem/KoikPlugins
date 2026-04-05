@@ -51,35 +51,47 @@ namespace AniMorph
             { Kokan,   BoneName.Kokan },
             { Waist01, BoneName.Waist01 },
             { Waist02, BoneName.Waist02 },
-
         };
 
-        private readonly List<string> _returnToABMX = [];
-        private readonly List<BoneName> _updateList = [];
-        private static readonly string[] _singleList =
+        private readonly List<string> _effectsToReturn = [];
+        private readonly List<BoneName> _effectsToUpdate = [];
+        private static readonly BoneConfig[] _singleList =
             [
-#if DEBUG
-            //Thigh1R,
-            //Thigh2R,
-            //Thigh3R,
-#endif
-            Kokan,
-            Waist01,
+            new (Thigh1R, BoneName.Thigh1R, Effect.None, new Vector3(0.25f, 1f, 2f), Vector3.one, Vector3.one),
+            new (Thigh2R, BoneName.Thigh2R, Effect.None, new Vector3(0.125f, (2f / 3f), 1f), Vector3.one, Vector3.one),
+            new (Thigh3R, BoneName.Thigh3R, Effect.None, new Vector3(0f, (1f / 3f), (1f / 3f)), Vector3.one, Vector3.one),
+            //Kokan,
+            //Waist01,
             //Waist02,
-        ];
+            ];
 
-        // Master comes first
-        private static readonly List<List<string>> _tandemList =
-        [ 
-            [ Bust, Bust1L, Bust1R ],
-            [ Waist02, ButtL, ButtR ],
-        ];
+        private readonly Dictionary<BoneConfig, BoneConfig[]> _masterSlaveInitDic = new()
+        {
+            { new(Bust, BoneName.Bust, Effect.None, Vector3.one, Vector3.one, Vector3.one), 
+            [
+                new (Bust1L, BoneName.Bust1L, Effect.None, Vector3.one, Vector3.one, Vector3.one),
+                new (Bust1R, BoneName.Bust1R, Effect.None, Vector3.one, Vector3.one, Vector3.one),
+            ] },
+
+            { new(Waist02, BoneName.Waist02, Effect.None, Vector3.one, Vector3.one, Vector3.one),
+            [
+                new (ButtL, BoneName.ButtL, Effect.None, Vector3.one, Vector3.one, Vector3.one),
+                new (ButtR, BoneName.ButtR, Effect.None, Vector3.one, Vector3.one, Vector3.one),
+            ] },
+        };
+
+        //// Master comes first
+        //private static readonly List<List<string>> _masterSlavesList =
+        //[ 
+        //    [ Bust, Bust1L, Bust1R ],
+        //    [ Waist02, ButtL, ButtR ],
+        //];
         //private static readonly List<KeyValuePair<List<string>, Effect>> _tandemList =
         //    [
         //    new ( [Bust, Bust1L, Bust1R], Effect.Pos ),
         //    //[ Waist02, ButtL, ButtR ],
         //    ];
-        private static readonly List<BoneName> _bonesWithDynamicRotation =
+        private static readonly List<BoneName> _bonesWithAnimRot =
         [
             // Animated rotation
             BoneName.Bust1L,
@@ -87,7 +99,7 @@ namespace AniMorph
             BoneName.Bust1R, 
             // Animated rotation
             BoneName.Bust,
-            // BoneName.Butt,
+            //BoneName.Butt,
             //// Static rotation
             //BoneName.Waist02,
             // Animated rotation
@@ -119,6 +131,8 @@ namespace AniMorph
 
         private bool _filterDeltaTime;
         private bool _updated;
+
+        private readonly Animator _animator;
             
 
         #region Initialization
@@ -127,6 +141,11 @@ namespace AniMorph
         internal AniMorphEffector(ChaControl chara)
         {
             _chara = chara;
+
+            if (chara.animBody == null) throw new NullReferenceException(nameof(Animator));
+
+            _animator = chara.animBody;
+
 
             Setup();
             OnSettingChanged();
@@ -150,7 +169,6 @@ namespace AniMorph
 
 
             var boneLookup = new Dictionary<string, Transform>(StringComparer.Ordinal);
-
 
             foreach (var t in _chara.transform.GetComponentsInChildren<Transform>(includeInactive: true))
             {
@@ -195,96 +213,100 @@ namespace AniMorph
             // Iterate through singular items
             foreach (var single in _singleList)
             {
-                if (boneLookup.TryGetValue(single, out var boneTransform)
-                    && _mapDic.TryGetValue(single, out var boneEnum))
+                if (boneLookup.TryGetValue(single.name, out var boneTransform))
                 {
-                    _returnToABMX.Add(single);
-                    _updateList.Add(boneEnum);
+                    _effectsToReturn.Add(single.name);
+                    _effectsToUpdate.Add(single.enumName);
+
                     Transform centeredBoneTransform = null;
 
-                    if (GetCenteredBone(boneEnum, out var centeredBone))
+                    if (GetCenteredBone(single.enumName, out var centeredBone))
                     {
                         boneLookup.TryGetValue(centeredBone, out centeredBoneTransform);
                     }
-                    AddToDic(boneEnum, boneTransform, centeredBoneTransform, null, null); // bakedMesh, skinnedMesh);
+                    AddToDic(single, boneTransform, centeredBoneTransform);
                 }
             }
 
             // Iterate through tandems
-            foreach (var boneNames in _tandemList)
+            foreach (var kv in _masterSlaveInitDic)
             {
-                // Skip if master without slaves
-                if (boneNames.Count < 2) continue;
-
+                var slaveLen = kv.Value.Length;
                 // Prepare arrays for init under master
-                var slaveEnums = new BoneName[boneNames.Count - 1];
-                var slaveTransforms = new Transform[boneNames.Count - 1];
-                for (var i = 1; i < boneNames.Count; i++)
+                var slaveTransforms = new Transform[slaveLen];
+                for (var i = 0; i < slaveLen; i++)
                 {
-                    var slave = boneNames[i];
-                    if (boneLookup.TryGetValue(slave, out var slaveTransform)
-                        && _mapDic.TryGetValue(slave, out var slaveEnum))
+                    var slave = kv.Value[i];
+
+                    if (boneLookup.TryGetValue(slave.name, out var slaveTransform))
                     {
-                        // Slaves don't get own update
-                        _returnToABMX.Add(slave);
-                        // Fill in arrays for master
-                        slaveEnums[i - 1] = slaveEnum;
-                        slaveTransforms[i - 1] = slaveTransform;
+                        // Slaves are updated by master.
+                        _effectsToReturn.Add(slave.name);
+                        // Fill in arrays to pass them to the master
+                        slaveTransforms[i] = slaveTransform;
                     }
                 }
 
-                var master = boneNames[0];
-                if (boneLookup.TryGetValue(master, out var masterTransform)
-                    && _mapDic.TryGetValue(master, out var masterEnum))
+                var master = kv.Key.name;
+
+                if (boneLookup.TryGetValue(master, out var masterTransform))
                 {
                     // Some masters track one bone but apply to another.
-                    _returnToABMX.Add(master);
-                    // Master updates his slaves
-                    _updateList.Add(masterEnum);
+                    _effectsToReturn.Add(master);
+                    // Master is called to update himself and his slaves.
+                    _effectsToUpdate.Add(kv.Key.enumName);
 
                     // Init master with slaves together
-                    AddToDicTandem(masterEnum, slaveEnums, masterTransform, slaveTransforms, null, null); // bakedMesh, skinnedMesh);
+                    AddToDicTandem(kv.Key, kv.Value, masterTransform, slaveTransforms); // bakedMesh, skinnedMesh);
                 }
             }
 
-            void AddToDic(BoneName enumName, Transform boneTransform, Transform centeredBone, Mesh bakedMesh, SkinnedMeshRenderer skinnedMesh)
+            void AddToDic(BoneConfig cfg, Transform bone, Transform centerBone) //,  Mesh bakedMesh, SkinnedMeshRenderer skinnedMesh)
             {
                 // Perform null checks
-                if (_mainDic.ContainsKey(enumName) || boneTransform == null) return;
+                if (_mainDic.ContainsKey(cfg.enumName) || bone == null) return;
 
-                var dynamicRotation = _bonesWithDynamicRotation.Contains(enumName);
+                var isAnimRot = _bonesWithAnimRot.Contains(cfg.enumName);
 
                 var boneModifierData = new BoneModifierData();
-                _mainDic.Add(enumName, new BoneData(new MotionModifier(boneTransform, centeredBone, bakedMesh, skinnedMesh, boneModifierData, dynamicRotation), boneModifierData));
+
+                _mainDic.Add(cfg.enumName, new BoneData(new MotionModifier(cfg,bone, centerBone, boneModifierData, isAnimRot), boneModifierData));
             }
 
-            void AddToDicTandem(BoneName master, BoneName[] slaves, Transform masterTransform, Transform[] slaveTransforms, Mesh bakedMesh, SkinnedMeshRenderer skinnedMesh)
+            void AddToDicTandem(BoneConfig cfgMaster, BoneConfig[] cfgSlaves, Transform tformMaster, Transform[] tformSlaves)
             {
                 // Perform null checks
-                if (_mainDic.ContainsKey(master) || masterTransform == null) return;
-                for (var i = 0;  i < slaves.Length; i++)
+                if (_mainDic.ContainsKey(cfgMaster.enumName) || tformMaster == null) return;
+
+                for (var i = 0;  i < cfgSlaves.Length; i++)
                 {
-                    if (_mainDic.ContainsKey(slaves[i]) || slaveTransforms[i] == null) return;
+                    if (_mainDic.ContainsKey(cfgSlaves[i].enumName) || tformSlaves[i] == null) return;
                 }
 
                 // Add and organize slaves
-                var boneModifierSlaves = new MotionModifierSlave[slaves.Length];
+                var slaveModifiers = new MotionModifierSlave[cfgSlaves.Length];
+
                 // Bit of an oversight with boneModifierData as modifiers got access
                 // to it much later in the development, so we add it twice on init.
-                var boneModifierDataSlaves = new BoneModifierData[slaves.Length];
-                for (var i = 0; i < slaves.Length; i++)
-                {
+                var boneModifierDataSlaves = new BoneModifierData[cfgSlaves.Length];
 
-                    var animatedBoneSlave = _bonesWithDynamicRotation.Contains(slaves[i]);
+                for (var i = 0; i < cfgSlaves.Length; i++)
+                {
+                    var isAnimRot = _bonesWithAnimRot.Contains(cfgSlaves[i].enumName);
+
                     boneModifierDataSlaves[i] = new();
-                    boneModifierSlaves[i] = new MotionModifierSlave(slaveTransforms[i], masterTransform, bakedMesh, skinnedMesh, boneModifierDataSlaves[i], animatedBoneSlave);
-                    _mainDic.Add(slaves[i], new BoneData(boneModifierSlaves[i], boneModifierDataSlaves[i]));
+
+                    slaveModifiers[i] = new MotionModifierSlave(cfgSlaves[i], tformSlaves[i], tformMaster, boneModifierDataSlaves[i], isAnimRot);
+
+                    _mainDic.Add(cfgSlaves[i].enumName, new BoneData(slaveModifiers[i], boneModifierDataSlaves[i]));
                 }
 
                 // Add master with slaves
-                var animatedBoneMaster = _bonesWithDynamicRotation.Contains(master);
-                var boneModifierDataMaster = new BoneModifierData();
-                _mainDic.Add(master, new BoneData(new MotionModifierMaster(masterTransform, boneModifierSlaves, boneModifierDataMaster, animatedBoneMaster), boneModifierDataMaster));
+                var isAnimatedBone = _bonesWithAnimRot.Contains(cfgMaster.enumName);
+
+                var masterModifierData = new BoneModifierData();
+
+                _mainDic.Add(cfgMaster.enumName, new BoneData(new MotionModifierMaster(cfgMaster, tformMaster, slaveModifiers, masterModifierData, isAnimatedBone), masterModifierData));
 
             }
             bool GetCenteredBone(BoneName boneName, out string centeredBone)
@@ -312,7 +334,7 @@ namespace AniMorph
         {
             _updated = false;
 
-            foreach (var key in _updateList)
+            foreach (var key in _effectsToUpdate)
             {
                 _mainDic[key].motion.OnUpdate();
             }
@@ -326,13 +348,17 @@ namespace AniMorph
             var deltaTime = Time.deltaTime;
             if (deltaTime == 0f) return;
 
+            var stateLen = _animator.GetCurrentAnimatorStateInfo(0).length;
+
+            var invAnimLen = stateLen == 0f ? 1f : 1f / stateLen;
+
             // Opt for lesser evil during the lag spike,
             if (_filterDeltaTime && deltaTime > (1f / 15f)) deltaTime = (1f / 15f);
 
-            var invDelta = (1f / deltaTime);
-            foreach (var key in _updateList)
+            var deltaTimeInv = (1f / deltaTime);
+            foreach (var key in _effectsToUpdate)
             {
-                _mainDic[key].motion.UpdateModifiers(deltaTime, invDelta);
+                _mainDic[key].motion.UpdateModifier(deltaTime, deltaTimeInv, invAnimLen);
             }
         }
 
@@ -343,7 +369,7 @@ namespace AniMorph
         #region Overrides
 
 
-        public override IEnumerable<string> GetAffectedBones(BoneController origin) => _returnToABMX;
+        public override IEnumerable<string> GetAffectedBones(BoneController origin) => _effectsToReturn;
 
         public override BoneModifierData GetEffect(string bone, BoneController origin, ChaFileDefine.CoordinateType coordinate)
         {
@@ -367,7 +393,7 @@ namespace AniMorph
         {
             foreach (var keyValuePair in _mainDic)
             {
-                var bodyPart = GetBodyPart(keyValuePair.Key);
+                var bodyPart = ConvertBoneToBody(keyValuePair.Key);
                 keyValuePair.Value.motion.OnSettingChanged(bodyPart, _chara);
 
                 var mass = _bodyPartSizeDic.TryGetValue(bodyPart, out var value) ? value : 1f;
@@ -386,12 +412,12 @@ namespace AniMorph
         {
             foreach (var keyValuePair in _mainDic)
             {
-                var bodyPart = GetBodyPart(keyValuePair.Key);
+                var bodyPart = ConvertBoneToBody(keyValuePair.Key);
                 keyValuePair.Value.motion.OnSetClothesState(bodyPart, chara);
             }
         }
 
-        private Body GetBodyPart(BoneName boneName) => boneName switch
+        private Body ConvertBoneToBody(BoneName boneName) => boneName switch
         {
             BoneName.Bust or BoneName.Bust1L or BoneName.Bust1R => Body.Breast,
             BoneName.Waist02 or BoneName.ButtL or BoneName.ButtR => Body.Butt,
@@ -403,7 +429,7 @@ namespace AniMorph
 
         internal void OnChangeAnimator()
         {
-            foreach (var entry in _updateList)
+            foreach (var entry in _effectsToUpdate)
             {
                 _mainDic[entry].motion.OnChangeAnimator();
             }
@@ -426,7 +452,7 @@ namespace AniMorph
         #region Types
 
 
-        private enum BoneName
+        internal enum BoneName
         {
             None,
             Bust1L,
@@ -450,6 +476,27 @@ namespace AniMorph
         {
             internal readonly string[] bonesToMeasure = bonesToMeasure;
             internal readonly float defaultMass = defaultMass;
+        }
+
+        // Very rare access, no point in struct.
+        internal class BoneConfig
+        {
+            internal BoneConfig(string name, BoneName enumName, Effect effects, Vector3 posApplication, Vector3 rotApplication, Vector3 sclApplication)
+            {
+                this.name = name;
+                this.posApplication = posApplication;
+                this.rotApplication = rotApplication;
+                this.sclApplication = sclApplication;
+                this.effects = effects;
+                this.enumName = enumName;
+            }
+
+            internal readonly string name;
+            internal readonly BoneName enumName;
+            internal readonly Effect effects;
+            internal readonly Vector3 posApplication;
+            internal readonly Vector3 rotApplication;
+            internal readonly Vector3 sclApplication;
         }
 
 

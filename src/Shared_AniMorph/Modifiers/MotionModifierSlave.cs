@@ -1,9 +1,11 @@
-﻿using KKABMX.GUI;
+﻿using ADV.Commands.Object;
+using KKABMX.GUI;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
+using static AniMorph.AniMorphEffector;
 using static AniMorph.MotionModifier;
 
 namespace AniMorph
@@ -14,29 +16,93 @@ namespace AniMorph
 
 
         internal MotionModifierSlave(
+            BoneConfig cfg,
             Transform bone, 
             Transform centeredBone, 
-            Mesh bakedMesh, 
-            SkinnedMeshRenderer skinnedMesh, 
             KKABMX.Core.BoneModifierData boneModifierData, 
-            bool animatedBone) : base(bone, centeredBone, bakedMesh, skinnedMesh, boneModifierData, animatedBone)
+            bool animatedBone) : base(cfg, bone, centeredBone, boneModifierData, animatedBone)
         {
 
         }
 
 
-        internal void UpdateSlave(Effect effectMask, Vector3 velocity, float deltaTime, float masterDotFwd, float masterDotRight, Vector3 positionModifier, Vector3 rotationModifier, Vector3 scaleModifier)
+        internal void UpdateSlave(float masterDotFwd, float masterDotRight, float dt, float dtInv, float animLenInv, Vector3 posOffset, Vector3 rotOffset, Vector3 sclOffset)
         {
-            if ((effectMask & Effect.Tether) != 0)
-                rotationModifier += tether.GetTetheringOffset(velocity, deltaTime);
+            if (!active) return;
 
-            if ((effectMask & Effect.GravRot) != 0)
-                rotationModifier += GetGravityAngularOffset(masterDotFwd, masterDotRight);
+            ref var cfg = ref config;
+            ref var prev = ref previous;
 
-            abmxModifierData.PositionModifier = positionModifier;
-            // Remove not allowed axes
-            abmxModifierData.RotationModifier = Vector3.Scale(rotationModifier, AngularApplication);
-            abmxModifierData.ScaleModifier = scaleModifier;
+
+            if ((cfg.effects & Effect.Rot) != 0)
+                rotOffset = GetRotOffset(ref cfg, ref prev, dt, dtInv, animLenInv);
+
+            if ((cfg.effects & Effect.Pos) != 0)
+            {
+                posOffset += GetPosOffset(ref cfg, ref prev, dt, dtInv, animLenInv, out var velocity, out var velocityLen, out var accel);
+
+                if ((cfg.effects & Effect.Tether) != 0)
+                    rotOffset += tether.GetTetheringOffset(velocity, dt);
+
+                prev.velocity = velocity;
+            }
+
+
+
+            // Not allowed axes are multiplied by zero, allowed by one.
+            //rotOffset = Vector3.Scale(rotOffset, rotApplication);
+
+            // Apply acceleration scale distortion
+            //var scaleModifier = GetScaleOffset(
+            //    ref config,
+            //    ref prev,
+            //    velocity, velocityMagnitude, deltaTime, deltaTimeInv,
+            //    (config.effects & Effect.Accel) != 0,
+            //    (config.effects & Effect.Decel) != 0
+            //    );
+            //var scaleModifier = GetSquashOffset(
+            //    ref cfg,
+            //    ref prev,
+            //    velocity, accel, velocityLen, deltaTime, invDeltaTime
+            //    );
+
+
+            //var dotUp = Vector3.Dot(transform.up, Vector3.up);
+            //var dotR = Vector3.Dot(transform.right, Vector3.up);
+            //var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
+
+            // Apply gravity position offset
+            if ((cfg.effects & Effect.GravRot) != 0)
+                rotOffset += GetGravityAngularOffset(masterDotFwd, masterDotRight);
+
+            posOffset = Vector3.Scale(posOffset, posApplication);
+
+            var abmxData = abmxModifierData;
+
+            abmxData.PositionModifier = posOffset;
+            abmxData.RotationModifier = rotOffset;
+            abmxData.ScaleModifier = sclOffset;
+
+            //AniMorph.Logger.LogDebug($"UpdateModifiers: pos[{positionModifier}] rot[{rotationModifier}] scale[{scaleModifier}]");
+
+            // Store current variables as "previous" for the next frame.
+
+            // Positional offset that will be the ABMX,
+            // required for calculation of (semi)static bones.
+            prev.posOffset = posOffset;
+            prev.rotOffset = rotOffset;
+            prev.sclOffset = sclOffset;
+
+            //if ((effectMask & Effect.Tether) != 0)
+            //    rotModifier += tether.GetTetheringOffset(velocity, deltaTime);
+
+            //if ((effectMask & Effect.GravRot) != 0)
+            //    rotModifier += GetGravityAngularOffset(masterDotFwd, masterDotRight);
+
+            //abmxModifierData.PositionModifier = posModifier;
+            //// Remove not allowed axes
+            //abmxModifierData.RotationModifier = Vector3.Scale(rotModifier, AngularApplication);
+            //abmxModifierData.ScaleModifier = sclModifier;
         }
 
 
