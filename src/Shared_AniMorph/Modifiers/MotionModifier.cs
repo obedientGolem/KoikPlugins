@@ -9,7 +9,9 @@ using System.Reflection;
 using UnityEngine;
 using static AniMorph.AniMorphEffector;
 using static AniMorph.AniMorphPlugin;
+using static RootMotion.FinalIK.AimPoser;
 using static RootMotion.FinalIK.Grounding;
+using static RootMotion.FinalIK.IKSolver;
 using Random = UnityEngine.Random;
 
 namespace AniMorph
@@ -22,16 +24,22 @@ namespace AniMorph
         protected readonly Tethering tether;
         protected readonly bool isLeftSide;
         protected readonly BoneModifierData abmxModifierData;
+
         protected Vector3 posApplication = Vector3.one;
+        protected Vector3 posPositiveApp = Vector3.one;
+        protected Vector3 posNegativeApp = Vector3.one;
+
         protected Vector3 rotApplication = Vector3.one;
         protected Vector3 sclApplication = Vector3.one;
 
         protected bool active;
         protected BoneModifier abmxModifier;
         // Big struct, only ref access.
-        protected MotionConfig config = new();
+        protected Config config = new();
         // Big struct, only ref access.
-        protected PreviousFrame previous = new();
+        protected Previous previous = new();
+        // Big struct, only ref access.
+        protected Current current = new();
 
 
         private readonly float _baseScaleVolume;
@@ -39,8 +47,6 @@ namespace AniMorph
         private readonly bool _isAnimatedRotation;
 
         private BoneModifierData _combineModifiersCachedReturn;
-
-
 
         private float devVelInf = 0.05f;
 
@@ -94,7 +100,10 @@ namespace AniMorph
             _baseScaleMagnitude = bone.localScale.magnitude;
             _isAnimatedRotation = isAnimatedRotation;
 
+            posPositiveApp = cfg.posPositiveApp;
+            posNegativeApp = cfg.posNegativeApp;
             posApplication = cfg.posApplication;
+
             rotApplication = cfg.rotApplication;
             sclApplication = cfg.sclApplication;
 
@@ -204,7 +213,7 @@ namespace AniMorph
         #region Update Cycle
 
 
-        internal void OnUpdate()
+        internal virtual void OnUpdate()
         {
             // Grab modified local orientations from previous frame,
             // local orientations are just fields with Vector3, extremely cheap to access.
@@ -217,7 +226,8 @@ namespace AniMorph
         {
             if (!active) return;
 
-            ref var config = ref this.config;
+            ref var cfg = ref config;
+            ref var curr = ref current;
             ref var prev = ref previous;
 
             var posOffset = Vector3.zero;
@@ -225,15 +235,15 @@ namespace AniMorph
             var sclOffset = Vector3.one;
 
             // Apply linear offset, its calculations are necessary to other methods even if the offset itself isn't.
-            posOffset = GetPosOffset(ref config, ref prev, dt, dtInv, animLenInv, out var velocity, out var velocityLen, out var accel);
+            posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, /*out var velocityLen,*/ out var accel);
 
             // Remove linear offset if setting
-            if ((config.effects & Effect.Pos) == 0)
+            if ((cfg.effects & Effect.Pos) == 0)
                 posOffset = Vector3.zero;
 
             // Apply angular offset
-            if ((config.effects & Effect.Rot) != 0)
-                rotOffset = GetRotOffset(ref config, ref prev, dt, dtInv, animLenInv);
+            if ((cfg.effects & Effect.Rot) != 0)
+                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
 
             // Not allowed axes are multiplied by zero, allowed by one.
 
@@ -245,10 +255,10 @@ namespace AniMorph
             //    (config.effects & Effect.Accel) != 0,
             //    (config.effects & Effect.Decel) != 0
             //    );
-            if ((config.effects & Effect.Scl) != 0)
-                sclOffset = GetScaleOffset(ref config, ref prev, velocity, velocityLen, dt, dtInv);
+            if ((cfg.effects & Effect.Scl) != 0)
+                sclOffset = GetScaleOffset(ref cfg, ref curr, ref prev, velocity, /*velocityLen, */dt, dtInv);
 
-            if ((config.effects & Effect.Tether) != 0)
+            if ((cfg.effects & Effect.Tether) != 0)
                 rotOffset += tether.GetTetheringOffset(velocity, dt);
 
             var dotUp = Vector3.Dot(transform.up, Vector3.up);
@@ -256,23 +266,35 @@ namespace AniMorph
             var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
 
             // Apply gravity position offset
-            if ((config.effects & Effect.GravPos) != 0)
-                posOffset += GetGravityPositionOffset(ref config, dotUp, dotR);
+            if ((cfg.effects & Effect.GravPos) != 0)
+                posOffset += GetGravityPositionOffset(ref cfg, dotUp, dotR);
             // Apply gravity scale offset
-            if ((config.effects & Effect.GravScl) != 0)
-                sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref config, dotFwd));
+            if ((cfg.effects & Effect.GravScl) != 0)
+                sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref cfg, dotFwd));
             // Apply gravity rotation offset
-            if ((config.effects & Effect.GravRot) != 0)
+            if ((cfg.effects & Effect.GravRot) != 0)
                 rotOffset += GetGravityAngularOffset(dotFwd, dotR);
 
 
+            var posPositive = posPositiveApp;
+            var posNegative = posNegativeApp;
+
+            var posSignScale = new Vector3(
+                posOffset.x > 0f ? posPositive.x : posNegative.x,
+                posOffset.y > 0f ? posPositive.y : posNegative.y,
+                posOffset.z > 0f ? posPositive.z : posNegative.z
+                );
+
+            // TODO Include into sign applications on init once dev phase is over.
             posOffset = Vector3.Scale(posOffset, posApplication);
+            posOffset = Vector3.Scale(posOffset, posSignScale);
+
             rotOffset = Vector3.Scale(rotOffset, rotApplication);
             sclOffset = Vector3.Scale(sclOffset, sclApplication);
 
             var boneModifierData = abmxModifierData;
 
-            boneModifierData.PositionModifier = posOffset;
+            boneModifierData.PositionModifier = curr.cleanLocalRot * posOffset;
             boneModifierData.RotationModifier = rotOffset;
             boneModifierData.ScaleModifier = sclOffset;
 
@@ -317,7 +339,8 @@ namespace AniMorph
 
         private float FastExp(float t)
         {
-            // Almost free and accurate for our ranges Math.Exp().
+            // at t < 0 stable until t > -0.3
+            // at t > 0 stable all the way through but starts rapid ascend a tad later
             var u = t * t;
             return 1f + t + u * (0.5f + u * 0.144f);
         }
@@ -329,7 +352,7 @@ namespace AniMorph
         #region Position
 
 
-        protected Vector3 GetCleanDeltaPos(ref PreviousFrame prev)
+        protected Vector3 GetCleanDeltaPos(ref Previous prev)
         {
             // Orientations can be contaminated if the bone isn't reset by animator on each frame,
             // here we figure out what kind of a bone we are dealing with
@@ -339,6 +362,11 @@ namespace AniMorph
             // those calculations will fall apart for bones that aren't reset by the animator.
             // Can be fixed with increased sampling through out the frame,
             // but currently there is no such need, so we avoid extra convolution.
+
+            // On second thought, even if there will be another plugin like this,
+            // for as long as that plugin does the same -
+            // checks out for contamination and removes own influence, we can coexists in perfect harmony.
+
 
             // Early Update() to ~12000 order LateUpdate() state comparison.
             var localPos = transform.localPosition;
@@ -369,7 +397,20 @@ namespace AniMorph
             else
             {
                 // The Illusion way.
-                cleanPos = transform.TransformPoint(-prev.posOffset);
+                var posOffset = new Vector3(
+                    x ? 0f : prev.posOffset.x,
+                    y ? 0f : prev.posOffset.y,
+                    z ? 0f : prev.posOffset.z
+                    );
+
+                cleanPos = transform.TransformPoint(-posOffset);
+
+                //cleanPos = new Vector3(
+                //    x ? currPos.x : cleanPos.x,
+                //    y ? currPos.y : cleanPos.y,
+                //    z ? currPos.z : cleanPos.z
+                //    );
+
                 var vecDynamic = transform.InverseTransformPoint(prev.position);
                 var vecStatic = transform.InverseTransformDirection(prev.cleanPos - cleanPos);
 
@@ -379,15 +420,22 @@ namespace AniMorph
                     z ? vecDynamic.z : vecStatic.z
                     );
             }
-            AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
-                $"dynamic({x},{y},{z}) cleanDeltaPos({cleanDeltaPos.x:F3},{cleanDeltaPos.y:F3},{cleanDeltaPos.z:F3})");
+            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
+            //    $"dynamic({x},{y},{z}) dynamicRot[{prev.localRot != transform.localRotation}) " +
+            //    $"prevLocalRot[{prev.localRot.eulerAngles}] localRot[{transform.localRotation.eulerAngles}] " +
+            //    //$"cleanDeltaPos({cleanDeltaPos.x:F3},{cleanDeltaPos.y:F3},{cleanDeltaPos.z:F3}) " +
+            //    //$"cleanPos({cleanPos.x:F3},{cleanPos.y:F3},{cleanPos.z:F3}) " +
+            //    //$"prevCleanPos({prev.cleanPos.x:F3},{prev.cleanPos.y:F3},{prev.cleanPos.z:F3}) " +
+            //    //$"currPos({currPos.x:F3},{currPos.y:F3},{currPos.z:F3}) " +
+            //    $"");
+
             prev.cleanPos = cleanPos;
             prev.position = currPos;
 
             return cleanDeltaPos;
         }
 
-        private bool IsPosShock(ref MotionConfig cfg, ref PreviousFrame prev, Vector3 cleanDeltaPos, float dtInv, float animLenInv)
+        private bool IsPosShock(ref Config cfg, ref Current curr, ref Previous prev, Vector3 cleanDeltaPos, float dtInv, float animLenInv)
         {
             // A simple velocity, based on movements of a transform without our interference.
             var cleanVelDelta = cleanDeltaPos - prev.cleanPosVel;
@@ -398,7 +446,7 @@ namespace AniMorph
 
             prev.cleanPosVel = cleanDeltaPos;
 
-            if (prev.bleedTime > 0f) return false;
+            if (curr.bleedTime > 0f) return false;
 
             // --- Shock detection --- 
             var len = cleanVelDelta.magnitude * dtInv;
@@ -410,127 +458,120 @@ namespace AniMorph
                 prev.velocity += cleanVelDelta * cfg.posShockStr;
 
                 // TODO Add slowdown instead of freeze?
-                prev.bleedTime = cfg.posBleedLen * animLenInv;
+                curr.bleedTime = cfg.posBleedLen * animLenInv;
 
                 if (len > cfg.posFreezeThreshold || projectionDot < 0f)
                 {
-                    prev.shockTime = cfg.posFreezeLen * animLenInv;
-#if DEBUG_POS
+                    curr.shockTime = cfg.posFreezeLen * animLenInv;
+
                     AniMorphPlugin.Logger.LogError($"[{transform.name}] " +
-                    $"len[{len:F3}] deltaTimeInv[{deltaTimeInv:F0}]" +
-                    $"dot < 0[{projectionDot < 0f}]");
-#endif
+                        $"len[{len:F3}] " +
+                        $"dot < 0[{projectionDot < 0f}]");
                 }
-#if DEBUG_POS
                 else
                 {
                     AniMorphPlugin.Logger.LogWarning($"[{transform.name}] " +
-                    $"len[{len:F3}] deltaTimeInv[{deltaTimeInv:F0}]" +
-                    $"dot < 0[{projectionDot < 0f}]");
+                        $"len[{len:F3}] " +
+                        $"dot < 0[{projectionDot < 0f}]");
                 }
-#endif
                 return true;
             }
             return false;
         }
 
-        protected Vector3 GetPosOffset(ref MotionConfig cfg, ref PreviousFrame prev, float dt, float dtInv, float animLenInv,            
-            out Vector3 velocity, out float velocityLen, out Vector3 accel)
+        protected Vector3 GetPosOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv,            
+            out Vector3 velocity, /*out float velocityLen, */out Vector3 accel)
         {
             var cleanDeltaPos = GetCleanDeltaPos(ref prev);
 
             // --- Shock state ---
-            if (prev.shockTime > 0f)
+            if (curr.shockTime > 0f)
             {
-                prev.shockTime -= dt;
+                curr.shockTime -= dt;
                 // Continue tracking of velocities between frames even if we froze for a bit.
                 prev.cleanPosVel = cleanDeltaPos;
 
                 velocity = prev.velocity;
-                velocityLen = velocity.magnitude;
+                //velocityLen = velocity.magnitude;
                 accel = Vector3.zero;
 
                 return cleanDeltaPos - velocity;
             }
 
             // --- Normal state ---
-            else if (IsPosShock(ref cfg, ref prev, cleanDeltaPos, dtInv, animLenInv))
+            else if (IsPosShock(ref cfg, ref curr, ref prev, cleanDeltaPos, dtInv, animLenInv))
             {
                 velocity = prev.velocity;
-                velocityLen = velocity.magnitude;
+                //velocityLen = velocity.magnitude;
                 accel = Vector3.zero;
 
                 return cleanDeltaPos - velocity;
             }
             velocity = prev.velocity;
             // --- Bleed velocity ---
-            if (prev.bleedTime > 0f)
+            if (curr.bleedTime > 0f)
             {
-                prev.bleedTime -= dt;
+                curr.bleedTime -= dt;
 
                 velocity *= FastExp(-cfg.posBleedStr * dt);
             }
 
-            //var inheritedVel = cleanDeltaPos * (dtInv * devVelInf);
-            var springForce = -cfg.posSpring * dtInv * cleanDeltaPos;
-            var dampingForce = -cfg.posDamping * velocity;
+            // Technically speaking, in this setup spring(k) and damping have swapped roles, but it works out greatly.
 
-            accel = /*inheritedVel +*/ springForce + dampingForce;
+            var springForce = Mathf.Exp(-(prev.velocityLen * 20f)) * (-cfg.posSpring * dtInv) * cleanDeltaPos;
+            var dampingForce = /*FastExp(prev.velocityLen * 10f) * */-cfg.posDamping * velocity;
+
+            accel = springForce + dampingForce;
 
             if ((cfg.noiseAff & NoiseAffliction.Pos) != 0)
-                accel += GetNoiseVec(cfg.noiseOctaves, cfg.noiseVecPos, cfg.noiseAmplPos * animLenInv, cfg.noiseFreq * dt, out cfg.noiseVecPos);
+                accel += GetNoiseVec(cfg.noiseOctaves, cfg.noiseVecPos, cfg.noiseAmplPos * animLenInv * (prev.velocityLen * 40f), cfg.noiseFreq * dt, out cfg.noiseVecPos);
 
             accel *= (cfg.massInv * dt);
 
             velocity += accel;
 
-            //var appliedVelocity = Vector3.Scale(posApplication, velocity);
-            // --- Velocity clamp ---
+            prev.velocityLen = velocity.magnitude;
 
-
-            velocityLen = velocity.magnitude;
-            //var maxVelocityLen = config.linearMaxVelocityLen;
-
-            //if (velocityLen > maxVelocityLen)
-            //{
-            //    velocity = (velocity / velocityLen) * maxVelocityLen;
-            //    velocityLen = maxVelocityLen;
-            //}
+            AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
+                $"cleanDeltaPos({cleanDeltaPos.x:F3},{cleanDeltaPos.y:F3},{cleanDeltaPos.z:F3}) " +
+                $"velocity({velocity.x:F3},{velocity.y:F3},{velocity.z:F3}) " +
+                //$"currPos({currPos.x:F3},{currPos.y:F3},{currPos.z:F3}) " +
+                $"");
 
             return cleanDeltaPos - velocity;
         }
 
-
+        private float devSqrMaxLen = 0.25f;
+        private float devMaxLen = 0.5f;
 #endregion
 
 
         #region Rotation
 
 
-        // (20 .. 40)
-        public float slowSmoothing = 25f;
-        // (5 .. 12)
-        public float fastSmoothing = 8f;
-        // (0.1 .. 0.3)
-        public float highFrequencyInfluence = 0.2f;
 
-        private Vector3 slowFilteredDelta;
-        private Vector3 fastFilteredDelta;
 
         private Vector3 devPrevRotDelta;
         private float devRotFreeze;
         private float devRotFreezeTime = 0.1f;
-        protected virtual Vector3 GetRotOffset(ref MotionConfig cfg, ref PreviousFrame prev, float dt, float dtInv, float animLenInv)
+        protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv)
         {
             var currRot = transform.rotation;
-            var isDynamic = transform.localRotation != prev.localRot;
+            var currLocalRot = transform.localRotation;
+            var isDynamic = currLocalRot != prev.localRot;
 
             if (!isDynamic)
             {
-                currRot = currRot * Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
-            }
-            var delta = currRot * Quaternion.Inverse(prev.adjustedRot);
+                var inverseOffset = Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
 
+                currRot = currRot * inverseOffset;
+
+                curr.cleanLocalRot = currLocalRot * inverseOffset;
+            }
+            else
+                curr.cleanLocalRot = currLocalRot;
+
+            var delta = currRot * Quaternion.Inverse(prev.adjustedRot);
 
             delta.ToAngleAxis(out var angle, out var axis);
 
@@ -541,9 +582,7 @@ namespace AniMorph
                 angle -= 360f;
 
             var absAngle = Mathf.Abs(angle);
-
             var accel = Vector3.zero;
-
             var angVel = prev.torque;
 
             if (devRotFreeze > 0f)
@@ -551,7 +590,6 @@ namespace AniMorph
                 devRotFreeze -= dt;
 
                 accel -= cfg.rotDamping * angVel;
-
                 angVel += accel * dt;
 
                 prev.torque = angVel;
@@ -565,20 +603,22 @@ namespace AniMorph
             {
                 var deltaAngVel = axis * (angle * angleExp * dtInv);
 
-                var slowLerp = 1f - FastExp(-slowSmoothing * dt);
-                var fastLerp = 1f - FastExp(-fastSmoothing * dt);
+                //var slowLerp = 1f - FastExp(-cfg.rotSlowSmooth * dt);
+                //var fastLerp = 1f - FastExp(-cfg.rotFastSmooth * dt);
 
-                slowFilteredDelta = Vector3.Lerp(slowFilteredDelta, deltaAngVel, slowLerp);
-                fastFilteredDelta = Vector3.Lerp(fastFilteredDelta, deltaAngVel, fastLerp);
+                var slowLerp = cfg.rotSlowSmooth * dt;
+                var fastLerp = cfg.rotFastSmooth * dt;
 
-                var highFreqDelta = fastFilteredDelta - slowFilteredDelta;
+                prev.slowRotDelta = Vector3.Lerp(prev.slowRotDelta, deltaAngVel, slowLerp);
+                prev.fastRotDelta = Vector3.Lerp(prev.fastRotDelta, deltaAngVel, fastLerp);
+
+                //var highFreqDelta = prev.fastRotDelta - prev.slowRotDelta;
 
                 var targetVel = Vector3.Lerp(
-                    slowFilteredDelta,
-                    fastFilteredDelta,
-                    highFrequencyInfluence
+                    prev.slowRotDelta,
+                    prev.fastRotDelta,
+                    cfg.rotHighFreqInf
                 );
-
                 //accel = cfg.rotSpring * (targetVel - angVel);
                 accel = cfg.rotSpring * targetVel;
             }
@@ -590,15 +630,13 @@ namespace AniMorph
 
             angVel += accel * dt;
 
-
-
             var angVelDot = Vector3.Dot(angVel, prev.torque);
 
-            if (prev.highTorque)
+            if (curr.highTorque)
             {
                 if (angVelDot < 1f)
                 {
-                    prev.highTorque = false;
+                    curr.highTorque = false;
                     var freezeTime = absAngle * (1f / 45f);
                     devRotFreeze = devRotFreezeTime * (freezeTime * freezeTime);
                     //Time.timeScale = 0f;
@@ -609,7 +647,7 @@ namespace AniMorph
             }
             else if (angVelDot > 1000f)
             {
-                prev.highTorque = true;
+                curr.highTorque = true;
             }
 
             //var rot = angVelocityLen == 0f ?
@@ -639,8 +677,8 @@ namespace AniMorph
             }
             var resultEuler = result.eulerAngles;
 
-            AniMorphPlugin.Logger.LogDebug($"[{transform.name}] GetRotOffset: " +
-                $"result{resultEuler} angVel{angVel} rotDot[{angVelDot:F3}]"); 
+            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] GetRotOffset: " +
+            //    $"result{resultEuler} angVel{angVel} rotDot[{angVelDot:F3}]"); 
 
             //if (rotDot < 0f) Time.timeScale = 0f;
 
@@ -659,9 +697,9 @@ namespace AniMorph
             internal Vector3 velNorm;
             internal Vector3 accelVec;
             internal Vector3 absVelNorm;
-            internal Vector3 distort;
+            internal Vector3 distortion;
             internal float accelDot;
-            internal float totalAccel;
+            //internal float totalAccel;
             internal float totalDecel;
             internal float distortValue;
 
@@ -681,7 +719,7 @@ namespace AniMorph
         private Vector3 devSclPrevDir;
         private float devSclDicSharpness = 10f;
 
-        protected Vector3 GetSquashOffset(ref MotionConfig config, ref PreviousFrame prev, Vector3 vel, Vector3 accel, float velLen, float deltaTime, float deltaTimeInv)
+        protected Vector3 GetSquashOffset(ref Config config, ref Previous prev, Vector3 vel, Vector3 accel, float velLen, float deltaTime, float deltaTimeInv)
         {
 
             var driver = _squashMode switch
@@ -738,8 +776,8 @@ namespace AniMorph
                 ref scaleVelocity,
                 1f / squashDamping
             );
-
         }
+
         Vector3 GetDirectionalScale(Vector3 direction, float stretch, float squash)
         {
             Vector3 localDir = direction.normalized;
@@ -755,22 +793,24 @@ namespace AniMorph
         private bool devAccel = true;
         private bool devDecel;
 
-        protected Vector3 GetScaleOffset(ref MotionConfig cfg, ref PreviousFrame prev, Vector3 vel, float velLen, float dt, float dtInv)
+        protected Vector3 GetScaleOffset(ref Config cfg, ref Current curr, ref Previous prev, Vector3 vel,/* float velLen,*/ float dt, float dtInv)
         {
-            if (velLen == 0f) return Vector3.one;
+            return Vector3.one;
+            //if (velLen == 0f) return Vector3.one;
 
             var scl = devScl;
             // Normalize velocity
-            scl.velNorm = vel / velLen;
+            scl.velNorm = vel; /// velLen;
 
             scl.absVelNorm = new Vector3(Mathf.Abs(scl.velNorm.x), Mathf.Abs(scl.velNorm.y), Mathf.Abs(scl.velNorm.z));
+
             scl.accelVec = (vel - prev.velocity) * dtInv;
             // Project acceleration onto direction,
             // projection dot lesser than 0 means deceleration, otherwise acceleration.
             scl.accelDot = Vector3.Dot(scl.velNorm, scl.accelVec);
 
             // Init distortion as neutral
-            scl.distort = Vector3.one;
+            scl.distortion = Vector3.one;
 
             // Proper acceleration with accumulation or without
             // looks worse then a dumb magnitude based implementation.
@@ -778,29 +818,28 @@ namespace AniMorph
 
             if (devAccel)
             {
-                scl.distortValue = cfg.sclAccelStr;
+                //scl.distortValue = cfg.sclAccelStr;
 
-                if (cfg.sclDumbAccel)
-                {
-                    scl.distortValue *= velLen * dtInv;
-                }
-                else
-                {
-                    // Accumulate acceleration, deltaTime is a passive drain to avoid awkward accumulations in some idle animations.
-                    scl.totalAccel = Mathf.Clamp01(cfg.sclTotalAccel + scl.accelDot - (dt * 0.1f));
+                //if (cfg.sclDumbAccel)
+                //{
+                //    scl.distortValue *= velLen * dtInv;
+                //}
+                //else
+                //{
 
-                    scl.distortValue *= scl.totalAccel;
+                // Accumulate acceleration, deltaTime is a passive drain to avoid awkward accumulations in some idle animations.
+                prev.sclTotalAccel = Mathf.Max(0f, prev.sclTotalAccel + (scl.accelDot * cfg.sclAccelStr) - (dt * 0.1f));
 
-                    cfg.sclTotalAccel = scl.totalAccel;
-                }
+                scl.distortValue *= prev.sclTotalAccel;
+                //}
 
                 scl.distortValue = Mathf.Clamp(scl.distortValue, 0f, cfg.sclMaxDistortion);
                 // Apply distortion amount to velocity axes
-                scl.distort += scl.absVelNorm * scl.distortValue;
+                scl.distortion += scl.absVelNorm * scl.distortValue;
                 // Shrink axes perpendicular to the velocity 
                 var perpendicularScale = Vector3.one + Vector3.Scale(scl.absVelNorm - Vector3.one, scl.distortValue * cfg.sclAxisDistribution);
                 // Combine vectors
-                scl.distort = Vector3.Scale(scl.distort, perpendicularScale);
+                scl.distortion = Vector3.Scale(scl.distortion, perpendicularScale);
 //#if DEBUG
 //                AniMorph.Logger.LogDebug($"Acceleration:distortion({distortion.x:F3},{distortion.y:F3},{distortion.z:F3})" +
 //                    $"distortionAmount[{distortionAmount:F3}] velocityMagnitude[{(velocityMagnitude * fps):F5}" +
@@ -809,45 +848,45 @@ namespace AniMorph
 //                    "");
 //#endif
             }
-            if (devDecel)
-            {
-                // Amplify deceleration as it tends to be too small.
-                if (scl.accelDot < 0f) scl.accelDot *= 2f;
-                // Accumulate deceleration, deltaTime is a passive drain to avoid awkward accumulations in some idle animations.
-                scl.totalDecel = Mathf.Clamp01(cfg.sclTotalDecel - scl.accelDot - (dt * 0.1f));
-                // Store for the next frame
-                cfg.sclTotalDecel = scl.totalDecel;
+//            if (devDecel)
+//            {
+//                // Amplify deceleration as it tends to be too small.
+//                if (scl.accelDot < 0f) scl.accelDot *= 2f;
+//                // Accumulate deceleration, deltaTime is a passive drain to avoid awkward accumulations in some idle animations.
+//                scl.totalDecel = Mathf.Clamp01(cfg.sclTotalDecel - scl.accelDot - (dt * 0.1f));
+//                // Store for the next frame
+//                cfg.sclTotalDecel = scl.totalDecel;
 
-                if (scl.totalDecel < 0f)
-                {
-                    // How much scale can deviate
-                    var distortionAmount = scl.totalDecel * cfg.sclDecelStr;
-                    distortionAmount = Mathf.Clamp(distortionAmount, 0f, cfg.sclMaxDistortion);
-                    // Apply distortion amount to velocity axes
-                    var decelerationScale = Vector3.one - (scl.absVelNorm * distortionAmount);
-                    // Expand axes perpendicular to the velocity
-                    var perpendicularScale = Vector3.one + Vector3.Scale((Vector3.one - scl.absVelNorm), distortionAmount * cfg.sclAxisDistribution); // * (squashAmount * 0.5f);
-                    // Combine vectors
-                    decelerationScale = Vector3.Scale(decelerationScale, perpendicularScale);
+//                if (scl.totalDecel < 0f)
+//                {
+//                    // How much scale can deviate
+//                    var distortionAmount = scl.totalDecel * cfg.sclDecelStr;
+//                    distortionAmount = Mathf.Clamp(distortionAmount, 0f, cfg.sclMaxDistortion);
+//                    // Apply distortion amount to velocity axes
+//                    var decelerationScale = Vector3.one - (scl.absVelNorm * distortionAmount);
+//                    // Expand axes perpendicular to the velocity
+//                    var perpendicularScale = Vector3.one + Vector3.Scale((Vector3.one - scl.absVelNorm), distortionAmount * cfg.sclAxisDistribution); // * (squashAmount * 0.5f);
+//                    // Combine vectors
+//                    decelerationScale = Vector3.Scale(decelerationScale, perpendicularScale);
 
-                    scl.distort = Vector3.Scale(scl.distort, decelerationScale);
-#if DEBUG
-                    AniMorphPlugin.Logger.LogDebug($"Deceleration: distortionAmount[{distortionAmount:F3}] " +
-                        $"perpendicularScale({perpendicularScale.x:F2},{perpendicularScale.y:F2},{perpendicularScale.z:F2}) " +
-                        $"decelerationScale({decelerationScale.x:F2},{decelerationScale.y:F2},{decelerationScale.z:F2})" +
-                        $"");
-#endif
-                }
-            }
+//                    scl.distortion = Vector3.Scale(scl.distortion, decelerationScale);
+//#if DEBUG
+//                    AniMorphPlugin.Logger.LogDebug($"Deceleration: distortionAmount[{distortionAmount:F3}] " +
+//                        $"perpendicularScale({perpendicularScale.x:F2},{perpendicularScale.y:F2},{perpendicularScale.z:F2}) " +
+//                        $"decelerationScale({decelerationScale.x:F2},{decelerationScale.y:F2},{decelerationScale.z:F2})" +
+//                        $"");
+//#endif
+//                }
+//            }
             if (cfg.sclPreserveVolume)
             {
                 // Preserve original volume
-                var stretchVolume = scl.distort.x * scl.distort.y * scl.distort.z;
+                var stretchVolume = scl.distortion.x * scl.distortion.y * scl.distortion.z;
                 var volumeCorrection = Mathf.Pow(_baseScaleVolume / stretchVolume, (1f / 3f));
-                scl.distort *= volumeCorrection;
+                scl.distortion *= volumeCorrection;
             }
 
-            var finalScale = Vector3.Lerp(prev.scale, scl.distort, dt * cfg.sclLerpSpeed);
+            var finalScale = Vector3.Lerp(prev.scale, scl.distortion, dt * cfg.sclLerpSpeed);
             //#if DEBUG
             //            if (!acceleration && !deceleration)
             //            {
@@ -869,7 +908,7 @@ namespace AniMorph
         #region Dots
 
 
-        protected Vector3 GetGravityPositionOffset(ref MotionConfig config, float dotUp, float dotR)
+        protected Vector3 GetGravityPositionOffset(ref Config config, float dotUp, float dotR)
         {
             var result = Vector3.Lerp(config.gravityUpMid, dotUp > 0f ? config.gravityUpUp : config.gravityUpDown, Mathf.Abs(dotUp));
 
@@ -885,7 +924,7 @@ namespace AniMorph
         /// </summary>
         /// <param name="dotFwd"></param>
         /// <returns>Offset for flat addition to the scale.</returns>
-        protected Vector3 GetGravityScaleOffset(ref MotionConfig config, float dotFwd)
+        protected Vector3 GetGravityScaleOffset(ref Config config, float dotFwd)
         {
             var result = Vector3.Lerp(config.gravityForwardMid, dotFwd > 0f ? config.gravityForwardUp : config.gravityForwardDown, Mathf.Abs(dotFwd));
 //#if DEBUG
@@ -959,8 +998,8 @@ namespace AniMorph
             prev.velocity = Vector3.zero;
             prev.torque = Vector3.zero;
             prev.scale = Vector3.one;
-            cfg.sclTotalAccel = 0f;
-            cfg.sclTotalDecel = 0f;
+            prev.sclTotalAccel = 0f;
+            prev.sclTotalDecel = 0f;
             abmxModifierData.Clear();
 
 
@@ -1246,7 +1285,7 @@ namespace AniMorph
             Double,
         }
 
-        protected struct MotionConfig()
+        protected struct Config()
         {
             internal Effect effects;
 
@@ -1290,8 +1329,6 @@ namespace AniMorph
             internal float sclMaxDistortion = 0.4f;
             internal bool sclPreserveVolume;
             internal bool sclDumbAccel;
-            internal float sclTotalAccel;
-            internal float sclTotalDecel;
 
 
             // When Dot(Bone.up, Vector3.up) points in up/middle/down direction.
@@ -1313,11 +1350,28 @@ namespace AniMorph
             internal float mass = 1f;
             internal float linearMaxVelocityLen = 1f;
             internal float linearMaxSqrVelocity = 1f;
+
+
+            // (20 .. 40)
+            public float rotSlowSmooth = 25f;
+            // (5 .. 12)
+            public float rotFastSmooth = 8f;
+            // (0.1 .. 0.3)
+            public float rotHighFreqInf = 0.2f;
         }
 
-        protected /*struct*/ class PreviousFrame
+        protected struct Current
+        {
+            internal bool highTorque;
+            internal float shockTime;
+            internal float bleedTime;
+            internal Quaternion cleanLocalRot;
+        }
+        
+        protected /*struct*/ class Previous
         {
             internal Vector3 velocity;
+            internal float velocityLen;
             internal Vector3 torque;
 
             internal Vector3 position;
@@ -1326,21 +1380,43 @@ namespace AniMorph
             internal Vector3 cleanPosVelDelta;
             //internal Vector3 localAdjVec;
             internal Vector3 scale;
-            // Pseudo previous as we use dead reckoning and have no way to know,
-            // Synchronized periodically when animator changes states.
+
             internal Vector3 posOffset;
+            internal Vector3 rotOffset;
             internal Vector3 sclOffset;
+
             // Clean rotation from that frame
             //internal Quaternion cleanRot;
             //internal Quaternion rotAdjustment;
             //internal Vector3 rotModifier;
             internal Quaternion adjustedRot;
-            internal Vector3 rotOffset;
             internal Vector3 localPos;
             internal Quaternion localRot;
-            internal float shockTime;
-            internal float bleedTime;
-            internal bool highTorque;
+
+            internal float sclTotalAccel;
+            internal float sclTotalDecel;
+
+            internal Vector3 slowRotDelta;
+            internal Vector3 fastRotDelta;
+
+            internal void Clear(Transform bone)
+            {
+                var pos = bone.position;
+
+                position = pos;
+                cleanPos = pos;
+                cleanPosVel = Vector3.zero;
+                cleanPosVelDelta = Vector3.zero;
+                posOffset = Vector3.zero;
+                rotOffset = Vector3.zero;
+                adjustedRot = bone.rotation;
+                localRot = bone.localRotation;
+                velocity = Vector3.zero;
+                torque = Vector3.zero;
+                scale = Vector3.one;
+                sclTotalAccel = 0f;
+                sclTotalDecel = 0f;
+            }
         }
 
 

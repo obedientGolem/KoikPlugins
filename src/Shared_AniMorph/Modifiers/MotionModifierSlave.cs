@@ -31,35 +31,33 @@ namespace AniMorph
             if (!active) return;
 
             ref var cfg = ref config;
+            ref var curr = ref current;
             ref var prev = ref previous;
 
 
             if ((cfg.effects & Effect.Rot) != 0)
-                rotOffset = GetRotOffset(ref cfg, ref prev, dt, dtInv, animLenInv);
+                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
 
             if ((cfg.effects & Effect.Pos) != 0)
             {
-                posOffset += GetPosOffset(ref cfg, ref prev, dt, dtInv, animLenInv, out var velocity, out var velocityLen, out var accel);
+                posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, /*out var velocityLen,*/ out var accel);
+
 
                 if ((cfg.effects & Effect.Tether) != 0)
                     rotOffset += tether.GetTetheringOffset(velocity, dt);
+
+
+                if ((cfg.effects & Effect.Scl) != 0)
+                    sclOffset = GetScaleOffset(ref cfg, ref curr, ref prev, velocity, /*velocityLen,*/ dt, dtInv);
+
 
                 prev.velocity = velocity;
             }
 
 
-
             // Not allowed axes are multiplied by zero, allowed by one.
             //rotOffset = Vector3.Scale(rotOffset, rotApplication);
 
-            // Apply acceleration scale distortion
-            //var scaleModifier = GetScaleOffset(
-            //    ref config,
-            //    ref prev,
-            //    velocity, velocityMagnitude, deltaTime, deltaTimeInv,
-            //    (config.effects & Effect.Accel) != 0,
-            //    (config.effects & Effect.Decel) != 0
-            //    );
             //var scaleModifier = GetSquashOffset(
             //    ref cfg,
             //    ref prev,
@@ -75,11 +73,22 @@ namespace AniMorph
             if ((cfg.effects & Effect.GravRot) != 0)
                 rotOffset += GetGravityAngularOffset(masterDotFwd, masterDotRight);
 
+            var posPositive = posPositiveApp;
+            var posNegative = posNegativeApp;
+
+            var posSignScale = new Vector3(
+                posOffset.x > 0f ? posPositive.x : posNegative.x,
+                posOffset.y > 0f ? posPositive.y : posNegative.y,
+                posOffset.z > 0f ? posPositive.z : posNegative.z
+                );
+
+            // TODO Include into two above on init once dev phase is over.
             posOffset = Vector3.Scale(posOffset, posApplication);
+            posOffset = Vector3.Scale(posOffset, posSignScale);
 
             var abmxData = abmxModifierData;
 
-            abmxData.PositionModifier = posOffset;
+            abmxData.PositionModifier = curr.cleanLocalRot * posOffset;
             abmxData.RotationModifier = rotOffset;
             abmxData.ScaleModifier = sclOffset;
 

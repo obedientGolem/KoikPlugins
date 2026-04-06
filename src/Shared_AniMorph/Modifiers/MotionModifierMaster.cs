@@ -139,5 +139,13 @@ namespace AniMorph
                 config.effects &= ~effect;
             }
         }
+
+        internal override void OnUpdate()
+        {
+            base.OnUpdate();
+
+            foreach (var slave in _slaves)
+                slave.OnUpdate();
+        }
     }
 }
