@@ -87,7 +87,7 @@ namespace AniMorph
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
 
-                    noiseOctave: 4,
+                    noiseOctaves: 4,
                     noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
@@ -143,7 +143,7 @@ namespace AniMorph
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.Panty,
 
-                    noiseOctave: 4,
+                    noiseOctaves: 4,
                     noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
@@ -201,7 +201,7 @@ namespace AniMorph
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseOctave: 4,
+                    noiseOctaves: 4,
                     noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.075f,
                     noiseAmplitudeRot: 0.67f,
@@ -419,6 +419,62 @@ namespace AniMorph
             //        gravityRightMid: Vector3.zero,
             //        gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
             //    ));
+
+            ConfigDic.Add(Body.Chest,
+                new(
+                    body: Body.Chest,
+                    config: Config,
+                    order: 1000,
+                    effect: Effect.Pos,
+                    adjustForSize: true,
+                    disableWhenClothes: ClothesKind.None,
+
+                    noiseOctaves: 4,
+                    noiseAffliction: NoiseAffliction.None,
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeScl: 0.15f,
+
+
+                    posSpring: 21f,
+                    posDamping: 0.2f,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclAccelerationFactor: 0.35f,
+                    sclDecelerationFactor: 0.5f,
+                    sclLerpSpeed: 8f,
+                    sclMaxDistortion: 0.4f,
+                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclPreserveVolume: true,
+                    sclDumbAcceleration: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxAngle: 30f,
+
+                    gravityUpUp: Vector3.zero,
+                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
+                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
+                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
+                    gravityFwdMid: Vector3.zero,
+                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
+                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
+                    gravityRightMid: Vector3.zero,
+                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
+                ));
         }
 
 
@@ -481,11 +537,13 @@ namespace AniMorph
 
         public enum Body
         {
+            Chest,
             Breast,
+            Pelvis,
             Thigh,
+
             Butt,
             Kokan,
-            Waist01,
             Waist02
         }
 
@@ -514,6 +572,7 @@ namespace AniMorph
             Female = 1 << 1,
         }
         public static readonly ClothesKind[] ClothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
+
         [Flags]
         public enum ClothesKind
         {
@@ -553,7 +612,7 @@ namespace AniMorph
                 bool adjustForSize,
                 ClothesKind disableWhenClothes,
 
-                int noiseOctave,
+                int noiseOctaves,
                 NoiseAffliction noiseAffliction,
                 float noiseAmplitudePos,
                 float noiseAmplitudeRot,
@@ -618,20 +677,20 @@ namespace AniMorph
                 DisableWhenClothes = config.Bind(name, "DisableClothed", disableWhenClothes,
                     new ConfigDescription("Don't apply effects when particular piece of clothing is fully present", null, new ConfigurationManagerAttributes { Order = order - 6 }));
 
-                NoiseOctave = config.Bind(name, "NoiseOctave", noiseOctave,
+                NoiseOctaves = config.Bind(name, "NoiseOctaves", noiseOctaves,
                     new ConfigDescription("", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { Order = order - 7 }));
 
                 NoiseAffliction = config.Bind(name, "NoiseAffliction", noiseAffliction,
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 8 }));
 
                 NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", noiseAmplitudePos,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 12, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 12, ShowRangeAsPercent = false }));
 
                 NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", noiseAmplitudeRot,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 13, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 13, ShowRangeAsPercent = false }));
 
                 NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", noiseAmplitudeScl,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 14, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 14, ShowRangeAsPercent = false }));
 
                 PosSpring = config.Bind(name, "PosSpring", posSpring,
                     new ConfigDescription("Strength of positional lag\nBigger value – more effort put out", null, new ConfigurationManagerAttributes { Order = order - 15 }));
@@ -739,7 +798,7 @@ namespace AniMorph
             public ConfigEntry<bool> AdjustForSize;
             public ConfigEntry<ClothesKind> DisableWhenClothes;
 
-            public ConfigEntry<int> NoiseOctave;
+            public ConfigEntry<int> NoiseOctaves;
             public ConfigEntry<NoiseAffliction> NoiseAffliction;
             public ConfigEntry<float> NoiseAmplitudePos;
             public ConfigEntry<float> NoiseAmplitudeRot;

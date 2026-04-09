@@ -15,7 +15,7 @@ namespace AniMorph
     internal class MotionModifierMaster : MotionModifier
     {
         private readonly MotionModifierSlave[] _slaves;
-        private readonly Effect _masterEffects;
+        private readonly Effect _sharedEffects;
 
         internal MotionModifierMaster(
             BoneConfig cfg,
@@ -26,39 +26,33 @@ namespace AniMorph
             ) : base(cfg, transform, null, masterModifierData, isAnimatedBone)
         {
             _slaves = slaveModifiers;
-            _masterEffects = cfg.effects;
+            _sharedEffects = cfg.sharedEffects;
         }
 
 
-        internal override void UpdateModifier(float deltaTime, float deltaTimeInv, float animLenInv)
+        internal override void UpdateModifier(float dt, float dtInv, float animLenInv)
         {
             if (!active) return;
 
-            ref var prev = ref previous;
-            ref var cfg = ref config;
+            ref var cfg = ref devConfig;
+            ref var curr = ref devCurrent;
+            ref var prev = ref devPrevious;
 
             var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
-            //var freeze = FreezeTimer > 0f;
+            posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, out var accel);
 
-            //if (freeze)
-            //    FreezeTimer -= deltaTime;
+            if ((cfg.effects & Effect.Pos) == 0)
+                posOffset = Vector3.zero;
 
-            // TODO Decentralize some calculations?
+            if ((cfg.effects & Effect.Rot) != 0)
+                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+            else
+                // Required for correct application of local position.
+                curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
-
-            // Apply linear offset, its calculations are necessary to other methods even if the offset itself isn't.
-            //var posModifier = GetPosOffset(ref cfg, ref prev, deltaTime, deltaTimeInv, animLenInv, out var velocity, out var velocityLen, out var accel);
-
-            ////// Remove linear offset if setting
-            //if ((cfg.effects & Effect.Pos) == 0)
-            //{
-            //    posModifier = Vector3.zero;
-            //}
-            // Apply angular offset
-            //var rotModifier = (cfg.effects & Effect.Rot) != 0 ? GetAngularOffset(ref cfg, ref prev, deltaTime) : Vector3.zero;
 
             //var sclModifier = Vector3.Scale(
             //    abmxModifierData.ScaleModifier,
@@ -88,55 +82,73 @@ namespace AniMorph
             var dotR = Vector3.Dot(transform.right, Vector3.up);
             var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
 
-            // Apply gravity linear offset
             if ((cfg.effects & Effect.GravPos) != 0)
                 posOffset += GetGravityPositionOffset(ref cfg, dotUp, dotR);
 
-            // Apply gravity scale offset
             if ((cfg.effects & Effect.GravScl) != 0)
                 sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref cfg, dotFwd));
 
+
+            var posPositive = posPositiveApp;
+            var posNegative = posNegativeApp;
+
+            var posSignScale = new Vector3(
+                posOffset.x > 0f ? posPositive.x : posNegative.x,
+                posOffset.y > 0f ? posPositive.y : posNegative.y,
+                posOffset.z > 0f ? posPositive.z : posNegative.z
+                );
+
+            // TODO Include into sign applications on init once dev phase is over.
+            posOffset = Vector3.Scale(posOffset, posApplication);
+            posOffset = Vector3.Scale(posOffset, posSignScale);
+            rotOffset = Vector3.Scale(rotOffset, rotApplication);
+            sclOffset = Vector3.Scale(sclOffset, sclApplication);
+
+            var boneModifierData = abmxModifierData;
+
+            boneModifierData.PositionModifier = curr.cleanLocalRot * posOffset;
+            boneModifierData.RotationModifier = rotOffset;
+            boneModifierData.ScaleModifier = sclOffset;
+
+            prev.velocity = velocity;
+            prev.posOffset = posOffset;
+            prev.rotOffset = rotOffset;
+            prev.sclOffset = sclOffset;
+
+            var sharedEffects = _sharedEffects;
+
+            if ((sharedEffects & Effect.Pos) == 0)
+                posOffset = Vector3.zero;
+
+            if ((sharedEffects & Effect.Rot) == 0)
+                rotOffset = Vector3.zero;
+
+            if ((sharedEffects & Effect.Scl) == 0)
+                sclOffset = Vector3.one;
+
             foreach (var slave in _slaves)
             {
-                slave.UpdateSlave(dotFwd, dotR, deltaTime, deltaTimeInv, animLenInv, posOffset, rotOffset, sclOffset);
+                slave.UpdateSlave(dotFwd, dotR, dt, dtInv, animLenInv, posOffset, rotOffset, sclOffset);
             }
-
-            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] UpdateModifiers: " +
-            //    $"velocity({velocity.x:F3},{velocity.y:F3},{velocity.z:F3}) " +
-            //    $"accel({accel.x:F3},{accel.y:F3},{accel.z:F3}) ");
-            // Discard not allowed axes
-
-            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] posModifier[{posModifier.magnitude:F3}]");
-
-            //if (!freeze)
-            //{
-            //foreach (var slave in _slaves)
-            //    {
-            //        slave.UpdateSlave(cfg.effects, velocity, deltaTime, dotFwd, dotR, posModifier, rotModifier, sclModifier);
-            //    }
-            //}
-
-            //rotModifier = Vector3.Scale(rotModifier, AngularApplication);
-            //if (!freeze)
-                //abmxModifierData.RotationModifier = rotModifier;
-
-
-            // Store current variables as "previous" for the next frame.
-            //prev.velocity = velocity;
-            //prev.rotModifier = rotModifier;
-            // Master doesn't offset itself, only slaves move.
-            //previous.posModifier = posModifier;
         }
 
         internal override void OnSettingChanged(AniMorphPlugin.Body body, ChaControl chara)
         {
             base.OnSettingChanged(body, chara);
 
-            foreach (Effect effect in Enum.GetValues(typeof(Effect)))
-            {
-                if ((_masterEffects & effect) != 0) continue;
+            ref var cfg = ref devConfig;
 
-                config.effects &= ~effect;
+            foreach (var slave in _slaves)
+                slave.OnSettingChanged(body, chara);
+
+            // --- Clean-up effects ---
+            if (cfg.allowedEffects == Effect.DevAnything) return;
+
+            foreach (Effect effect in effects)
+            {
+                if ((cfg.allowedEffects & effect) != 0) continue;
+
+                devConfig.effects &= ~effect;
             }
         }
 
@@ -146,6 +158,14 @@ namespace AniMorph
 
             foreach (var slave in _slaves)
                 slave.OnUpdate();
+        }
+
+        internal override void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
+        {
+            base.OnAnimationLoopStart(animLoopFrameCountInv, dt);
+
+            foreach (var slave in _slaves)
+                slave.OnAnimationLoopStart(animLoopFrameCountInv, dt);
         }
     }
 }

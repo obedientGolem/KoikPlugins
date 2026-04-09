@@ -17,40 +17,58 @@ namespace AniMorph
         private const float OneThird = (1f / 3f);
         private const float TwoThirds = (2f / 3f);
 
-        private const string Thigh1R = "cf_s_thigh01_R";
-        private const string Thigh2R = "cf_s_thigh02_R";
-        private const string Thigh3R = "cf_s_thigh03_R";
+        // --- Chest ---
+        private const string Spine03 = "cf_s_spine03";
+        private const string Spine02 = "cf_s_spine02";
+        private const string Spine01 = "cf_s_spine01";
 
+        // --- Shoulders ---
+        private const string ShldrL = "cf_s_arm01_L";
+        private const string ShldrR = "cf_s_arm01_R";
+
+        // --- Breast ---
         private const string Bust    = "cf_d_bust00";
         private const string Bust1L  = "cf_d_bust01_L";
         private const string Bust1R  = "cf_d_bust01_R";
 
-        // Reset by the HScene (true, true, true)
-        private const string ButtL   = "cf_s_siri_L";
-        // Reset by the HScene (true, true, true)
-        private const string ButtR   = "cf_s_siri_R";
+        // --- Pelvis ---
+        private const string Waist01 = "cf_s_waist01";        // Position reset by the HScene xyz(false, true, true)
+        private const string Waist02 = "cf_s_waist02";        // Position reset by the HScene xyz(false, false, true)
+        private const string Kokan = "cf_j_kokan";
+        private const string ButtL   = "cf_s_siri_L";         // Reset by the HScene xyz(true, true, true)
+        private const string ButtR   = "cf_s_siri_R";         // Reset by the HScene xyz(true, true, true)
 
-        private const string Kokan   = "cf_j_kokan";
+        // --- Thighs ---
+        private const string Thigh1R = "cf_s_thigh01_R";
+        private const string Thigh2R = "cf_s_thigh02_R";
+        private const string Thigh3R = "cf_s_thigh03_R";
 
-        // Position reset by the HScene (false, true, true)
-        private const string Waist01 = "cf_s_waist01";
+        private const string Thigh1L = "cf_s_thigh01_L";
+        private const string Thigh2L = "cf_s_thigh02_L";
+        private const string Thigh3L = "cf_s_thigh03_L";
 
-        // Position reset by the HScene (false, false, true)
-        private const string Waist02 = "cf_s_waist02";
 
         private readonly ChaControl _chara;
 
         private readonly Dictionary<BoneName, BoneData> _mainDic = [];
         private static readonly Dictionary<string, BoneName> _mapDic = new(StringComparer.Ordinal)
         {
+            { Spine03, BoneName.Spine03 },
+            { Spine02, BoneName.Spine02 },
+            { Spine01, BoneName.Spine01 },
             { Bust,    BoneName.Bust },
             { Bust1L,  BoneName.Bust1L },
             { Bust1R,  BoneName.Bust1R },
-            { ButtL,   BoneName.ButtL },
-            { ButtR,   BoneName.ButtR },
             { Thigh1R, BoneName.Thigh1R },
             { Thigh2R, BoneName.Thigh2R },
             { Thigh3R, BoneName.Thigh3R },
+            { Thigh1L, BoneName.Thigh1L },
+            { Thigh2L, BoneName.Thigh2L },
+            { Thigh3L, BoneName.Thigh3L },
+
+
+            { ButtL,   BoneName.ButtL },
+            { ButtR,   BoneName.ButtR },
             { Kokan,   BoneName.Kokan },
             { Waist01, BoneName.Waist01 },
             { Waist02, BoneName.Waist02 },
@@ -63,8 +81,8 @@ namespace AniMorph
                 new (
                     name:           Thigh1R,
                     enumName:       BoneName.Thigh1R,
-                    effects:        Effect.None,
-                    posApplication: new Vector3(0.25f, 1f, 2f),
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: new Vector3(OneThird, 1f, 1f + TwoThirds),
                     posPositiveApp: Vector3.one,
                     posNegativeApp: Vector3.one,
                     rotApplication: Vector3.one,
@@ -73,8 +91,8 @@ namespace AniMorph
                 new (
                     name:           Thigh2R,
                     enumName:       BoneName.Thigh2R,
-                    effects:        Effect.None,
-                    posApplication: new Vector3(0.125f, TwoThirds, 1f),
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: new Vector3(0.25f, TwoThirds, 1f),
                     posPositiveApp: Vector3.one,
                     posNegativeApp: Vector3.one,
                     rotApplication: Vector3.one,
@@ -83,13 +101,47 @@ namespace AniMorph
                 new (
                     name:           Thigh3R,
                     enumName:       BoneName.Thigh3R,
-                    effects:        Effect.None,
+                    allowedEffects: Effect.DevAnything,
                     posApplication: new Vector3(0f, OneThird, OneThird),
                     posPositiveApp: Vector3.one,
                     posNegativeApp: Vector3.one,
                     rotApplication: Vector3.one,
                     sclApplication: Vector3.one
                     ),
+
+                new (
+                    name:           Thigh1L,
+                    enumName:       BoneName.Thigh1L,
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: new Vector3(OneThird, 1f, 1f + TwoThirds),
+                    posPositiveApp: Vector3.one,
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                new (
+                    name:           Thigh2L,
+                    enumName:       BoneName.Thigh2L,
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: new Vector3(0.25f, TwoThirds, 1f),
+                    posPositiveApp: Vector3.one,
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                new (
+                    name:           Thigh3L,
+                    enumName:       BoneName.Thigh3L,
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: new Vector3(0f, OneThird, OneThird),
+                    posPositiveApp: Vector3.one,
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+
+
+
             //Kokan,
             //Waist01,
             //Waist02,
@@ -98,73 +150,116 @@ namespace AniMorph
         private readonly Dictionary<BoneConfig, BoneConfig[]> _masterSlaveInitDic = new()
         {
             {
+                // Master
                 new (
                     name:           Bust,
                     enumName:       BoneName.Bust,
-                    effects:        Effect.None,
+                    allowedEffects: Effect.Rot,
+                    sharedEffects:  Effect.Pos,
                     posApplication: Vector3.one,
                     posPositiveApp: Vector3.one,
                     posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
+                    rotApplication: new Vector3(0f, 0f, 1f),
                     sclApplication: Vector3.one
                     ),
+                // Slaves
             [
 
                 new (
                     name:           Bust1L,
                     enumName:       BoneName.Bust1L,
-                    effects:        Effect.None,
+                    allowedEffects: Effect.DevAnything,
                     posApplication: Vector3.one,
                     posPositiveApp: new Vector3(TwoThirds, 1f, 1f),
                     posNegativeApp: new Vector3(1f, 1f, 0f),
                     rotApplication: Vector3.one,
                     sclApplication: Vector3.one
                     ),
+                //new (
+                //    name:           Bust1R,
+                //    enumName:       BoneName.Bust1R,
+                //    effects:        Effect.DevAnything,
+                //    posApplication: Vector3.one,
+                //    posPositiveApp: Vector3.one,
+                //    posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
+                //    rotApplication: Vector3.one,
+                //    sclApplication: Vector3.one
+                //    ),
+            ] },
+
+            {
+                // Master
                 new (
-                    name:           Bust1R,
-                    enumName:       BoneName.Bust1R,
-                    effects:        Effect.None,
+                    name:           Waist02,
+                    enumName:       BoneName.Waist02,
+                    allowedEffects: Effect.Pos,
+                    sharedEffects:  Effect.None,
                     posApplication: Vector3.one,
                     posPositiveApp: Vector3.one,
-                    posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                // Slaves
+            [
+                new (
+                    name:           ButtL,
+                    enumName:       BoneName.ButtL,
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: Vector3.one,
+                    posPositiveApp: new Vector3(OneThird, TwoThirds, OneThird),
+                    posNegativeApp: new Vector3(1f, 1f + OneThird, 1f),
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                new (
+                    name:           ButtR,
+                    enumName:       BoneName.ButtR,
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: new Vector3(1f, TwoThirds, OneThird),
+                    posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
+                    posNegativeApp: Vector3.one,
                     rotApplication: Vector3.one,
                     sclApplication: Vector3.one
                     ),
             ] },
 
-            //{
-            //    new (
-            //        name:           Waist02,
-            //        enumName:       BoneName.Waist02,
-            //        effects:        Effect.None,
-            //        posApplication: Vector3.one,
-            //        posPositiveApp: Vector3.one,
-            //        posNegativeApp: Vector3.one,
-            //        rotApplication: Vector3.one,
-            //        sclApplication: Vector3.one
-            //        ),
-            //[
-            //    new (
-            //        name:           ButtL, 
-            //        enumName:       BoneName.ButtL, 
-            //        effects:        Effect.None, 
-            //        posApplication: Vector3.one,
-            //        posPositiveApp: new Vector3(OneThird, TwoThirds, OneThird),
-            //        posNegativeApp: new Vector3(1f, 1f + OneThird, 1f),
-            //        rotApplication: Vector3.one, 
-            //        sclApplication: Vector3.one
-            //        ),
-            //    new (
-            //        name:           ButtR,
-            //        enumName:       BoneName.ButtR,
-            //        effects:        Effect.None,
-            //        posApplication: new Vector3(1f, TwoThirds, OneThird),
-            //        posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
-            //        posNegativeApp: Vector3.one,
-            //        rotApplication: Vector3.one,
-            //        sclApplication: Vector3.one
-            //        ),
-            //] },
+            {
+                // Master
+                new (
+                    name:           Spine02,
+                    enumName:       BoneName.Spine02,
+                    allowedEffects: Effect.DevAnything,
+                    sharedEffects:  Effect.Pos,
+                    posApplication: Vector3.one,
+                    posPositiveApp: Vector3.one,
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                // Slaves
+            [
+                new (
+                    name:           Spine01,
+                    enumName:       BoneName.Spine01,
+                    allowedEffects: Effect.None,
+                    posApplication: Vector3.one,
+                    posPositiveApp: Vector3.one,
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                new (
+                    name:           Spine03,
+                    enumName:       BoneName.Spine03,
+                    allowedEffects: Effect.None,
+                    posApplication: Vector3.one,
+                    posPositiveApp: Vector3.one,
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+            ] },
         };
 
         //// Master comes first
@@ -218,6 +313,9 @@ namespace AniMorph
 
         private bool _filterDeltaTime;
         private bool _updated;
+
+        private float _prevAnimNormTime = 1f;
+        private int _animLoopFrameCount;
 
         private readonly Animator _animator;
             
@@ -432,20 +530,50 @@ namespace AniMorph
         {
             // For some reason it doesn't work on Update(),
             // can't remember why exactly though.
-            var deltaTime = Time.deltaTime;
-            if (deltaTime == 0f) return;
+            var dt = Time.deltaTime;
+            if (dt == 0f) return;
 
-            var stateLen = _animator.GetCurrentAnimatorStateInfo(0).length;
+            var animState = _animator.GetCurrentAnimatorStateInfo(0);
 
-            var invAnimLen = stateLen == 0f ? 1f : 1f / stateLen;
+            var animLen = animState.length;
+            var animTime = animState.normalizedTime;
+
+            var animLenInv = animLen == 0f ? 1f : 1f / animLen;
+
+            var animTimeF = animTime - (int)animTime;
+            var isNewAnimLoop = animTimeF < _prevAnimNormTime;
+            _prevAnimNormTime = animTimeF;
+
+            var animLoopFrameCountInv = 0f;
+
+            if (!isNewAnimLoop)
+            {
+                _animLoopFrameCount++;
+            }
+            else if (_animLoopFrameCount != 0)
+            {
+                animLoopFrameCountInv = 1f / _animLoopFrameCount;
+                _animLoopFrameCount = 0;
+            }
+
 
             // Opt for lesser evil during the lag spike,
-            if (_filterDeltaTime && deltaTime > (1f / 15f)) deltaTime = (1f / 15f);
+            if (_filterDeltaTime && dt > (1f / 15f)) dt = (1f / 15f);
 
-            var deltaTimeInv = (1f / deltaTime);
+            var dtInv = (1f / dt);
             foreach (var key in _effectsToUpdate)
             {
-                _mainDic[key].motion.UpdateModifier(deltaTime, deltaTimeInv, invAnimLen);
+                if (isNewAnimLoop)
+                {
+                    var motion = _mainDic[key].motion;
+
+                    motion.OnAnimationLoopStart(animLoopFrameCountInv, dt);
+                    motion.UpdateModifier(dt, dtInv, animLenInv);
+                }
+                else
+                {
+                    _mainDic[key].motion.UpdateModifier(dt, dtInv, animLenInv);
+                }
             }
         }
 
@@ -506,11 +634,13 @@ namespace AniMorph
 
         private Body ConvertBoneToBody(BoneName boneName) => boneName switch
         {
+            BoneName.Spine01 or BoneName.Spine02 or BoneName.Spine03 => Body.Chest,
             BoneName.Bust or BoneName.Bust1L or BoneName.Bust1R => Body.Breast,
             BoneName.Waist02 or BoneName.ButtL or BoneName.ButtR => Body.Butt,
             BoneName.Thigh1R or BoneName.Thigh2R or BoneName.Thigh3R => Body.Thigh,
+            BoneName.Thigh1L or BoneName.Thigh2L or BoneName.Thigh3L => Body.Thigh,
             BoneName.Kokan => Body.Kokan,
-            BoneName.Waist01 => Body.Waist01,
+            BoneName.Waist01 => Body.Pelvis,
             _ => throw new NotImplementedException(boneName.ToString())
         };
 
@@ -541,19 +671,31 @@ namespace AniMorph
 
         internal enum BoneName
         {
-            None,
+            // --- Chest ---
+            Spine03,
+            Spine02,
+            Spine01,
+
+            // --- Breast ---
+            Bust,
             Bust1L,
             Bust1R,
-            Bust,
-           // Butt,
+
+            // --- Pelvis ---
+            Waist01,
+            Waist02,
+            Kokan,
             ButtL,
             ButtR,
+
+            // --- Thighs ---
             Thigh1R,
             Thigh2R,
             Thigh3R,
-            Kokan,
-            Waist01,
-            Waist02,
+
+            Thigh1L,
+            Thigh2L,
+            Thigh3L,
         }
 
         //internal enum Bone
@@ -568,7 +710,7 @@ namespace AniMorph
         // Very rare access, no point in struct.
         internal class BoneConfig
         {
-            internal BoneConfig(string name, BoneName enumName, Effect effects, Vector3 posApplication, Vector3 posPositiveApp, Vector3 posNegativeApp, Vector3 rotApplication, Vector3 sclApplication)
+            internal BoneConfig(string name, BoneName enumName, Effect allowedEffects, Vector3 posApplication, Vector3 posPositiveApp, Vector3 posNegativeApp, Vector3 rotApplication, Vector3 sclApplication, Effect sharedEffects = Effect.None)
             {
                 this.name = name;
 
@@ -578,13 +720,15 @@ namespace AniMorph
 
                 this.rotApplication = rotApplication;
                 this.sclApplication = sclApplication;
-                this.effects = effects;
+                this.allowedEffects = allowedEffects;
+                this.sharedEffects = sharedEffects;
                 this.enumName = enumName;
             }
 
             internal readonly string name;
             internal readonly BoneName enumName;
-            internal readonly Effect effects;
+            internal readonly Effect allowedEffects;
+            internal readonly Effect sharedEffects;
             internal readonly Vector3 posApplication;
             internal readonly Vector3 posPositiveApp;
             internal readonly Vector3 posNegativeApp;

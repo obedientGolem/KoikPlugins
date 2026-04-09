@@ -30,9 +30,9 @@ namespace AniMorph
         {
             if (!active) return;
 
-            ref var cfg = ref config;
-            ref var curr = ref current;
-            ref var prev = ref previous;
+            ref var cfg = ref devConfig;
+            ref var curr = ref devCurrent;
+            ref var prev = ref devPrevious;
 
 
             if ((cfg.effects & Effect.Rot) != 0)
@@ -72,6 +72,7 @@ namespace AniMorph
             // Apply gravity position offset
             if ((cfg.effects & Effect.GravRot) != 0)
                 rotOffset += GetGravityAngularOffset(masterDotFwd, masterDotRight);
+            
 
             var posPositive = posPositiveApp;
             var posNegative = posNegativeApp;
@@ -82,44 +83,40 @@ namespace AniMorph
                 posOffset.z > 0f ? posPositive.z : posNegative.z
                 );
 
-            // TODO Include into two above on init once dev phase is over.
+            // TODO Include into sign applications on init once dev phase is over.
             posOffset = Vector3.Scale(posOffset, posApplication);
             posOffset = Vector3.Scale(posOffset, posSignScale);
 
-            var abmxData = abmxModifierData;
+            rotOffset = Vector3.Scale(rotOffset, rotApplication);
+            sclOffset = Vector3.Scale(sclOffset, sclApplication);
 
-            abmxData.PositionModifier = curr.cleanLocalRot * posOffset;
-            abmxData.RotationModifier = rotOffset;
-            abmxData.ScaleModifier = sclOffset;
+            var boneModifierData = abmxModifierData;
 
-            //AniMorph.Logger.LogDebug($"UpdateModifiers: pos[{positionModifier}] rot[{rotationModifier}] scale[{scaleModifier}]");
+            boneModifierData.PositionModifier = curr.cleanLocalRot * posOffset;
+            boneModifierData.RotationModifier = rotOffset;
+            boneModifierData.ScaleModifier = sclOffset;
 
-            // Store current variables as "previous" for the next frame.
-
-            // Positional offset that will be the ABMX,
-            // required for calculation of (semi)static bones.
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
-
-            //if ((effectMask & Effect.Tether) != 0)
-            //    rotModifier += tether.GetTetheringOffset(velocity, deltaTime);
-
-            //if ((effectMask & Effect.GravRot) != 0)
-            //    rotModifier += GetGravityAngularOffset(masterDotFwd, masterDotRight);
-
-            //abmxModifierData.PositionModifier = posModifier;
-            //// Remove not allowed axes
-            //abmxModifierData.RotationModifier = Vector3.Scale(rotModifier, AngularApplication);
-            //abmxModifierData.ScaleModifier = sclModifier;
         }
 
 
-        //internal override void OnSettingChanged(AniMorph.Body body, ChaControl chara)
-        //{
-        //    base.OnSettingChanged(body, chara);
+        internal override void OnSettingChanged(AniMorphPlugin.Body body, ChaControl chara)
+        {
+            base.OnSettingChanged(body, chara);
 
-        //    UpdateAngularApplication(AniMorph.ConfigDic[body].AngularApplicationSlave.Value);
-        //}
+            ref var cfg = ref devConfig;
+
+            // --- Clean-up effects ---
+            if (cfg.allowedEffects == Effect.DevAnything) return;
+
+            foreach (Effect effect in effects)
+            {
+                if ((cfg.allowedEffects & effect) != 0) continue;
+
+                devConfig.effects &= ~effect;
+            }
+        }
     }
 }
