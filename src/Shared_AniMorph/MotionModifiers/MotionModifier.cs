@@ -26,13 +26,6 @@ namespace AniMorph
         protected readonly bool isLeftSide;
         protected readonly BoneModifierData abmxModifierData;
 
-        protected Vector3 posApplication = Vector3.one;
-        protected Vector3 posPositiveApp = Vector3.one;
-        protected Vector3 posNegativeApp = Vector3.one;
-
-        protected Vector3 rotApplication = Vector3.one;
-        protected Vector3 sclApplication = Vector3.one;
-
         protected bool active;
         protected BoneModifier abmxModifier;
         // Big struct, only ref access.
@@ -41,13 +34,15 @@ namespace AniMorph
         protected Previous devPrevious;
         // Big struct, only ref access.
         protected Current devCurrent;
+        // Class, rare access.
+        protected DefaultConfig devBaseConfig;
 
 
         private readonly float _baseScaleVolume;
         private readonly float _baseScaleMagnitude;
         private readonly bool _isAnimatedRotation;
 
-        private BoneModifierData _combineModifiersCachedReturn;
+        //private BoneModifierData _combineModifiersCachedReturn;
 
         private float devVelInf = 0.05f;
 
@@ -82,13 +77,23 @@ namespace AniMorph
         /// <param name="bone">Bone that will be modified.</param>
         /// <param name="bakedMesh">Baked skinned mesh</param>
         /// <param name="skinnedMesh"></param>
-        internal MotionModifier(BoneConfig cfg, Transform bone, Transform centeredBone, BoneModifierData boneModifierData, bool isAnimatedRotation)
+        internal MotionModifier(BaseConfig baseCfg, Transform bone, Transform centeredBone, BoneModifierData boneModifierData, bool isAnimatedRotation)
         {
             if (bone == null) 
                 throw new ArgumentNullException(nameof(bone));
-            
+
+            devBaseConfig = new DefaultConfig(
+                allowedEffects: baseCfg.allowedEffects,
+                posFactor: baseCfg.posFactor,
+                rotFactor: baseCfg.rotFactor,
+                sclFactor: baseCfg.sclFactor
+                );
+
             devConfig = new Config(
-                allowedEffects: cfg.allowedEffects
+                posPositiveApp: Vector3.Scale(baseCfg.posPositiveApp, baseCfg.posApplication),
+                posNegativeApp: Vector3.Scale(baseCfg.posNegativeApp, baseCfg.posApplication),
+                rotApplication: baseCfg.rotApplication,
+                sclApplication: baseCfg.sclApplication
                 );
 
             devCurrent = new();
@@ -108,12 +113,6 @@ namespace AniMorph
             _baseScaleMagnitude = bone.localScale.magnitude;
             _isAnimatedRotation = isAnimatedRotation;
 
-            posPositiveApp = cfg.posPositiveApp;
-            posNegativeApp = cfg.posNegativeApp;
-            posApplication = cfg.posApplication;
-
-            rotApplication = cfg.rotApplication;
-            sclApplication = cfg.sclApplication;
 
             if (centeredBone != null)
             {
@@ -284,8 +283,8 @@ namespace AniMorph
                 rotOffset += GetGravityAngularOffset(dotFwd, dotR);
 
 
-            var posPositive = posPositiveApp;
-            var posNegative = posNegativeApp;
+            var posPositive = cfg.posPositiveApp;
+            var posNegative = cfg.posNegativeApp;
 
             var posSignScale = new Vector3(
                 posOffset.x > 0f ? posPositive.x : posNegative.x,
@@ -294,11 +293,9 @@ namespace AniMorph
                 );
 
             // TODO Include into sign applications on init once dev phase is over.
-            posOffset = Vector3.Scale(posOffset, posApplication);
             posOffset = Vector3.Scale(posOffset, posSignScale);
-
-            rotOffset = Vector3.Scale(rotOffset, rotApplication);
-            sclOffset = Vector3.Scale(sclOffset, sclApplication);
+            rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
+            sclOffset = Vector3.Scale(sclOffset, cfg.sclApplication);
 
             var boneModifierData = abmxModifierData;
 
@@ -493,13 +490,14 @@ namespace AniMorph
             var cleanDeltaPos = GetCleanDeltaPos(ref prev);
 
             prev.cleanAdjDeltaPosLen = cleanDeltaPos.magnitude * dtInv;
+
             curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
 
             // --- Shock state ---
             if (curr.shockTime > 0f)
             {
                 curr.shockTime -= dt;
-                // Continue tracking of velocities between frames even if we froze for a bit.
+                // Continue position tracking between frames even if we froze for a bit.
                 prev.cleanDeltaPos = cleanDeltaPos;
 
                 velocity = prev.velocity;
@@ -607,8 +605,6 @@ namespace AniMorph
 
             delta.ToAngleAxis(out var angle, out var axis);
 
-            // --- Filter corruption ---
-            var isInfAxis = float.IsInfinity(axis.x);
 
             if (angle > 180f)
                 angle -= 360f;
@@ -629,10 +625,12 @@ namespace AniMorph
                 return (Quaternion.Inverse(currRot) * prev.adjustedRot).eulerAngles;
             }
 
-            var angleExp = FastExp(absAngle * dt);
 
-            if (!isInfAxis)
+            // --- Filter corruption ---
+            if (!float.IsInfinity(axis.x))
             {
+                var angleExp = FastExp(absAngle * dt);
+
                 var deltaAngVel = axis * (angle * angleExp * dtInv);
 
                 //var slowLerp = 1f - FastExp(-cfg.rotSlowSmooth * dt);
@@ -660,7 +658,9 @@ namespace AniMorph
             if ((cfg.noiseAff & NoiseAffliction.Rot) != 0)
                 accel += GetNoiseVec(cfg.noiseOctaves, cfg.noiseVecRot, cfg.noiseAmplRot * curr.noiseAmplFactor, cfg.noiseFreq * dt, out cfg.noiseVecRot);
 
-            angVel += accel * dt;
+            angVel += Vector3.Scale(accel, cfg.rotApplication) * dt;
+
+            //angVel += accel * dt;
 
             var angVelDot = Vector3.Dot(angVel, prev.torque);
 
@@ -999,7 +999,7 @@ namespace AniMorph
         #region OnHooks
 
 
-        internal void OnChangeAnimator()
+        internal virtual void OnChangeAnimator()
         {
             var bone = transform;
 
@@ -1043,12 +1043,12 @@ namespace AniMorph
                 }
             }
             
-            if (_combineModifiersCachedReturn == null && abmxModifier != null)
-            {
-                var traverse = Traverse.Create(abmxModifier);
+            //if (_combineModifiersCachedReturn == null && abmxModifier != null)
+            //{
+            //    var traverse = Traverse.Create(abmxModifier);
 
-                _combineModifiersCachedReturn = traverse.Field("_combineModifiersCachedReturn").GetValue<BoneModifierData>();
-            }
+            //    _combineModifiersCachedReturn = traverse.Field("_combineModifiersCachedReturn").GetValue<BoneModifierData>();
+            //}
         }
 
         internal virtual void OnSettingChanged(AniMorphPlugin.Body body, ChaControl chara)
@@ -1057,6 +1057,7 @@ namespace AniMorph
             AniMorphPlugin.Logger.LogDebug($"[{transform.name}] - {GetType().Name}.OnSettingChanged: [{chara.name}:{body}]");
 #endif
             ref var cfg = ref devConfig;
+            var baseCfg = devBaseConfig;
 
             var pluginConfig = AniMorphPlugin.ConfigDic[body];
 
@@ -1064,14 +1065,14 @@ namespace AniMorph
 
             cfg.noiseOctaves = pluginConfig.NoiseOctaves.Value;
             cfg.noiseAff = pluginConfig.NoiseAffliction.Value;
-            cfg.noiseAmplPos = pluginConfig.NoiseAmplitudePos.Value;
-            cfg.noiseAmplRot = pluginConfig.NoiseAmplitudeRot.Value * 100f;
-            cfg.noiseAmplScl = pluginConfig.NoiseAmplitudeScl.Value;
+            cfg.noiseAmplPos = baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value;
+            cfg.noiseAmplRot = baseCfg.rotFactor * pluginConfig.NoiseAmplitudeRot.Value * 100f;
+            cfg.noiseAmplScl = baseCfg.sclFactor * pluginConfig.NoiseAmplitudeScl.Value;
             // The backward way algos are setup forces us to have weird coefficient ranges,
             // and I'd rather have ugly values(tiny decimals) hidden and instead expose usual common values,
             // that will be converted here.
-            cfg.posSpring = (float)Math.Round(pluginConfig.PosSpring.Value * (1f / 60f), 3);
-            cfg.posDamping = pluginConfig.PosSpring.Value * pluginConfig.PosDamping.Value;
+            cfg.posSpring = (float)Math.Round(baseCfg.posFactor * pluginConfig.PosSpring.Value * (1f / 60f), 3);
+            cfg.posDamping = (baseCfg.posFactor * pluginConfig.PosSpring.Value) * pluginConfig.PosDamping.Value;
             cfg.posShockThreshold = pluginConfig.PosShockThreshold.Value;
             cfg.posShockStr = pluginConfig.PosShockStr.Value;
             cfg.posFreezeThreshold = pluginConfig.PosFreezeThreshold.Value;
@@ -1083,8 +1084,8 @@ namespace AniMorph
             //config.useLinearGravity = pluginConfig.PosGravity.Value != 0f;
             //SetLinearMassMultiplier = pluginConfig.LinearMass.Value;
 
-            cfg.rotSpring = (float)Math.Round(pluginConfig.RotSpring.Value * (1f / 60f), 3);
-            cfg.rotDamping = pluginConfig.RotSpring.Value * pluginConfig.RotDamping.Value;
+            cfg.rotSpring = (float)Math.Round(baseCfg.rotFactor * pluginConfig.RotSpring.Value * (1f / 60f), 3);
+            cfg.rotDamping = (baseCfg.rotFactor * pluginConfig.RotSpring.Value) * pluginConfig.RotDamping.Value;
             cfg.rotRate = pluginConfig.RotRate.Value;
 
             cfg.sclAccelStr = pluginConfig.ScaleAccelerationFactor.Value;
@@ -1122,7 +1123,7 @@ namespace AniMorph
 
             switch (body)
             {
-                case Body.Butt:
+                case Body.Pelvis:
                     cfg.posLimitPositive = new Vector3(1f, 1.33f, 1f);
                     cfg.posLimitNegative = new Vector3(1f, 0.67f, 1f);
                     break;
@@ -1309,16 +1310,39 @@ namespace AniMorph
             // Not necessarily a double, can be just an uneven weird one.
             Double,
         }
+        
+        protected class DefaultConfig
+        {
+            // No point making it a struct as it is rarely accessed.
+            internal DefaultConfig(Effect allowedEffects, float posFactor, float rotFactor, float sclFactor)
+            {
+                this.allowedEffects = allowedEffects;
+                this.posFactor = posFactor;
+                this.rotFactor = rotFactor;
+                this.sclFactor = sclFactor;
+            }
+
+            internal Effect allowedEffects;
+            internal float posFactor;
+            internal float rotFactor;
+            internal float sclFactor;
+        }
 
         protected struct Config
         {
-            internal Config(Effect allowedEffects)
+            internal Config(Vector3 posPositiveApp, Vector3 posNegativeApp, Vector3 rotApplication, Vector3 sclApplication)
             {
-                this.allowedEffects = allowedEffects;
+                this.posPositiveApp = posPositiveApp;
+                this.posNegativeApp = posNegativeApp;
+                this.rotApplication = rotApplication;
+                this.sclApplication = sclApplication;
             }
 
-            internal /*readonly*/ Effect allowedEffects;
             internal Effect effects;
+            internal Vector3 posPositiveApp;
+            internal Vector3 posNegativeApp;
+            internal Vector3 rotApplication;
+            internal Vector3 sclApplication;
 
             internal int noiseOctaves;
             internal NoiseAffliction noiseAff;

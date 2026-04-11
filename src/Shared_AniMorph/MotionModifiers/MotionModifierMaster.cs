@@ -15,10 +15,9 @@ namespace AniMorph
     internal class MotionModifierMaster : MotionModifier
     {
         private readonly MotionModifierSlave[] _slaves;
-        private readonly Effect _sharedEffects;
 
         internal MotionModifierMaster(
-            BoneConfig cfg,
+            BaseConfig cfg,
             Transform transform,
             MotionModifierSlave[] slaveModifiers, 
             BoneModifierData masterModifierData,
@@ -26,7 +25,6 @@ namespace AniMorph
             ) : base(cfg, transform, null, masterModifierData, isAnimatedBone)
         {
             _slaves = slaveModifiers;
-            _sharedEffects = cfg.sharedEffects;
         }
 
 
@@ -42,12 +40,14 @@ namespace AniMorph
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
+            var effects = cfg.effects;
+
             posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, out var accel);
 
-            if ((cfg.effects & Effect.Pos) == 0)
+            if ((effects & Effect.Pos) == 0)
                 posOffset = Vector3.zero;
 
-            if ((cfg.effects & Effect.Rot) != 0)
+            if ((effects & Effect.Rot) != 0)
                 rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
             else
                 // Required for correct application of local position.
@@ -82,15 +82,15 @@ namespace AniMorph
             var dotR = Vector3.Dot(transform.right, Vector3.up);
             var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
 
-            if ((cfg.effects & Effect.GravPos) != 0)
+            if ((effects & Effect.GravPos) != 0)
                 posOffset += GetGravityPositionOffset(ref cfg, dotUp, dotR);
 
-            if ((cfg.effects & Effect.GravScl) != 0)
+            if ((effects & Effect.GravScl) != 0)
                 sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref cfg, dotFwd));
 
 
-            var posPositive = posPositiveApp;
-            var posNegative = posNegativeApp;
+            var posPositive = cfg.posPositiveApp;
+            var posNegative = cfg.posNegativeApp;
 
             var posSignScale = new Vector3(
                 posOffset.x > 0f ? posPositive.x : posNegative.x,
@@ -99,10 +99,9 @@ namespace AniMorph
                 );
 
             // TODO Include into sign applications on init once dev phase is over.
-            posOffset = Vector3.Scale(posOffset, posApplication);
             posOffset = Vector3.Scale(posOffset, posSignScale);
-            rotOffset = Vector3.Scale(rotOffset, rotApplication);
-            sclOffset = Vector3.Scale(sclOffset, sclApplication);
+            rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
+            sclOffset = Vector3.Scale(sclOffset, cfg.sclApplication);
 
             var boneModifierData = abmxModifierData;
 
@@ -115,20 +114,10 @@ namespace AniMorph
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
 
-            var sharedEffects = _sharedEffects;
-
-            if ((sharedEffects & Effect.Pos) == 0)
-                posOffset = Vector3.zero;
-
-            if ((sharedEffects & Effect.Rot) == 0)
-                rotOffset = Vector3.zero;
-
-            if ((sharedEffects & Effect.Scl) == 0)
-                sclOffset = Vector3.one;
 
             foreach (var slave in _slaves)
             {
-                slave.UpdateSlave(dotFwd, dotR, dt, dtInv, animLenInv, posOffset, rotOffset, sclOffset);
+                slave.UpdateSlave(effects, dotFwd, dotR, dt, dtInv, animLenInv, posOffset, rotOffset, sclOffset);
             }
         }
 
@@ -142,11 +131,11 @@ namespace AniMorph
                 slave.OnSettingChanged(body, chara);
 
             // --- Clean-up effects ---
-            if (cfg.allowedEffects == Effect.DevAnything) return;
+            if (devBaseConfig.allowedEffects == Effect.DevAnything) return;
 
             foreach (Effect effect in effects)
             {
-                if ((cfg.allowedEffects & effect) != 0) continue;
+                if ((devBaseConfig.allowedEffects & effect) != 0) continue;
 
                 devConfig.effects &= ~effect;
             }

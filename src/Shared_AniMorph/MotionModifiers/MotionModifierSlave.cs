@@ -12,23 +12,53 @@ namespace AniMorph
 {
     internal class MotionModifierSlave : MotionModifier
     {
-
-
+        private /*readonly*/ Effect _inheritEffects;
+        private readonly bool _masterIsParent;
+        private Vector3 _localVecToMaster;
+        private readonly Transform _master;
 
         internal MotionModifierSlave(
-            BoneConfig cfg,
+            BaseConfig cfg,
             Transform bone, 
-            Transform centeredBone, 
+            Transform master, 
             KKABMX.Core.BoneModifierData boneModifierData, 
-            bool animatedBone) : base(cfg, bone, centeredBone, boneModifierData, animatedBone)
+            bool animatedBone) : base(cfg, bone, master, boneModifierData, animatedBone)
         {
-
+            _master = master;
+            _inheritEffects = cfg.inheritEffects;
+            var masterIsParent = false;
+            var parent = bone.transform.parent;
+            while (parent != null)
+            {
+                if (master == parent)
+                {
+                    masterIsParent = true;
+                    break;
+                }
+                parent = parent.parent;
+            }
+            _masterIsParent = masterIsParent;
         }
 
-
-        internal void UpdateSlave(float masterDotFwd, float masterDotRight, float dt, float dtInv, float animLenInv, Vector3 posOffset, Vector3 rotOffset, Vector3 sclOffset)
+        internal void UpdateSlave(Effect masterEffects, float masterDotFwd, float masterDotRight, float dt, float dtInv, float animLenInv, Vector3 posOffset, Vector3 rotOffset, Vector3 sclOffset)
         {
             if (!active) return;
+
+            var inheritEffects = _inheritEffects;
+
+            if ((inheritEffects & Effect.Pos) == 0)
+                posOffset = Vector3.zero;
+            else if ((masterEffects & Effect.Rot) != 0 && !_masterIsParent)
+            {
+                posOffset += _localVecToMaster - (Quaternion.Euler(rotOffset) * _localVecToMaster);
+            }
+
+            if ((inheritEffects & Effect.Rot) == 0)
+                rotOffset = Vector3.zero;
+
+            if ((inheritEffects & Effect.Scl) == 0)
+                sclOffset = Vector3.one;
+
 
             ref var cfg = ref devConfig;
             ref var curr = ref devCurrent;
@@ -74,8 +104,8 @@ namespace AniMorph
                 rotOffset += GetGravityAngularOffset(masterDotFwd, masterDotRight);
             
 
-            var posPositive = posPositiveApp;
-            var posNegative = posNegativeApp;
+            var posPositive = cfg.posPositiveApp;
+            var posNegative = cfg.posNegativeApp;
 
             var posSignScale = new Vector3(
                 posOffset.x > 0f ? posPositive.x : posNegative.x,
@@ -84,11 +114,8 @@ namespace AniMorph
                 );
 
             // TODO Include into sign applications on init once dev phase is over.
-            posOffset = Vector3.Scale(posOffset, posApplication);
             posOffset = Vector3.Scale(posOffset, posSignScale);
-
-            rotOffset = Vector3.Scale(rotOffset, rotApplication);
-            sclOffset = Vector3.Scale(sclOffset, sclApplication);
+            sclOffset = Vector3.Scale(sclOffset, cfg.sclApplication);
 
             var boneModifierData = abmxModifierData;
 
@@ -109,14 +136,23 @@ namespace AniMorph
             ref var cfg = ref devConfig;
 
             // --- Clean-up effects ---
-            if (cfg.allowedEffects == Effect.DevAnything) return;
+            if (devBaseConfig.allowedEffects == Effect.DevAnything) return;
 
             foreach (Effect effect in effects)
             {
-                if ((cfg.allowedEffects & effect) != 0) continue;
+                if ((devBaseConfig.allowedEffects & effect) != 0) continue;
 
                 devConfig.effects &= ~effect;
             }
+        }
+
+        internal override void OnChangeAnimator()
+        {
+            base.OnChangeAnimator();
+
+            if (_master == null) return;
+
+            _localVecToMaster = transform.InverseTransformPoint(_master.position);
         }
     }
 }

@@ -41,7 +41,7 @@ namespace AniMorph
         private static readonly Dictionary<Body, Effect> _allowedEffectsDic = new()
         {
             { Body.Breast, Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.GravPos | Effect.GravRot | Effect.GravScl },
-            { Body.Butt, Effect.Pos | Effect.Rot | Effect.Scl },
+            { Body.Pelvis, Effect.Pos | Effect.Rot | Effect.Scl },
         };
 
 
@@ -82,7 +82,7 @@ namespace AniMorph
                 new(
                     body: Body.Breast,
                     config: Config,
-                    order: 1000,
+                    order: 10000,
                     effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.GravPos | Effect.GravRot | Effect.GravScl,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
@@ -134,11 +134,11 @@ namespace AniMorph
                     gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
                 ));
 
-            ConfigDic.Add(Body.Butt,
+            ConfigDic.Add(Body.Pelvis,
                 new(
-                    body: Body.Butt,
+                    body: Body.Pelvis,
                     config: Config,
-                    order: 800,
+                    order: 9000,
                     effect: Effect.Pos | Effect.Rot | Effect.Scl,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.Panty,
@@ -192,12 +192,181 @@ namespace AniMorph
                     gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
                     ));
 
-            ConfigDic.Add(Body.Thigh,
+
+            ConfigDic.Add(Body.Chest,
                 new(
-                    body: Body.Thigh,
+                    body: Body.Chest,
                     config: Config,
-                    order: 600,
-                    effect: Effect.Pos | Effect.Scl,
+                    order: 8000,
+                    effect: Effect.Pos,
+                    adjustForSize: true,
+                    disableWhenClothes: ClothesKind.None,
+
+                    noiseOctaves: 4,
+                    noiseAffliction: NoiseAffliction.None,
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeScl: 0.15f,
+
+
+                    posSpring: 21f,
+                    posDamping: 0.2f,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclAccelerationFactor: 0.35f,
+                    sclDecelerationFactor: 0.5f,
+                    sclLerpSpeed: 8f,
+                    sclMaxDistortion: 0.4f,
+                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclPreserveVolume: true,
+                    sclDumbAcceleration: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxAngle: 30f,
+
+                    gravityUpUp: Vector3.zero,
+                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
+                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
+                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
+                    gravityFwdMid: Vector3.zero,
+                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
+                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
+                    gravityRightMid: Vector3.zero,
+                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
+                ));
+
+            ConfigDic.Add(Body.Shoulders,
+                new(
+                    body: Body.Shoulders,
+                    config: Config,
+                    order: 7000,
+                    effect: Effect.Pos,
+                    adjustForSize: true,
+                    disableWhenClothes: ClothesKind.None,
+
+                    noiseOctaves: 4,
+                    noiseAffliction: NoiseAffliction.None,
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeScl: 0.15f,
+
+
+                    posSpring: 21f,
+                    posDamping: 0.2f,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclAccelerationFactor: 0.35f,
+                    sclDecelerationFactor: 0.5f,
+                    sclLerpSpeed: 8f,
+                    sclMaxDistortion: 0.4f,
+                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclPreserveVolume: true,
+                    sclDumbAcceleration: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxAngle: 30f,
+
+                    gravityUpUp: Vector3.zero,
+                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
+                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
+                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
+                    gravityFwdMid: Vector3.zero,
+                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
+                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
+                    gravityRightMid: Vector3.zero,
+                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
+                ));
+
+            ConfigDic.Add(Body.Tummy,
+                new(
+                    body: Body.Tummy,
+                    config: Config,
+                    order: 6000,
+                    effect: Effect.Pos,
+                    adjustForSize: true,
+                    disableWhenClothes: ClothesKind.None,
+
+                    noiseOctaves: 4,
+                    noiseAffliction: NoiseAffliction.None,
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeScl: 0.15f,
+
+
+                    posSpring: 21f,
+                    posDamping: 0.2f,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclAccelerationFactor: 0.35f,
+                    sclDecelerationFactor: 0.5f,
+                    sclLerpSpeed: 8f,
+                    sclMaxDistortion: 0.4f,
+                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclPreserveVolume: true,
+                    sclDumbAcceleration: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxAngle: 30f,
+
+                    gravityUpUp: Vector3.zero,
+                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
+                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
+                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
+                    gravityFwdMid: Vector3.zero,
+                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
+                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
+                    gravityRightMid: Vector3.zero,
+                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
+                ));
+
+            ConfigDic.Add(Body.Thighs,
+                new(
+                    body: Body.Thighs,
+                    config: Config,
+                    order: 5000,
+                    effect: Effect.Pos,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
@@ -249,44 +418,46 @@ namespace AniMorph
                     gravityRightMid: Vector3.zero,
                     gravityRightDown: Vector3.zero));
 
-            //ConfigDic.Add(Body.Kokan,
+
+            //ConfigDic.Add(Body.Cheeks,
             //    new(
-            //        body: Body.Kokan,
+            //        body: Body.Cheeks,
             //        config: Config,
-            //        order: 400,
-            //        effect: Effect.None,
+            //        order: 4000,
+            //        effect: Effect.Pos,
             //        adjustForSize: true,
             //        disableWhenClothes: ClothesKind.None,
 
-            //        noiseOctave: 4,
+            //        noiseOctaves: 4,
             //        noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
-            //        noiseAmplitudePos: 0.15f,
+            //        noiseAmplitudePos: 0.075f,
             //        noiseAmplitudeRot: 0.67f,
             //        noiseAmplitudeScl: 0.15f,
 
-            //        posSpring: 15f,
-            //        posDamping: 0.5f,
+
+            //        posSpring: 30f,
+            //        posDamping: 0.2f,
             //        posShockStr: 1f,
             //        posShockThreshold: 0.15f,
             //        posFreezeThreshold: 0.25f,
-            //        posFreezeLen: 0.05f,
-            //        posBleedStr: 5f,
+            //        posFreezeLen: 0.02f,
+            //        posBleedStr: 2f,
             //        posBleedLen: 0.1f,
-            //        //posGravity: 0f,
+            //        //posGravity: 0.1f,
             //        //LinearLimitPositive: Vector3.one,
             //        //LinearLimitNegative: Vector3.one,
 
-            //        rotSpring: 20f,
+            //        rotSpring: 30f,
             //        rotDamping: 5f,
             //        rotRate: 2f,
-            //        //AngularApplicationMaster: Axis.Z,
-            //        //AngularApplicationSlave: Axis.X | Axis.Y,
+            //        //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
+            //        //AngularApplicationSlave: Axis.Y,
 
-            //        sclAccelerationFactor: 0.35f,
+            //        sclAccelerationFactor: 40f,
             //        sclDecelerationFactor: 0.5f,
             //        sclLerpSpeed: 8f,
-            //        sclMaxDistortion: 0.4f,
-            //        sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+            //        sclMaxDistortion: 0.5f,
+            //        sclUnevenDistribution: new Vector3(0.4f, 0.5f, 0.6f),
             //        sclPreserveVolume: true,
             //        sclDumbAcceleration: true,
 
@@ -296,185 +467,73 @@ namespace AniMorph
             //        tetherMaxAngle: 30f,
 
             //        gravityUpUp: Vector3.zero,
-            //        gravityUpMid: new Vector3(0f, 0.02f, 0f),
-            //        gravityUpDown: new Vector3(0f, 0.05f, 0f),
-            //        gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
+            //        gravityUpMid: Vector3.zero,
+            //        gravityUpDown: Vector3.zero,
+            //        gravityFwdUp: Vector3.zero,
             //        gravityFwdMid: Vector3.zero,
-            //        gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-            //        gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
+            //        gravityFwdDown: Vector3.zero,
+            //        gravityRightUp: Vector3.zero,
             //        gravityRightMid: Vector3.zero,
-            //        gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-            //    ));
+            //        gravityRightDown: Vector3.zero));
 
-            //ConfigDic.Add(Body.Waist01,
-            //    new(
-            //        body: Body.Waist01,
-            //        config: Config,
-            //        order: 200,
-            //        effect: Effect.None,
-            //        adjustForSize: true,
-            //        disableWhenClothes: ClothesKind.None,
 
-            //        noiseOctave: 4,
-            //        noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
-            //        noiseAmplitudePos: 0.15f,
-            //        noiseAmplitudeRot: 0.67f,
-            //        noiseAmplitudeScl: 0.15f,
 
-            //        posSpring: 15f,
-            //        posDamping: 0.5f,
-            //        posShockStr: 1f,
-            //        posShockThreshold: 0.15f,
-            //        posFreezeThreshold: 0.25f,
-            //        posFreezeLen: 0.05f,
-            //        posBleedStr: 5f,
-            //        posBleedLen: 0.1f,
-            //        //posGravity: 0f,
-            //        //LinearLimitPositive: Vector3.one,
-            //        //LinearLimitNegative: Vector3.one,
-
-            //        rotSpring: 20f,
-            //        rotDamping: 5f,
-            //        rotRate: 2f,
-            //        //AngularApplicationMaster: Axis.Z,
-            //        //AngularApplicationSlave: Axis.X | Axis.Y,
-
-            //        sclAccelerationFactor: 0.35f,
-            //        sclDecelerationFactor: 0.5f,
-            //        sclLerpSpeed: 8f,
-            //        sclMaxDistortion: 0.4f,
-            //        sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
-            //        sclPreserveVolume: true,
-            //        sclDumbAcceleration: true,
-
-            //        tetherMultiplier: 0.5f,
-            //        tetherFrequency: 3f,
-            //        tetherDamping: 0.3f,
-            //        tetherMaxAngle: 30f,
-
-            //        gravityUpUp: Vector3.zero,
-            //        gravityUpMid: new Vector3(0f, 0.02f, 0f),
-            //        gravityUpDown: new Vector3(0f, 0.05f, 0f),
-            //        gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
-            //        gravityFwdMid: Vector3.zero,
-            //        gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-            //        gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-            //        gravityRightMid: Vector3.zero,
-            //        gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-            //    ));
-
-            //ConfigDic.Add(Body.Waist02,
-            //    new(
-            //        body: Body.Waist02,
-            //        config: Config,
-            //        order: 0,
-            //        effect: Effect.None,
-            //        adjustForSize: true,
-            //        disableWhenClothes: ClothesKind.None,
-
-            //        noiseOctave: 4,
-            //        noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
-            //        noiseAmplitudePos: 0.15f,
-            //        noiseAmplitudeRot: 0.67f,
-            //        noiseAmplitudeScl: 0.15f,
-
-            //        posSpring: 15f,
-            //        posDamping: 0.5f,
-            //        posShockStr: 1f,
-            //        posShockThreshold: 0.15f,
-            //        posFreezeThreshold: 0.25f,
-            //        posFreezeLen: 0.05f,
-            //        posBleedStr: 5f,
-            //        posBleedLen: 0.1f,
-            //        //posGravity: 0f,
-            //        //LinearLimitPositive: Vector3.one,
-            //        //LinearLimitNegative: Vector3.one,
-
-            //        rotSpring: 20f,
-            //        rotDamping: 5f,
-            //        rotRate: 2f,
-            //        //AngularApplicationMaster: Axis.Z,
-            //        //AngularApplicationSlave: Axis.X | Axis.Y,
-
-            //        sclAccelerationFactor: 0.35f,
-            //        sclDecelerationFactor: 0.5f,
-            //        sclLerpSpeed: 8f,
-            //        sclMaxDistortion: 0.4f,
-            //        sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
-            //        sclPreserveVolume: true,
-            //        sclDumbAcceleration: true,
-
-            //        tetherMultiplier: 0.5f,
-            //        tetherFrequency: 3f,
-            //        tetherDamping: 0.3f,
-            //        tetherMaxAngle: 30f,
-
-            //        gravityUpUp: Vector3.zero,
-            //        gravityUpMid: new Vector3(0f, 0.02f, 0f),
-            //        gravityUpDown: new Vector3(0f, 0.05f, 0f),
-            //        gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
-            //        gravityFwdMid: Vector3.zero,
-            //        gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-            //        gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-            //        gravityRightMid: Vector3.zero,
-            //        gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-            //    ));
-
-            ConfigDic.Add(Body.Chest,
+            ConfigDic.Add(Body.Neck,
                 new(
-                    body: Body.Chest,
+                    body: Body.Neck,
                     config: Config,
-                    order: 1000,
+                    order: 3000,
                     effect: Effect.Pos,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.None,
-                    noiseAmplitudePos: 0.15f,
+                    noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
+                    noiseAmplitudePos: 0.075f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
 
 
-                    posSpring: 21f,
+                    posSpring: 30f,
                     posDamping: 0.2f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
+                    posFreezeLen: 0.02f,
+                    posBleedStr: 2f,
                     posBleedLen: 0.1f,
-                    //posGravity: 0f,
+                    //posGravity: 0.1f,
+                    //LinearLimitPositive: Vector3.one,
+                    //LinearLimitNegative: Vector3.one,
 
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
+                    rotSpring: 30f,
+                    rotDamping: 5f,
                     rotRate: 2f,
-                    //AngularApplicationMaster: Axis.Z,
-                    //AngularApplicationSlave: Axis.X | Axis.Y,
+                    //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
+                    //AngularApplicationSlave: Axis.Y,
 
-                    sclAccelerationFactor: 0.35f,
+                    sclAccelerationFactor: 40f,
                     sclDecelerationFactor: 0.5f,
                     sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.4f,
-                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclMaxDistortion: 0.5f,
+                    sclUnevenDistribution: new Vector3(0.4f, 0.5f, 0.6f),
                     sclPreserveVolume: true,
                     sclDumbAcceleration: true,
 
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
+                    tetherMultiplier: 0.5f,
+                    tetherFrequency: 3f,
                     tetherDamping: 0.3f,
                     tetherMaxAngle: 30f,
 
                     gravityUpUp: Vector3.zero,
-                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
-                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
-                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
+                    gravityUpMid: Vector3.zero,
+                    gravityUpDown: Vector3.zero,
+                    gravityFwdUp: Vector3.zero,
                     gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
+                    gravityFwdDown: Vector3.zero,
+                    gravityRightUp: Vector3.zero,
                     gravityRightMid: Vector3.zero,
-                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-                ));
+                    gravityRightDown: Vector3.zero));
         }
 
 
@@ -524,9 +583,9 @@ namespace AniMorph
                 {
                     ConfigDic[Body.Breast].Effects.Value &= ~effect;
                 }
-                if ((_allowedEffectsDic[Body.Butt] & effect) == 0)
+                if ((_allowedEffectsDic[Body.Pelvis] & effect) == 0)
                 {
-                    ConfigDic[Body.Butt].Effects.Value &= ~effect;
+                    ConfigDic[Body.Pelvis].Effects.Value &= ~effect;
                 }
             }
         }
@@ -537,14 +596,14 @@ namespace AniMorph
 
         public enum Body
         {
+            //Cheeks,
+            Neck,
+            Shoulders,
             Chest,
             Breast,
+            Tummy,
             Pelvis,
-            Thigh,
-
-            Butt,
-            Kokan,
-            Waist02
+            Thighs,
         }
 
         public enum FilterDeltaTimeKind
@@ -671,11 +730,17 @@ namespace AniMorph
                 "gravityScale – scale of the bone is adjusted based on the rotation of the bone in the world space as imitation of the gravity",
                 null, new ConfigurationManagerAttributes { Order = order }));
 
-                AdjustForSize = config.Bind(name, "AdjustForSize", adjustForSize,
-                    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 5 }));
-
                 DisableWhenClothes = config.Bind(name, "DisableClothed", disableWhenClothes,
-                    new ConfigDescription("Don't apply effects when particular piece of clothing is fully present", null, new ConfigurationManagerAttributes { Order = order - 6 }));
+                    new ConfigDescription("Don't apply effects when particular piece of clothing is fully present", null, new ConfigurationManagerAttributes { Order = order - 5 }));
+
+                AdjustForSize = config.Bind(name, "AdjustForSize", adjustForSize,
+                    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
+
+                // ExtraChaos Rot 
+                // RotAxes
+                // RotFactor
+                //ExtraChaos = config.Bind(name, "AdjustForSize", adjustForSize,
+                //    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
 
                 NoiseOctaves = config.Bind(name, "NoiseOctaves", noiseOctaves,
                     new ConfigDescription("", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { Order = order - 7 }));
