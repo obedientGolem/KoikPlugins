@@ -60,9 +60,9 @@ namespace AniMorph
                 sclOffset = Vector3.one;
 
 
-            ref var cfg = ref devConfig;
-            ref var curr = ref devCurrent;
-            ref var prev = ref devPrevious;
+            ref var cfg = ref config;
+            ref var curr = ref current;
+            ref var prev = ref previous;
 
 
             if ((cfg.effects & Effect.Rot) != 0)
@@ -133,16 +133,16 @@ namespace AniMorph
         {
             base.OnSettingChanged(body, chara);
 
-            ref var cfg = ref devConfig;
+            ref var cfg = ref config;
 
             // --- Clean-up effects ---
-            if (devBaseConfig.allowedEffects == Effect.DevAnything) return;
+            if (baseConfig.allowedEffects == Effect.DevAnything) return;
 
             foreach (Effect effect in effects)
             {
-                if ((devBaseConfig.allowedEffects & effect) != 0) continue;
+                if ((baseConfig.allowedEffects & effect) != 0) continue;
 
-                devConfig.effects &= ~effect;
+                config.effects &= ~effect;
             }
         }
 

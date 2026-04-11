@@ -29,13 +29,13 @@ namespace AniMorph
         protected bool active;
         protected BoneModifier abmxModifier;
         // Big struct, only ref access.
-        protected Config devConfig;
-        // Big struct, only ref access.
-        protected Previous devPrevious;
-        // Big struct, only ref access.
-        protected Current devCurrent;
+        protected Config config;
         // Class, rare access.
-        protected DefaultConfig devBaseConfig;
+        protected DefaultConfig baseConfig;
+        // Big struct, only ref access.
+        protected Previous previous;
+        // Big struct, only ref access.
+        protected Current current;
 
 
         private readonly float _baseScaleVolume;
@@ -51,14 +51,14 @@ namespace AniMorph
         {
             if (value <= 0f) value = 0.01f;
 
-            ref var cfg = ref devConfig;
+            ref var cfg = ref config;
             cfg.mass = value;
             cfg.massInv = 1f / value;
         }
 
         private void SetMaxVelocity(float value)
         {
-            ref var cfg = ref devConfig;
+            ref var cfg = ref config;
 
             cfg.linearMaxVelocityLen = value;
             cfg.linearMaxSqrVelocity = value * value;
@@ -82,24 +82,24 @@ namespace AniMorph
             if (bone == null) 
                 throw new ArgumentNullException(nameof(bone));
 
-            devBaseConfig = new DefaultConfig(
+            baseConfig = new DefaultConfig(
                 allowedEffects: baseCfg.allowedEffects,
                 posFactor: baseCfg.posFactor,
                 rotFactor: baseCfg.rotFactor,
                 sclFactor: baseCfg.sclFactor
                 );
 
-            devConfig = new Config(
+            config = new Config(
                 posPositiveApp: Vector3.Scale(baseCfg.posPositiveApp, baseCfg.posApplication),
                 posNegativeApp: Vector3.Scale(baseCfg.posNegativeApp, baseCfg.posApplication),
                 rotApplication: baseCfg.rotApplication,
                 sclApplication: baseCfg.sclApplication
                 );
 
-            devCurrent = new();
-            devPrevious = new();
+            current = new();
+            previous = new();
 
-            ref var prev = ref devPrevious;
+            ref var prev = ref previous;
 
             transform = bone;
             abmxModifierData = boneModifierData;
@@ -224,7 +224,7 @@ namespace AniMorph
         {
             // Grab modified local orientations from previous frame,
             // local orientations are just fields with Vector3, extremely cheap to access.
-            ref var prev = ref devPrevious;
+            ref var prev = ref previous;
             prev.localPos = transform.localPosition;
             prev.localRot = transform.localRotation;
         }
@@ -233,9 +233,9 @@ namespace AniMorph
         {
             if (!active) return;
 
-            ref var cfg = ref devConfig;
-            ref var curr = ref devCurrent;
-            ref var prev = ref devPrevious;
+            ref var cfg = ref config;
+            ref var curr = ref current;
+            ref var prev = ref previous;
 
             var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
@@ -685,7 +685,7 @@ namespace AniMorph
             //var rot = angVelocityLen == 0f ?
             //    prev.adjustedRot :
             //    Quaternion.AngleAxis(angVelocityLen * dt * cfg.rotRate, angVel * (1f / angVelocityLen)) * prev.adjustedRot;
-            var newRot = Quaternion.Euler(angVel * dt * devConfig.rotRate) * prev.adjustedRot;
+            var newRot = Quaternion.Euler(angVel * dt * config.rotRate) * prev.adjustedRot;
 
 
             //previous.cleanRot = cleanRot
@@ -755,7 +755,7 @@ namespace AniMorph
             if (magnitude < (0.0001f))// * 0.0001f))
             {
                 return Vector3.SmoothDamp(
-                    devPrevious.scale,
+                    previous.scale,
                     Vector3.one,
                     ref scaleVelocity,
                     1f / squashDamping
@@ -789,7 +789,7 @@ namespace AniMorph
             Vector3 targetScale = GetDirectionalScale(dir, stretch, squash);
 
             return Vector3.SmoothDamp(
-                devPrevious.scale,
+                previous.scale,
                 targetScale,
                 ref scaleVelocity,
                 1f / squashDamping
@@ -1003,8 +1003,8 @@ namespace AniMorph
         {
             var bone = transform;
 
-            ref var prev = ref this.devPrevious;
-            ref var cfg = ref this.devConfig;
+            ref var prev = ref this.previous;
+            ref var cfg = ref this.config;
             var pos = bone.position;
             prev.position = pos;
             prev.cleanPos = pos;
@@ -1056,8 +1056,8 @@ namespace AniMorph
 #if DEBUG
             AniMorphPlugin.Logger.LogDebug($"[{transform.name}] - {GetType().Name}.OnSettingChanged: [{chara.name}:{body}]");
 #endif
-            ref var cfg = ref devConfig;
-            var baseCfg = devBaseConfig;
+            ref var cfg = ref config;
+            var baseCfg = baseConfig;
 
             var pluginConfig = AniMorphPlugin.ConfigDic[body];
 
@@ -1186,7 +1186,7 @@ namespace AniMorph
 
         internal virtual void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
         {
-            devPrevious.OnAnimationLoopStart(animLoopFrameCountInv, dt);
+            previous.OnAnimationLoopStart(animLoopFrameCountInv, dt);
         }
 
 

@@ -478,9 +478,9 @@ namespace AniMorph
 
 
 
-            ConfigDic.Add(Body.Neck,
+            ConfigDic.Add(Body.Head,
                 new(
-                    body: Body.Neck,
+                    body: Body.Head,
                     config: Config,
                     order: 3000,
                     effect: Effect.Pos,
@@ -597,7 +597,7 @@ namespace AniMorph
         public enum Body
         {
             //Cheeks,
-            Neck,
+            Head,
             Shoulders,
             Chest,
             Breast,

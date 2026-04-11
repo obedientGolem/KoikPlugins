@@ -20,7 +20,8 @@ namespace AniMorph
         // --- Cheeks ---
         //private const string Cheeks  = "cf_J_CheekUpBase";
 
-        // --- Neck ---
+        // --- Head ---
+        private const string Head    = "cf_s_head";
         private const string Neck    = "cf_s_neck";
 
         // --- Chest ---
@@ -70,236 +71,192 @@ namespace AniMorph
 
         private readonly ChaControl _chara;
 
-        private readonly Dictionary<string, BoneData> _mainDic = new(StringComparer.Ordinal);
+        //private readonly Dictionary<string, BoneData> _mainDic = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, MotionModifier> _mainDic = new(StringComparer.Ordinal);
 
         private readonly List<string> _effectsToReturn = [];
         private readonly List<string> _effectsToUpdate = [];
         private static readonly BaseConfig[] _soloInitList =
             [
-                new (
-                    name:           Thigh1R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(OneThird, 1f, 1f + TwoThirds),
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Thigh2R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(0.25f, TwoThirds, 1f),
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Thigh3R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(0f, OneThird, OneThird),
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-
-                new (
-                    name:           Thigh1L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(OneThird, 1f, 1f + TwoThirds),
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Thigh2L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(0.25f, TwoThirds, 1f),
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Thigh3L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(0f, OneThird, OneThird),
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           ShldrL,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
-                    posNegativeApp: new Vector3(OneThird, TwoThirds, 1f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one,
-                    posFactor:      TwoThirds
-                    ),
-                new (
-                    name:           ShldrR,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
-                    posNegativeApp: new Vector3(OneThird, TwoThirds, 1f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one,
-                    posFactor:      TwoThirds
-                    ),
-                new (
-                    name:           Arm1L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f + OneThird, OneThird, 1f),
-                    posNegativeApp: new Vector3(TwoThirds, TwoThirds, OneThird),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Arm1R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f + OneThird, OneThird, 1f),
-                    posNegativeApp: new Vector3(TwoThirds, TwoThirds, OneThird),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Arm2L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(TwoThirds, 2f, 1f),
-                    posNegativeApp: new Vector3(1f, 1f, OneThird),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Arm2R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(TwoThirds, 2f, 1f),
-                    posNegativeApp: new Vector3(1f, 1f, OneThird),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-
-
-
-
-
-
-                new (
-                    name:           Arm3L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f + OneThird, OneThird, TwoThirds),
-                    posNegativeApp: new Vector3(OneThird, OneThird, OneThird),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Arm3R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f + OneThird, OneThird, TwoThirds),
-                    posNegativeApp: new Vector3(OneThird, OneThird, OneThird),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-
-
-
-
-
-
-                new (
-                    name:           FArm1L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(OneThird, 0.5f, OneThird),
-                    posNegativeApp: new Vector3(TwoThirds, 0.5f, TwoThirds),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           FArm1R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(OneThird, 0.5f, OneThird),
-                    posNegativeApp: new Vector3(TwoThirds, 0.5f, TwoThirds),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           FArm2L,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f, 1f, 1f),
-                    posNegativeApp: new Vector3(1f, 1f, 1f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           FArm2R,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f, 1f, 1f),
-                    posNegativeApp: new Vector3(1f, 1f, 1f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-
-
-
-
-
-
-
-
-                new (
-                    name:           Waist1,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f, 1f, 1f),
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Neck,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f, 1f, 1f),
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                //new (
-                //    name:           Cheeks,
-                //    allowedEffects: Effect.DevAnything,
-                //    posApplication: new Vector3(1f, 1f, 1f),
-                //    posPositiveApp: new Vector3(1f, 1f, 1f),
-                //    posNegativeApp: Vector3.one,
-                //    rotApplication: Vector3.one,
-                //    sclApplication: Vector3.one
-                //    ),
-
-
-
-            //Kokan,
-            //Waist01,
-            //Waist02,
+            new (
+                name:           Thigh1R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(OneThird, 1f, 1f + TwoThirds),
+                posPositiveApp: Vector3.one,
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Thigh2R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(0.25f, TwoThirds, 1f),
+                posPositiveApp: Vector3.one,
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Thigh3R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(0f, OneThird, OneThird),
+                posPositiveApp: Vector3.one,
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            
+            new (
+                name:           Thigh1L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(OneThird, 1f, 1f + TwoThirds),
+                posPositiveApp: Vector3.one,
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Thigh2L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(0.25f, TwoThirds, 1f),
+                posPositiveApp: Vector3.one,
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Thigh3L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(0f, OneThird, OneThird),
+                posPositiveApp: Vector3.one,
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           ShldrL,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
+                posNegativeApp: new Vector3(OneThird, TwoThirds, 1f),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one,
+                posFactor:      TwoThirds
+                ),
+            new (
+                name:          ShldrR,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
+                posNegativeApp: new Vector3(OneThird, TwoThirds, 1f),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one,
+                posFactor:      TwoThirds
+                ),
+            new (
+                name:           Arm1L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(1f + OneThird, OneThird, 1f),
+                posNegativeApp: new Vector3(TwoThirds, TwoThirds, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Arm1R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(1f + OneThird, OneThird, 1f),
+                posNegativeApp: new Vector3(TwoThirds, TwoThirds, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Arm2L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(TwoThirds, 2f, 1f),
+                posNegativeApp: new Vector3(1f, 1f, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Arm2R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(TwoThirds, 2f, 1f),
+                posNegativeApp: new Vector3(1f, 1f, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Arm3L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(1f + OneThird, OneThird, TwoThirds),
+                posNegativeApp: new Vector3(OneThird, OneThird, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Arm3R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(1f + OneThird, OneThird, TwoThirds),
+                posNegativeApp: new Vector3(OneThird, OneThird, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           FArm1L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(OneThird, 0.5f, OneThird),
+                posNegativeApp: new Vector3(TwoThirds, 0.5f, TwoThirds),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           FArm1R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(OneThird, 0.5f, OneThird),
+                posNegativeApp: new Vector3(TwoThirds, 0.5f, TwoThirds),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           FArm2L,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(TwoThirds, OneThird, OneThird),
+                posNegativeApp: new Vector3(1f, OneThird, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           FArm2R,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(TwoThirds, OneThird, OneThird),
+                posNegativeApp: new Vector3(1f, OneThird, OneThird),
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
+            new (
+                name:           Waist1,
+                allowedEffects: Effect.DevAnything,
+                posApplication: new Vector3(1f, 1f, 1f),
+                posPositiveApp: new Vector3(1f, 1f, 1f),
+                posNegativeApp: Vector3.one,
+                rotApplication: Vector3.one,
+                sclApplication: Vector3.one
+                ),
             ];
 
         private readonly Dictionary<BaseConfig, BaseConfig[]> _masterSlaveInitDic = new()
         {
             {
-                // Master
                 new (
                     name:           Bust,
                     allowedEffects: Effect.None,
@@ -309,33 +266,30 @@ namespace AniMorph
                     rotApplication: new Vector3(0f, 0f, 1f),
                     sclApplication: Vector3.one
                     ),
-                // Slaves
-            [
-
-                new (
-                    name:           Bust1L,
-                    allowedEffects: Effect.DevAnything,
-                    inheritEffects: Effect.Pos,
-                    posApplication: Vector3.one,
-                    posPositiveApp: new Vector3(TwoThirds, 1f, 1f),
-                    posNegativeApp: new Vector3(1f, 1f, 0f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Bust1R,
-                    allowedEffects: Effect.DevAnything,
-                    inheritEffects: Effect.Pos,
-                    posApplication: Vector3.one,
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-            ] },
-
+                    [
+                        new (
+                            name:           Bust1L,
+                            allowedEffects: Effect.DevAnything,
+                            inheritEffects: Effect.Pos,
+                            posApplication: Vector3.one,                
+                            posPositiveApp: new Vector3(TwoThirds, 1f, 1f),
+                            posNegativeApp: new Vector3(1f, 1f, 0f),
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                        new (
+                            name:           Bust1R,
+                            allowedEffects: Effect.DevAnything,
+                            inheritEffects: Effect.Pos,
+                            posApplication: Vector3.one,
+                            posPositiveApp: Vector3.one,
+                            posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                    ] 
+            },
             {
-                // Master
                 new (
                     name:           Waist2,
                     allowedEffects: Effect.Pos | Effect.Rot,
@@ -345,49 +299,47 @@ namespace AniMorph
                     rotApplication: Vector3.one,
                     sclApplication: Vector3.one
                     ),
-                // Slaves
-            [
-                new (
-                    name:           ButtL,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: Vector3.one,
-                    posPositiveApp: new Vector3(OneThird, TwoThirds, OneThird),
-                    posNegativeApp: new Vector3(1f, 1f + OneThird, 1f),
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           ButtR,
-                    allowedEffects: Effect.DevAnything,
-                    posApplication: new Vector3(1f, TwoThirds, OneThird),
-                    posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Kokan,
-                    allowedEffects: Effect.None,
-                    inheritEffects: Effect.Pos,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f, 1f, 1f),
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-                new (
-                    name:           Ana,
-                    allowedEffects: Effect.None,
-                    inheritEffects: Effect.Pos,
-                    posApplication: new Vector3(1f, 1f, 1f),
-                    posPositiveApp: new Vector3(1f, 1f, 1f),
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-
-            ] },
-
+                    [
+                        new (
+                            name:           ButtL,
+                            allowedEffects: Effect.DevAnything,
+                            posApplication: Vector3.one,
+                            posPositiveApp: new Vector3(OneThird, TwoThirds, OneThird),
+                            posNegativeApp: new Vector3(1f, 1f + OneThird, 1f),
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                        new (
+                            name:           ButtR,
+                            allowedEffects: Effect.DevAnything,
+                            posApplication: new Vector3(1f, TwoThirds, OneThird),
+                            posPositiveApp: new Vector3(OneThird, 1f + OneThird, 1f),
+                            posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                        new (
+                            name:           Kokan,
+                            allowedEffects: Effect.None,
+                            inheritEffects: Effect.Pos,
+                            posApplication: new Vector3(1f, 1f, 1f),
+                            posPositiveApp: new Vector3(1f, 1f, 1f),
+                            posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                        new (
+                            name:           Ana,
+                            allowedEffects: Effect.None,
+                            inheritEffects: Effect.Pos,
+                            posApplication: new Vector3(1f, 1f, 1f),
+                            posPositiveApp: new Vector3(1f, 1f, 1f),
+                            posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                    ] 
+            },
             {
                 // Master
                 new (
@@ -399,10 +351,33 @@ namespace AniMorph
                     rotApplication: Vector3.one,
                     sclApplication: Vector3.one
                     ),
-                // Slaves
-            [
+                    [
+                        new (
+                            name:           Spine3,
+                            allowedEffects: Effect.None,
+                            inheritEffects: Effect.Pos,
+                            posApplication: Vector3.one,
+                            posPositiveApp: new Vector3(1f, OneThird, 1f),
+                            posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                        new (
+                            name:           Spine1,
+                            allowedEffects: Effect.None,
+                            inheritEffects: Effect.Pos,
+                            posApplication: Vector3.one,
+                            posPositiveApp: new Vector3(1f, 1f, 1f),
+                            posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                    ] 
+            },
+            {
+                
                 new (
-                    name:           Spine1,
+                    name:           Neck,
                     allowedEffects: Effect.None,
                     inheritEffects: Effect.Pos,
                     posApplication: Vector3.one,
@@ -411,18 +386,19 @@ namespace AniMorph
                     rotApplication: Vector3.one,
                     sclApplication: Vector3.one
                     ),
-                new (
-                    name:           Spine3,
-                    allowedEffects: Effect.None,
-                    inheritEffects: Effect.Pos,
-                    posApplication: Vector3.one,
-                    posPositiveApp: Vector3.one,
-                    posNegativeApp: Vector3.one,
-                    rotApplication: Vector3.one,
-                    sclApplication: Vector3.one
-                    ),
-            ] },
-
+                    [
+                        new (
+                            name:           Head,
+                            allowedEffects: Effect.Pos | Effect.Rot,
+                            inheritEffects: Effect.Pos,
+                            posApplication: Vector3.one,
+                            posPositiveApp: Vector3.one,
+                            posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                    ]
+            }
         };
 
         private static readonly List<string> _bonesWithAnimRot =
@@ -443,6 +419,7 @@ namespace AniMorph
             // I think it's not.
             // Animated rotation
             // Kokan,
+           // Head,
        ];
 
         // BodyPart + boneNames-defaultMass pairs
@@ -672,7 +649,7 @@ namespace AniMorph
 
             foreach (var name in _effectsToUpdate)
             {
-                _mainDic[name].motion.OnUpdate();
+                _mainDic[name].OnUpdate();
             }
 
         }
@@ -784,7 +761,7 @@ namespace AniMorph
         {
             //Cheeks => Body.Cheeks,
 
-            Neck => Body.Neck,
+            Neck or Head => Body.Head,
 
             Spine1 or Spine2 or Spine3 => Body.Chest,
 
@@ -826,42 +803,6 @@ namespace AniMorph
 
 
         #region Types
-
-
-        //internal enum BoneName
-        //{
-        //    // --- Chest ---
-        //    Spine03,
-        //    Spine02,
-        //    Spine01,
-
-        //    // --- Shoulders ---
-        //    ShldrL,
-        //    ShldrR,
-
-        //    // --- Breast ---
-        //    Bust,
-        //    Bust1L,
-        //    Bust1R,
-
-        //    // --- Pelvis ---
-        //    Waist01,
-        //    Waist02,
-        //    Kokan,
-        //    ButtL,
-        //    ButtR,
-
-        //    // --- Thighs ---
-        //    Thigh1R,
-        //    Thigh2R,
-        //    Thigh3R,
-
-        //    Thigh1L,
-        //    Thigh2L,
-        //    Thigh3L,
-        //}
-
-        //internal enum Bone
 
 
         private readonly struct BodyPartMeasurement(string[] bonesToMeasure, float defaultMass)
