@@ -337,6 +337,11 @@ namespace AniMorph
             }
         }
 
+        public void DevStart()
+        {
+            HandleEnable();
+        }
+
         protected override void OnCardBeingSaved(GameMode currentGameMode)
         {
 

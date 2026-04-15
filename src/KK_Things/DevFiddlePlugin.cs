@@ -99,5 +99,12 @@ namespace KK_Things
             _dirLight.color = new Color(0.75f, 0.75f, 0.75f);
         }
 
+        private void Update()
+        {
+            if (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.S))
+            {
+                Debug.Log("Ctrl + S pressed");
+            }
+        }
     }
 }

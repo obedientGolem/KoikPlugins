@@ -8,7 +8,7 @@ using KKAPI.Chara;
 namespace IKPlugin
 {
     [BepInPlugin(GUID, Name, Version)]
-    internal class IKPlugin : BaseUnityPlugin
+    internal class IKNoisePlugin : BaseUnityPlugin
     {
         public const string GUID = "koik.ikplugin";
         public const string Name = "IKPlugin" +

@@ -243,15 +243,6 @@ namespace AniMorph
                 rotApplication: Vector3.one,
                 sclApplication: Vector3.one
                 ),
-            new (
-                name:           Waist1,
-                allowedEffects: Effect.DevAnything,
-                posApplication: new Vector3(1f, 1f, 1f),
-                posPositiveApp: new Vector3(1f, 1f, 1f),
-                posNegativeApp: Vector3.one,
-                rotApplication: Vector3.one,
-                sclApplication: Vector3.one
-                ),
             ];
 
         private readonly Dictionary<BaseConfig, BaseConfig[]> _masterSlaveInitDic = new()
@@ -277,16 +268,16 @@ namespace AniMorph
                             rotApplication: Vector3.one,
                             sclApplication: Vector3.one
                             ),
-                        new (
-                            name:           Bust1R,
-                            allowedEffects: Effect.DevAnything,
-                            inheritEffects: Effect.Pos,
-                            posApplication: Vector3.one,
-                            posPositiveApp: Vector3.one,
-                            posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
-                            rotApplication: Vector3.one,
-                            sclApplication: Vector3.one
-                            ),
+                        //new (
+                        //    name:           Bust1R,
+                        //    allowedEffects: Effect.DevAnything,
+                        //    inheritEffects: Effect.Pos,
+                        //    posApplication: Vector3.one,
+                        //    posPositiveApp: Vector3.one,
+                        //    posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
+                        //    rotApplication: Vector3.one,
+                        //    sclApplication: Vector3.one
+                        //    ),
                     ] 
             },
             {
@@ -362,16 +353,6 @@ namespace AniMorph
                             rotApplication: Vector3.one,
                             sclApplication: Vector3.one
                             ),
-                        new (
-                            name:           Spine1,
-                            allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos,
-                            posApplication: Vector3.one,
-                            posPositiveApp: new Vector3(1f, 1f, 1f),
-                            posNegativeApp: Vector3.one,
-                            rotApplication: Vector3.one,
-                            sclApplication: Vector3.one
-                            ),
                     ] 
             },
             {
@@ -394,6 +375,30 @@ namespace AniMorph
                             posApplication: Vector3.one,
                             posPositiveApp: Vector3.one,
                             posNegativeApp: Vector3.one,
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
+                    ]
+            },
+            {
+                
+                new (
+                    name:           Spine1,
+                    allowedEffects: Effect.DevAnything,
+                    posApplication: Vector3.one,
+                    posPositiveApp: new Vector3(1f, TwoThirds, 1f),
+                    posNegativeApp: Vector3.one,
+                    rotApplication: Vector3.one,
+                    sclApplication: Vector3.one
+                    ),
+                    [
+                        new (
+                            name:           Waist1,
+                            allowedEffects: Effect.None,
+                            inheritEffects: Effect.Pos,
+                            posApplication: new Vector3(1f, 1f, 1f),
+                            posPositiveApp: new Vector3(1f, 1f, 1f),
+                            posNegativeApp: new Vector3(1f, 1f, TwoThirds),
                             rotApplication: Vector3.one,
                             sclApplication: Vector3.one
                             ),
@@ -583,9 +588,7 @@ namespace AniMorph
 
                 var isAnimRot = _bonesWithAnimRot.Contains(cfg.name);
 
-                var boneModifierData = new BoneModifierData();
-
-                _mainDic.Add(cfg.name, new BoneData(new MotionModifier(cfg,bone, centerBone, boneModifierData, isAnimRot), boneModifierData));
+                _mainDic.Add(cfg.name, new MotionModifier(cfg,bone, centerBone, isAnimRot));
             }
 
             void AddToDicTandem(BaseConfig cfgMaster, BaseConfig[] cfgSlaves, Transform tformMaster, Transform[] tformSlaves)
@@ -609,19 +612,15 @@ namespace AniMorph
                 {
                     var isAnimRot = _bonesWithAnimRot.Contains(cfgSlaves[i].name);
 
-                    boneModifierDataSlaves[i] = new();
+                    slaveModifiers[i] = new MotionModifierSlave(cfgSlaves[i], tformSlaves[i], tformMaster, isAnimRot);
 
-                    slaveModifiers[i] = new MotionModifierSlave(cfgSlaves[i], tformSlaves[i], tformMaster, boneModifierDataSlaves[i], isAnimRot);
-
-                    _mainDic.Add(cfgSlaves[i].name, new BoneData(slaveModifiers[i], boneModifierDataSlaves[i]));
+                    _mainDic.Add(cfgSlaves[i].name, slaveModifiers[i]);
                 }
 
                 // Add master with slaves
                 var isAnimatedBone = _bonesWithAnimRot.Contains(cfgMaster.name);
 
-                var masterModifierData = new BoneModifierData();
-
-                _mainDic.Add(cfgMaster.name, new BoneData(new MotionModifierMaster(cfgMaster, tformMaster, slaveModifiers, masterModifierData, isAnimatedBone), masterModifierData));
+                _mainDic.Add(cfgMaster.name, new MotionModifierMaster(cfgMaster, tformMaster, slaveModifiers, isAnimatedBone));
 
             }
             bool GetCenteredBone(string boneName, out string centeredBoneName)
@@ -693,14 +692,14 @@ namespace AniMorph
             {
                 if (isNewAnimLoop)
                 {
-                    var motion = _mainDic[key].motion;
+                    var motion = _mainDic[key];
 
                     motion.OnAnimationLoopStart(animLoopFrameCountInv, dt);
                     motion.UpdateModifier(dt, dtInv, animLenInv);
                 }
                 else
                 {
-                    _mainDic[key].motion.UpdateModifier(dt, dtInv, animLenInv);
+                    _mainDic[key].UpdateModifier(dt, dtInv, animLenInv);
                 }
             }
         }
@@ -722,7 +721,7 @@ namespace AniMorph
                 UpdateModifiers();
             }
 
-            return _mainDic[bone].modifier;
+            return _mainDic[bone].GetBoneModifierData;
         }
 
 
@@ -734,11 +733,11 @@ namespace AniMorph
             foreach (var keyValuePair in _mainDic)
             {
                 var bodyPart = ConvertBoneToBody(keyValuePair.Key);
-                keyValuePair.Value.motion.OnSettingChanged(bodyPart, _chara);
+                keyValuePair.Value.OnSettingChanged(bodyPart, _chara);
 
                 var mass = _bodyPartSizeDic.TryGetValue(bodyPart, out var value) ? value : 1f;
 
-                keyValuePair.Value.motion.SetMass(mass);
+                keyValuePair.Value.SetMass(mass);
             }
 
             var deltaTimeSettingValue = AniMorphPlugin.FilterDeltaTime.Value;
@@ -753,7 +752,7 @@ namespace AniMorph
             foreach (var keyValuePair in _mainDic)
             {
                 var bodyPart = ConvertBoneToBody(keyValuePair.Key);
-                keyValuePair.Value.motion.OnSetClothesState(bodyPart, chara);
+                keyValuePair.Value.OnSetClothesState(bodyPart, chara);
             }
         }
 
@@ -763,7 +762,7 @@ namespace AniMorph
 
             Neck or Head => Body.Head,
 
-            Spine1 or Spine2 or Spine3 => Body.Chest,
+            Spine2 or Spine3 => Body.Chest,
 
             ShldrL or Arm1L or Arm2L or Arm3L or FArm1L or FArm2L => Body.Shoulders,
             ShldrR or Arm1R or Arm2R or Arm3R or FArm1R or FArm2R => Body.Shoulders,
@@ -775,16 +774,16 @@ namespace AniMorph
             Thigh1L or Thigh2L or Thigh3L => Body.Thighs,
             Thigh1R or Thigh2R or Thigh3R => Body.Thighs,
 
-            Waist1 => Body.Tummy,
+            Waist1 or Spine1 => Body.Tummy,
 
             _ => throw new NotImplementedException(name)
         };
 
         internal void OnChangeAnimator()
         {
-            foreach (var entry in _effectsToUpdate)
+            foreach (var name in _effectsToUpdate)
             {
-                _mainDic[entry].motion.OnChangeAnimator();
+                _mainDic[name].OnChangeAnimator();
             }
         }
 
@@ -797,7 +796,7 @@ namespace AniMorph
         {
             foreach (var value in _mainDic.Values)
             {
-                value.modifier.Clear();
+                value.GetBoneModifierData.Clear();
             }
         }
 

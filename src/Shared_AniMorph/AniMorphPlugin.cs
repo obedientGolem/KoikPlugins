@@ -17,18 +17,20 @@ namespace AniMorph
     [BepInPlugin(GUID, Name, Version)]
     [BepInProcess(KoikatuAPI.GameProcessName)]
     [BepInProcess(KoikatuAPI.StudioProcessName)]
-#if !DEBUG
     [BepInDependency(KKABMX_Core.GUID, KKABMX_Core.Version)]
-#endif
 
 #if KK
     [BepInProcess(KoikatuAPI.GameProcessNameSteam)]
 #endif
     internal class AniMorphPlugin : BaseUnityPlugin
     {
-        public const string GUID = "AniMorph.ABMX";
-        public const string Name = "Anisotropic Morph";
-        public const string Version = "0.25";
+        public const string GUID = "Koik.AnisotropicMorph";
+        public const string Name = "AnisotropicMorph" +
+#if DEBUG
+            " (DEBUG)"
+#endif
+            ;
+        public const string Version = "0.9";
         internal new static ManualLogSource Logger;
 
         public static ConfigEntry<Gender> Enable;
@@ -88,7 +90,6 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
@@ -110,13 +111,10 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
-                    sclAccelerationFactor: 0.35f,
-                    sclDecelerationFactor: 0.5f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.4f,
-                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
@@ -144,7 +142,6 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.Panty,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
@@ -168,13 +165,10 @@ namespace AniMorph
                     //AngularApplicationMaster: (Axis)0,
                     //AngularApplicationSlave: Axis.X | Axis.Y | Axis.Z,
 
-                    sclAccelerationFactor: 0.15f,
-                    sclDecelerationFactor: 0.3f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.4f,
-                    sclUnevenDistribution: new Vector3(0.5f, 0.5f, 0.5f),
+                    sclStr: 30f,
+                    sclRate: 10f,
+                    sclDistortion: 0.4f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: -3f,
                     tetherFrequency: 3f,
@@ -203,7 +197,6 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.None,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
@@ -225,13 +218,10 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
-                    sclAccelerationFactor: 0.35f,
-                    sclDecelerationFactor: 0.5f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.4f,
-                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
@@ -259,7 +249,6 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.None,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
@@ -281,13 +270,10 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
-                    sclAccelerationFactor: 0.35f,
-                    sclDecelerationFactor: 0.5f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.4f,
-                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
@@ -310,19 +296,18 @@ namespace AniMorph
                     body: Body.Tummy,
                     config: Config,
                     order: 6000,
-                    effect: Effect.Pos,
+                    effect: Effect.Pos | Effect.Rot,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.None,
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudePos: 0.45f,
+                    noiseAmplitudeRot: 5f,
                     noiseAmplitudeScl: 0.15f,
 
 
                     posSpring: 21f,
-                    posDamping: 0.2f,
+                    posDamping: 0.5f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -337,13 +322,10 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
-                    sclAccelerationFactor: 0.35f,
-                    sclDecelerationFactor: 0.5f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.4f,
-                    sclUnevenDistribution: new Vector3(0.6f, 0.5f, 0.4f),
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
@@ -371,7 +353,6 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.075f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
@@ -395,13 +376,10 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
                     //AngularApplicationSlave: Axis.Y,
 
-                    sclAccelerationFactor: 40f,
-                    sclDecelerationFactor: 0.5f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.5f,
-                    sclUnevenDistribution: new Vector3(0.4f, 0.5f, 0.6f),
+                    sclStr: 40f,
+                    sclRate: 8f,
+                    sclDistortion: 0.5f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: 0.5f,
                     tetherFrequency: 3f,
@@ -488,7 +466,6 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
                     noiseAmplitudePos: 0.075f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
@@ -512,13 +489,10 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
                     //AngularApplicationSlave: Axis.Y,
 
-                    sclAccelerationFactor: 40f,
-                    sclDecelerationFactor: 0.5f,
-                    sclLerpSpeed: 8f,
-                    sclMaxDistortion: 0.5f,
-                    sclUnevenDistribution: new Vector3(0.4f, 0.5f, 0.6f),
+                    sclStr: 40f,
+                    sclRate: 8f,
+                    sclDistortion: 0.5f,
                     sclPreserveVolume: true,
-                    sclDumbAcceleration: true,
 
                     tetherMultiplier: 0.5f,
                     tetherFrequency: 3f,
@@ -651,15 +625,6 @@ namespace AniMorph
 #endif
         }
 
-        [Flags]
-        public enum NoiseAffliction
-        { 
-            None = 0,
-            Pos = 1 << 0,
-            Rot = 1 << 1,
-            Scl = 1 << 2,
-        }
-
         public class ConfigType
         {
             public ConfigType(
@@ -672,7 +637,6 @@ namespace AniMorph
                 ClothesKind disableWhenClothes,
 
                 int noiseOctaves,
-                NoiseAffliction noiseAffliction,
                 float noiseAmplitudePos,
                 float noiseAmplitudeRot,
                 float noiseAmplitudeScl,
@@ -685,25 +649,21 @@ namespace AniMorph
                 float posFreezeLen,
                 float posBleedStr,
                 float posBleedLen,
-                //float posGravity,
-                //Vector3 LinearLimitPositive,
-                //Vector3 LinearLimitNegative,
+
                 float rotSpring,
                 float rotDamping,
                 float rotRate,
-                //Axis AngularApplicationMaster,
-                //Axis AngularApplicationSlave,
-                float sclAccelerationFactor,
-                float sclDecelerationFactor,
-                float sclLerpSpeed,
-                float sclMaxDistortion,
-                Vector3 sclUnevenDistribution,
+
+                float sclStr,
+                float sclRate,
+                float sclDistortion,
                 bool sclPreserveVolume,
-                bool sclDumbAcceleration,
+
                 float tetherMultiplier,
                 float tetherFrequency,
                 float tetherDamping,
                 float tetherMaxAngle,
+
                 Vector3 gravityUpUp,
                 Vector3 gravityUpMid,
                 Vector3 gravityUpDown,
@@ -742,11 +702,10 @@ namespace AniMorph
                 //ExtraChaos = config.Bind(name, "AdjustForSize", adjustForSize,
                 //    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
 
+
+
                 NoiseOctaves = config.Bind(name, "NoiseOctaves", noiseOctaves,
                     new ConfigDescription("", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { Order = order - 7 }));
-
-                NoiseAffliction = config.Bind(name, "NoiseAffliction", noiseAffliction,
-                    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 8 }));
 
                 NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", noiseAmplitudePos,
                     new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 12, ShowRangeAsPercent = false }));
@@ -757,11 +716,14 @@ namespace AniMorph
                 NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", noiseAmplitudeScl,
                     new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 14, ShowRangeAsPercent = false }));
 
-                PosSpring = config.Bind(name, "PosSpring", posSpring,
-                    new ConfigDescription("Strength of positional lag\nBigger value – more effort put out", null, new ConfigurationManagerAttributes { Order = order - 15 }));
 
-                PosDamping = config.Bind(name, "PosDamping", posDamping,
-                    new ConfigDescription("Strength of negation of positional lag\nShould be smaller then LinearStrength for any effect", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
+
+                PosSpring = config.Bind(name, "Position Spring", posSpring,
+                    new ConfigDescription("Strength of the positional lag.",
+                    new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
+
+                PosDamping = config.Bind(name, "Position Damping", posDamping,
+                    new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
                 PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
                     new ConfigDescription("Shock introduces huge velocity impacts that quickly bleed out.\n" +
@@ -784,53 +746,37 @@ namespace AniMorph
                 PosBleedLen = config.Bind(name, "PosBleedLen", posBleedLen,
                     new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 26, ShowRangeAsPercent = false }));
 
-                //PosGravity = config.Bind(name, "PosGravity", posGravity,
-                //    new ConfigDescription("Strength of gravity for positional lag\nMost of the time looks better at 0 (disabled)", new AcceptableValueRange<float>(-1f, 1f), new ConfigurationManagerAttributes { Order = order - 25 }));
 
-                //// TODO
-                //BreastLinearMass = config.Bind(name, "LinearMass", 1f, new ConfigDescription("Not implemented", null, new ConfigurationManagerAttributes { Order = 79 }));
 
-                //LinearLimitPositive = config.Bind(name, "LinearLimitPositive", defaultLinearLimitPositive,
-                //    new ConfigDescription("Axial limitation of movements in positive local space\n0..1..1+ to nullify/set default/amplify axis in positive local space", null, new ConfigurationManagerAttributes { Order = order - 30 }));
+                RotSpring = config.Bind(name, "Rotation Spring", rotSpring,
+                    new ConfigDescription("Strength of the rotational lag.",
+                    new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
 
-                //LinearLimitNegative = config.Bind(name, "LinearLimitNegative", defaultLinearLimitNegative,
-                //    new ConfigDescription("Axial limitation of movements in negative local space\n0..1..1+ to nullify/set default/amplify axis in negative local space", null, new ConfigurationManagerAttributes { Order = order - 35 }));
+                RotDamping = config.Bind(name, "Rotation Damping", rotDamping,
+                    new ConfigDescription("Strength of negation of the rotational lag.", 
+                    new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false  }));
 
-                RotSpring = config.Bind(name, "RotSpring", rotSpring,
-                    new ConfigDescription("Strength of rotational lag", null, new ConfigurationManagerAttributes { Order = order - 40 }));
+                RotRate = config.Bind(name, "Rotation Interpolation Speed", rotRate,
+                    new ConfigDescription("How fast the rotation offset changes.", 
+                    new AcceptableValueRange<float>(0f, 10f), new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
 
-                RotDamping = config.Bind(name, "RotDamping", rotDamping,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false  }));
 
-                RotRate = config.Bind(name, "RotRate", rotRate,
-                    new ConfigDescription("Rate at which rotation is applied, bigger value – faster application.", new AcceptableValueRange<float>(0f, 20f), new ConfigurationManagerAttributes { Order = order - 46, ShowRangeAsPercent = false }));
 
-                //AngularApplicationMaster = config.Bind(name, "AngularApplyToRoot", defaultAngularApplicationMaster,
-                //    new ConfigDescription("Which axes or rotational lag should be applied to the root bone of the breast", null, new ConfigurationManagerAttributes { Order = order - 55 }));
+                SclStr = config.Bind(name, "Scale Strength", sclStr,
+                    new ConfigDescription("How much the velocity influences the scale.", 
+                    new AcceptableValueRange<float>(0f, 50f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
 
-                //AngularApplicationSlave = config.Bind(name, "AngularApplyToBone", defaultAngularApplicationSlave,
-                //    new ConfigDescription("Which axes or rotational lag should be applied to the breast bones", null, new ConfigurationManagerAttributes { Order = order - 60 }));
+                SclDistortion = config.Bind(name, "Scale Distortion", sclDistortion,
+                    new ConfigDescription("How much the scale can change, 1 ± this value.",
+                    new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 70, ShowRangeAsPercent = false }));
 
-                ScaleAccelerationFactor = config.Bind(name, "ScaleAccelerationFactor", sclAccelerationFactor,
-                    new ConfigDescription("Strength of deformation during acceleration", null, new ConfigurationManagerAttributes { Order = order - 65 }));
+                SclRate = config.Bind(name, "Scale Interpolation Speed", sclRate,
+                    new ConfigDescription("How fast the scale offset changes.", 
+                    new AcceptableValueRange<float>(0f, 20f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
 
-                ScaleDecelerationFactor = config.Bind(name, "ScaleDecelerationFactor", sclDecelerationFactor,
-                    new ConfigDescription("Strength of deformation during deceleration", null, new ConfigurationManagerAttributes { Order = order - 65 }));
+                SclPreserveVolume = config.Bind(name, "Scale Preserve Volume", sclPreserveVolume,
+                    new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));
 
-                ScaleLerpSpeed = config.Bind(name, "ScaleLerpSpeed", sclLerpSpeed,
-                    new ConfigDescription("Speed of scale change\nBigger value – more rapid, less smooth change", null, new ConfigurationManagerAttributes { Order = order - 70 }));
-
-                ScaleMaxDistortion = config.Bind(name, "ScaleMaxDistortion", sclMaxDistortion,
-                    new ConfigDescription("Scale deformation won't exceed scale of 1 +- this value", null, new ConfigurationManagerAttributes { Order = order - 75 }));
-
-                ScaleUnevenDistribution = config.Bind(name, "ScaleUnevenDistribution", sclUnevenDistribution,
-                    new ConfigDescription("Preferential treatment of scale axes\nDefault value 0.5, can be used with no consideration towards balance", null, new ConfigurationManagerAttributes { Order = order - 80 }));
-
-                ScalePreserveVolume = config.Bind(name, "ScalePreserveVolume", sclPreserveVolume,
-                    new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 85 }));
-
-                ScaleDumbAcceleration = config.Bind(name, "ScaleDumbAcceleration", sclDumbAcceleration,
-                    new ConfigDescription("Dumb looks better anyway", null, new ConfigurationManagerAttributes { Order = order - 90 }));
 
 
                 TetheringMultiplier = config.Bind(name, "TetheringMultiplier", tetherMultiplier,
@@ -844,6 +790,7 @@ namespace AniMorph
 
                 TetheringMaxAngle = config.Bind(name, "TetheringMaxAngle", tetherMaxAngle,
                     new ConfigDescription("Tethering won't exceed this value in degrees ", null, new ConfigurationManagerAttributes { Order = order - 110 }));
+
 
 
                 // Not a slightest clue how to explain to users what the hell dots(cosines) do together with transform's directions.
@@ -864,10 +811,10 @@ namespace AniMorph
             public ConfigEntry<ClothesKind> DisableWhenClothes;
 
             public ConfigEntry<int> NoiseOctaves;
-            public ConfigEntry<NoiseAffliction> NoiseAffliction;
             public ConfigEntry<float> NoiseAmplitudePos;
             public ConfigEntry<float> NoiseAmplitudeRot;
             public ConfigEntry<float> NoiseAmplitudeScl;
+
 
             //public ConfigEntry<float> PosGravity;
             public ConfigEntry<float> PosSpring;
@@ -882,24 +829,25 @@ namespace AniMorph
             //public ConfigEntry<Vector3> LinearLimitPositive;
             //public ConfigEntry<Vector3> LinearLimitNegative;
 
+
             public ConfigEntry<float> RotSpring;
             public ConfigEntry<float> RotDamping;
             public ConfigEntry<float> RotRate;
             //public ConfigEntry<Axis> AngularApplicationMaster;
             //public ConfigEntry<Axis> AngularApplicationSlave;
 
-            public ConfigEntry<float> ScaleAccelerationFactor;
-            public ConfigEntry<float> ScaleDecelerationFactor;
-            public ConfigEntry<float> ScaleLerpSpeed;
-            public ConfigEntry<float> ScaleMaxDistortion;
-            public ConfigEntry<bool> ScalePreserveVolume;
-            public ConfigEntry<bool> ScaleDumbAcceleration;
-            public ConfigEntry<Vector3> ScaleUnevenDistribution;
+
+            public ConfigEntry<float> SclStr;
+            public ConfigEntry<float> SclRate;
+            public ConfigEntry<float> SclDistortion;
+            public ConfigEntry<bool> SclPreserveVolume;
+
 
             public ConfigEntry<float> TetheringMultiplier;
             public ConfigEntry<float> TetheringFrequency;
             public ConfigEntry<float> TetheringDamping;
             public ConfigEntry<float> TetheringMaxAngle;
+
 
             public ConfigEntry<Vector3> GravityUpUp;
             public ConfigEntry<Vector3> GravityUpMid;

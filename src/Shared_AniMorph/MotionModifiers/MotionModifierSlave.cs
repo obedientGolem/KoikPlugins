@@ -18,11 +18,10 @@ namespace AniMorph
         private readonly Transform _master;
 
         internal MotionModifierSlave(
-            BaseConfig cfg,
+            AniMorphEffector.BaseConfig cfg,
             Transform bone, 
             Transform master, 
-            KKABMX.Core.BoneModifierData boneModifierData, 
-            bool animatedBone) : base(cfg, bone, master, boneModifierData, animatedBone)
+            bool animatedBone) : base(cfg, bone, master, animatedBone)
         {
             _master = master;
             _inheritEffects = cfg.inheritEffects;
@@ -67,19 +66,20 @@ namespace AniMorph
 
             if ((cfg.effects & Effect.Rot) != 0)
                 rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+            else
+                // Required for correct application of local position.
+                curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
             if ((cfg.effects & Effect.Pos) != 0)
             {
                 posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, /*out var velocityLen,*/ out var accel);
 
-
                 if ((cfg.effects & Effect.Tether) != 0)
                     rotOffset += tether.GetTetheringOffset(velocity, dt);
 
-
                 if ((cfg.effects & Effect.Scl) != 0)
-                    sclOffset = GetScaleOffset(ref cfg, ref curr, ref prev, velocity, /*velocityLen,*/ dt, dtInv);
-
+                    sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, prev.cleanDeltaPos, dt);
+                    //sclOffset = GetScaleOffset(ref cfg, ref curr, ref prev, velocity, /*velocityLen,*/ dt, dtInv);
 
                 prev.velocity = velocity;
             }

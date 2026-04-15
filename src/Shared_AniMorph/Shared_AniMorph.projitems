@@ -12,7 +12,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)AniMorphPlugin.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AniMorphCharaController.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)BoneData.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)AniMorphEffector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Hooks.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MotionModifiers\Effects\Tethering.cs" />

@@ -81,6 +81,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Private", "Private", "{280D
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK_Things", "src\KK_Things\KK_Things.csproj", "{0AC84096-BF99-4568-BA82-04B545A7AF8D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IKNoise", "IKNoise", "{204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared.IKNoise", "src\Shared_IKNoise\Shared.IKNoise.shproj", "{5D0F1DF0-6E1F-4DF5-9BED-2AB09E9B978F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.IKNoise", "src\KKS_IKNoise\KKS.IKNoise.csproj", "{86374143-D83F-4A7C-B23B-07512C8972FC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LateSwordAiming", "LateSwordAiming", "{D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS_LateSwordAiming", "src\LateSwordAiming\KKS_LateSwordAiming.csproj", "{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK.IKNoise", "src\KK_IKNoise\KK.IKNoise.csproj", "{1DC4ECBD-3832-4430-96D2-D5A8E4795697}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared_LateSwordAiming", "src\Shared_LateSwordAiming\Shared_LateSwordAiming.shproj", "{D3E2BB7A-D0D6-4C7E-99AE-3C23902EEF25}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK_LateSwordAiming", "src\KK_LateSwordAiming\KK_LateSwordAiming.csproj", "{73012E53-D93B-4AB7-B9C8-07B60F489850}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -167,6 +183,22 @@ Global
 		{0AC84096-BF99-4568-BA82-04B545A7AF8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0AC84096-BF99-4568-BA82-04B545A7AF8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0AC84096-BF99-4568-BA82-04B545A7AF8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{86374143-D83F-4A7C-B23B-07512C8972FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{86374143-D83F-4A7C-B23B-07512C8972FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{86374143-D83F-4A7C-B23B-07512C8972FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{86374143-D83F-4A7C-B23B-07512C8972FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Release|Any CPU.Build.0 = Release|Any CPU
+		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -201,24 +233,34 @@ Global
 		{628082B9-26EA-4733-8477-4FCBA8EE65E6} = {72967B2C-1DAA-403D-8DF7-C7FD5BCC8FEF}
 		{D93DA3DC-1CA0-4630-948D-C2D957B29AA5} = {72967B2C-1DAA-403D-8DF7-C7FD5BCC8FEF}
 		{0AC84096-BF99-4568-BA82-04B545A7AF8D} = {280DEB6F-DC14-47F4-80C6-2EB08C26E53F}
+		{5D0F1DF0-6E1F-4DF5-9BED-2AB09E9B978F} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
+		{86374143-D83F-4A7C-B23B-07512C8972FC} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
+		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
+		{1DC4ECBD-3832-4430-96D2-D5A8E4795697} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
+		{D3E2BB7A-D0D6-4C7E-99AE-3C23902EEF25} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
+		{73012E53-D93B-4AB7-B9C8-07B60F489850} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F0CE8428-C023-43B1-9D5B-4B49E396736A}
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		src\Shared_IKNoise\Shared_IKNoise.projitems*{1dc4ecbd-3832-4430-96d2-d5a8e4795697}*SharedItemsImports = 4
 		src\Shared_Blink\Shared_Blink.projitems*{3a9b6b96-2e12-4eea-abff-a505aa96867b}*SharedItemsImports = 4
 		src\Shared_Kokyu\Shared_Kokyu.projitems*{3c6d456a-a60a-40a2-a85a-6b6c8585c58d}*SharedItemsImports = 4
 		src\Shared_MaleBreath\Shared_MaleBreath.projitems*{42bc06c2-e53b-4c97-9556-6057737298cb}*SharedItemsImports = 4
 		src\Shared_MaleBreath\Shared_MaleBreath.projitems*{4e9ca49f-145b-434d-a43b-a6bd26ba2e87}*SharedItemsImports = 13
 		src\Shared_SpeakSoftly\Shared_SpeakSoftly.projitems*{5c7d7879-a13d-4d11-8112-8788a6445988}*SharedItemsImports = 4
+		src\Shared_IKNoise\Shared_IKNoise.projitems*{5d0f1df0-6e1f-4df5-9bed-2ab09e9b978f}*SharedItemsImports = 13
 		src\Shared_AniMorph\Shared_AniMorph.projitems*{5f77bfa3-418c-4b13-9e77-31a6a3531b4b}*SharedItemsImports = 13
 		src\Shared_AnimFilter\Shared_AnimFilter.projitems*{626c49a9-90e2-4cb8-9bd1-a3c32820ea48}*SharedItemsImports = 4
-		src\Shared_IK_Plugin\Shared_IK_Plugin.projitems*{628082b9-26ea-4733-8477-4fcba8ee65e6}*SharedItemsImports = 4
 		src\Shared_SpeakSoftly\Shared_SpeakSoftly.projitems*{666a982d-41b8-4f6f-bd6e-92dfa4d1172f}*SharedItemsImports = 13
+		src\Shared_LateSwordAiming\Shared_LateSwordAiming.projitems*{681cebb0-dc6a-409a-a296-6ebded8bbb0b}*SharedItemsImports = 4
+		src\Shared_LateSwordAiming\Shared_LateSwordAiming.projitems*{73012e53-d93b-4ab7-b9c8-07b60f489850}*SharedItemsImports = 4
 		src\Shared_Blink\Shared_Blink.projitems*{7514a7bb-f7e8-4fe2-a4a5-2a1404449901}*SharedItemsImports = 13
 		src\Shared_AnimFilter\Shared_AnimFilter.projitems*{75585f98-75a2-4f09-948c-9b552ee5fbf9}*SharedItemsImports = 13
 		src\Shared_Kokyu\Shared_Kokyu.projitems*{779a2a16-025d-4c2c-8135-46298fbb9933}*SharedItemsImports = 4
 		src\Shared_SpeakSoftly\Shared_SpeakSoftly.projitems*{85350087-670a-46dd-bb50-a85a11d9f48b}*SharedItemsImports = 4
+		src\Shared_IKNoise\Shared_IKNoise.projitems*{86374143-d83f-4a7c-b23b-07512c8972fc}*SharedItemsImports = 4
 		src\Shared_BirbExGauge\Shared_BirbExGauge.projitems*{94302fe6-41ee-469e-9174-e690455cfa05}*SharedItemsImports = 4
 		src\Shared_IKAmplifier\Shared_IKAmplifier.projitems*{97b8de54-feae-4f8b-aaf5-b592e1aacae1}*SharedItemsImports = 13
 		src\Shared_Kokyu\Shared_Kokyu.projitems*{989f659d-bdee-4091-9c13-8f6b2afb50a8}*SharedItemsImports = 13
@@ -226,6 +268,7 @@ Global
 		src\Shared_BirbExGauge\Shared_BirbExGauge.projitems*{aecdc6f7-66ec-4cab-b0bc-4e6408b7b007}*SharedItemsImports = 4
 		src\Shared_AniMorph\Shared_AniMorph.projitems*{c2b17a95-bf32-46e4-9e20-6921f10b09c3}*SharedItemsImports = 4
 		src\Shared_BirbExGauge\Shared_BirbExGauge.projitems*{d37bbd42-2c84-4c21-9707-448830c31aa5}*SharedItemsImports = 13
+		src\Shared_LateSwordAiming\Shared_LateSwordAiming.projitems*{d3e2bb7a-d0d6-4c7e-99ae-3c23902eef25}*SharedItemsImports = 13
 		src\Shared_AniMorph\Shared_AniMorph.projitems*{d5734469-7a1c-4f35-92bd-cb226f6651ea}*SharedItemsImports = 4
 		src\Shared_IK_Plugin\Shared_IK_Plugin.projitems*{d93da3dc-1ca0-4630-948d-c2d957b29aa5}*SharedItemsImports = 13
 		src\Shared_MaleBreath\Shared_MaleBreath.projitems*{f769118b-a847-4d21-b9c0-552e478cc98d}*SharedItemsImports = 4

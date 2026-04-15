@@ -17,12 +17,11 @@ namespace AniMorph
         private readonly MotionModifierSlave[] _slaves;
 
         internal MotionModifierMaster(
-            BaseConfig cfg,
+            AniMorphEffector.BaseConfig cfg,
             Transform transform,
             MotionModifierSlave[] slaveModifiers, 
-            BoneModifierData masterModifierData,
             bool isAnimatedBone
-            ) : base(cfg, transform, null, masterModifierData, isAnimatedBone)
+            ) : base(cfg, transform, null, isAnimatedBone)
         {
             _slaves = slaveModifiers;
         }
