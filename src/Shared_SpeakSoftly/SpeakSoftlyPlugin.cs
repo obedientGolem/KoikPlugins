@@ -16,7 +16,7 @@ using static UnityEngine.UI.Image;
 
 namespace KK_SpeakSoftly
 {
-    [BepInPlugin(GUID, "KK_SpeakSoftly", Version)]
+    [BepInPlugin(GUID, Name, Version)]
     [BepInDependency(KoikatuAPI.GUID, KoikatuAPI.VersionConst)]
     [BepInProcess(KoikatuAPI.GameProcessName)]
     [BepInProcess(KoikatuAPI.VRProcessName)]
@@ -27,7 +27,13 @@ namespace KK_SpeakSoftly
 
     public class SpeakSoftlyPlugin : BaseUnityPlugin
     {
-        public const string GUID = "KK_SpeakSoftly";
+        public const string GUID = "Koik.SpeakSoftly" ;
+        public const string Name = "Speak Softly"
+
+#if DEBUG
+            + " (DEBUG)"
+#endif
+            ;
         public const string Version = "1.0.0";
         internal new static ManualLogSource Logger;
         public static SpeakSoftlyPlugin Instance;
@@ -37,8 +43,11 @@ namespace KK_SpeakSoftly
         public static ConfigEntry<SettingState> PluginState;
         public static ConfigEntry<float> VolumeFadeLength;
         public static ConfigEntry<float> VolumeCatchUp;
+#if DEBUG
+        public static ConfigEntry<bool> Debug;
+#endif
 
-        #endregion
+#endregion
 
         private Harmony _harmonyPatch;
 
@@ -120,9 +129,18 @@ namespace KK_SpeakSoftly
             //    new AcceptableValueRange<float>(0f, 1f),
             //    new ConfigurationManagerAttributes { Order = -50, ShowRangeAsPercent = false })
             //    );
+#if DEBUG
+            Debug = Config.Bind(
+                section: "",
+                key: "Debug",
+                defaultValue: true,
+                new ConfigDescription("Volume changes over specified period of time (in seconds) after the effects that prompted the change have happened.",
+                null,
+                new ConfigurationManagerAttributes { Order = -20, ShowRangeAsPercent = false })
+                );
+#endif
 
-
-            #endregion
+#endregion
 
 
             VolumeCatchUp.SettingChanged += (_, _1) => SpeakSoftlyCharaController.OnSettingChanged();

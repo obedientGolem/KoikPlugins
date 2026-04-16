@@ -25,9 +25,9 @@ namespace AniMorph
     internal class AniMorphPlugin : BaseUnityPlugin
     {
         public const string GUID = "Koik.AnisotropicMorph";
-        public const string Name = "AnisotropicMorph" +
+        public const string Name = "AnisotropicMorph"
 #if DEBUG
-            " (DEBUG)"
+            + " (DEBUG)"
 #endif
             ;
         public const string Version = "0.9";
@@ -119,7 +119,10 @@ namespace AniMorph
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: new Vector3(0f, 0.02f, 0f),
@@ -173,7 +176,10 @@ namespace AniMorph
                     tetherMultiplier: -3f,
                     tetherFrequency: 3f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: new Vector3(0f, 0.02f, 0f),
@@ -226,7 +232,10 @@ namespace AniMorph
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: new Vector3(0f, 0.02f, 0f),
@@ -278,7 +287,10 @@ namespace AniMorph
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: new Vector3(0f, 0.02f, 0f),
@@ -330,7 +342,10 @@ namespace AniMorph
                     tetherMultiplier: 2f,
                     tetherFrequency: 2f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: new Vector3(0f, 0.02f, 0f),
@@ -384,7 +399,10 @@ namespace AniMorph
                     tetherMultiplier: 0.5f,
                     tetherFrequency: 3f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: Vector3.zero,
@@ -497,7 +515,10 @@ namespace AniMorph
                     tetherMultiplier: 0.5f,
                     tetherFrequency: 3f,
                     tetherDamping: 0.3f,
-                    tetherMaxAngle: 30f,
+                    tetherMaxDeg: 30,
+
+                    rotSidewaysDeg: 20,
+                    rotSidewaysFaceUpDivider: 3,
 
                     gravityUpUp: Vector3.zero,
                     gravityUpMid: Vector3.zero,
@@ -662,7 +683,7 @@ namespace AniMorph
                 float tetherMultiplier,
                 float tetherFrequency,
                 float tetherDamping,
-                float tetherMaxAngle,
+                int tetherMaxDeg,
 
                 Vector3 gravityUpUp,
                 Vector3 gravityUpMid,
@@ -672,7 +693,10 @@ namespace AniMorph
                 Vector3 gravityFwdDown,
                 Vector3 gravityRightUp,
                 Vector3 gravityRightMid,
-                Vector3 gravityRightDown
+                Vector3 gravityRightDown,
+
+                int rotSidewaysDeg,
+                int rotSidewaysFaceUpDivider
                 )
             {
                 var name = body.ToString();
@@ -766,7 +790,7 @@ namespace AniMorph
                     new ConfigDescription("How much the velocity influences the scale.", 
                     new AcceptableValueRange<float>(0f, 50f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
 
-                SclDistortion = config.Bind(name, "Scale Distortion", sclDistortion,
+                SclDistort = config.Bind(name, "Scale Distortion", sclDistortion,
                     new ConfigDescription("How much the scale can change, 1 ± this value.",
                     new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 70, ShowRangeAsPercent = false }));
 
@@ -774,22 +798,32 @@ namespace AniMorph
                     new ConfigDescription("How fast the scale offset changes.", 
                     new AcceptableValueRange<float>(0f, 20f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
 
-                SclPreserveVolume = config.Bind(name, "Scale Preserve Volume", sclPreserveVolume,
+                SclPreserveVol = config.Bind(name, "Scale Preserve Volume", sclPreserveVolume,
                     new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));
 
 
 
-                TetheringMultiplier = config.Bind(name, "TetheringMultiplier", tetherMultiplier,
+                TetherFactor = config.Bind(name, "TetheringMultiplier", tetherMultiplier,
                     new ConfigDescription("Strength of tethering", new AcceptableValueRange<float>(-5f, 5f), new ConfigurationManagerAttributes { Order = order - 95, ShowRangeAsPercent = false }));
 
-                TetheringFrequency = config.Bind(name, "TetheringFrequency", tetherFrequency,
+                TetherFreq = config.Bind(name, "TetheringFrequency", tetherFrequency,
                     new ConfigDescription("Ceiling for the amount oscillation per second", null, new ConfigurationManagerAttributes { Order = order - 100 }));
 
-                TetheringDamping = config.Bind(name, "TetheringDamping", tetherDamping,
+                TetherDamp = config.Bind(name, "TetheringDamping", tetherDamping,
                     new ConfigDescription("Strength of negation of tethering", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = order - 105, ShowRangeAsPercent = false }));
 
-                TetheringMaxAngle = config.Bind(name, "TetheringMaxAngle", tetherMaxAngle,
-                    new ConfigDescription("Tethering won't exceed this value in degrees ", null, new ConfigurationManagerAttributes { Order = order - 110 }));
+                TetherMaxDeg = config.Bind(name, "TetheringMaxAngle", tetherMaxDeg,
+                    new ConfigDescription("Tethering won't exceed this value in degrees ", 
+                    new AcceptableValueRange<int>(10, 60), new ConfigurationManagerAttributes { Order = order - 110 }));
+
+
+                RotSidewaysDeg = config.Bind(name, "RotSidewaysDeg", rotSidewaysDeg,
+                    new ConfigDescription("", 
+                    new AcceptableValueRange<int>(10, 60), new ConfigurationManagerAttributes { Order = order - 115, ShowRangeAsPercent = false }));
+
+                RotSidewaysFaceUpDivider = config.Bind(name, "RotSidewaysFaceUpDivider", rotSidewaysFaceUpDivider,
+                    new ConfigDescription("", 
+                    new AcceptableValueRange<int>(1, 5), new ConfigurationManagerAttributes { Order = order - 120, ShowRangeAsPercent = false }));
 
 
 
@@ -839,14 +873,14 @@ namespace AniMorph
 
             public ConfigEntry<float> SclStr;
             public ConfigEntry<float> SclRate;
-            public ConfigEntry<float> SclDistortion;
-            public ConfigEntry<bool> SclPreserveVolume;
+            public ConfigEntry<float> SclDistort;
+            public ConfigEntry<bool> SclPreserveVol;
 
 
-            public ConfigEntry<float> TetheringMultiplier;
-            public ConfigEntry<float> TetheringFrequency;
-            public ConfigEntry<float> TetheringDamping;
-            public ConfigEntry<float> TetheringMaxAngle;
+            public ConfigEntry<float> TetherFactor;
+            public ConfigEntry<float> TetherFreq;
+            public ConfigEntry<float> TetherDamp;
+            public ConfigEntry<int> TetherMaxDeg;
 
 
             public ConfigEntry<Vector3> GravityUpUp;
@@ -858,6 +892,9 @@ namespace AniMorph
             public ConfigEntry<Vector3> GravityRightUp;
             public ConfigEntry<Vector3> GravityRightMid;
             public ConfigEntry<Vector3> GravityRightDown;
+
+            public ConfigEntry<int> RotSidewaysDeg;
+            public ConfigEntry<int> RotSidewaysFaceUpDivider;
         }
 
         #endregion

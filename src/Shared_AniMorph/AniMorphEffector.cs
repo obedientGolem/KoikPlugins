@@ -268,16 +268,16 @@ namespace AniMorph
                             rotApplication: Vector3.one,
                             sclApplication: Vector3.one
                             ),
-                        //new (
-                        //    name:           Bust1R,
-                        //    allowedEffects: Effect.DevAnything,
-                        //    inheritEffects: Effect.Pos,
-                        //    posApplication: Vector3.one,
-                        //    posPositiveApp: Vector3.one,
-                        //    posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
-                        //    rotApplication: Vector3.one,
-                        //    sclApplication: Vector3.one
-                        //    ),
+                        new (
+                            name:           Bust1R,
+                            allowedEffects: Effect.DevAnything,
+                            inheritEffects: Effect.Pos,
+                            posApplication: Vector3.one,
+                            posPositiveApp: Vector3.one,
+                            posNegativeApp: new Vector3(TwoThirds, 1f, 0f),
+                            rotApplication: Vector3.one,
+                            sclApplication: Vector3.one
+                            ),
                     ] 
             },
             {

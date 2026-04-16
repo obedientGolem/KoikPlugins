@@ -101,7 +101,7 @@ namespace AniMorph
 
             // Apply gravity position offset
             if ((cfg.effects & Effect.GravRot) != 0)
-                rotOffset += GetGravityAngularOffset(masterDotFwd, masterDotRight);
+                rotOffset += GetRotSidewaysOffset(ref cfg, masterDotFwd, masterDotRight);
             
 
             var posPositive = cfg.posPositiveApp;

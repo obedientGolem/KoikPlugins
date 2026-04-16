@@ -170,7 +170,7 @@ namespace KK_SpeakSoftly
                     aSource.volume = Mathf.Clamp01(_volumeCurrent * _volumeSceneVoiceMultiplier);
                 }
 #if DEBUG
-                SpeakSoftlyPlugin.Logger.LogDebug($"[{ChaControl.name}]: volume[{aSource.volume}]");
+                if (SpeakSoftlyPlugin.Debug.Value) SpeakSoftlyPlugin.Logger.LogDebug($"[{ChaControl.name}]: volume[{aSource.volume}]");
 #endif
             }
             else if (IsState(State.Loading))

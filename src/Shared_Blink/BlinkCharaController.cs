@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine;
 
 namespace Blink
 {
@@ -44,6 +45,10 @@ namespace Blink
             get => _eyeOpenLvl;
             set
             {
+                //var u = 1f - value;
+
+                //value = Mathf.Clamp01(1f - (u * u));
+                
                 _eyeOpenLvl = value;
                 effector?.OnReload(this);
             }

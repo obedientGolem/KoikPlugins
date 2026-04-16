@@ -57,13 +57,6 @@ namespace AniMorph
             cfg.mass = value;
             cfg.massInv = 1f / value;
         }
-
-
-
-
-
-
-        
         /// <summary>
         /// 
         /// </summary>
@@ -250,7 +243,7 @@ namespace AniMorph
                 sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref cfg, dotFwd));
             // Apply gravity rotation offset
             if ((cfg.effects & Effect.GravRot) != 0)
-                rotOffset += GetGravityAngularOffset(dotFwd, dotR);
+                rotOffset += GetRotSidewaysOffset(ref cfg, dotFwd, dotR);
 
 
             var posPositive = cfg.posPositiveApp;
@@ -410,7 +403,7 @@ namespace AniMorph
             // A simple velocity, based on movements of a transform without our interference.
             var cleanVelDelta = cleanDeltaPos - prev.cleanDeltaPos;
             
-            var projectionDot = Vector3.Dot(cleanVelDelta, prev.cleanVelDelta);
+            var projectDot = Vector3.Dot(cleanVelDelta, prev.cleanVelDelta);
 
             prev.cleanVelDelta = cleanVelDelta;
 
@@ -421,29 +414,20 @@ namespace AniMorph
             // --- Shock detection --- 
             var len = cleanVelDelta.magnitude * dtInv;
 
-            if (len > cfg.posShockThreshold || projectionDot < 0f)
+            if (len > cfg.posShockThreshold || projectDot < 0f)
             {
                 //var shockPower = Mathf.Pow(Mathf.Sqrt(cleanVelDeltaSqrLen), 1.2f);
                 //velocity += cleanVelDelta.normalized * shockPower * shockFactor;
+
                 prev.velocity += cleanVelDelta * cfg.posShockStr;
 
                 // TODO Add slowdown instead of freeze?
                 curr.bleedTime = cfg.posBleedLen * animLenInv;
 
-                if (len > cfg.posFreezeThreshold || projectionDot < 0f)
+                if (len > cfg.posFreezeThreshold || projectDot < 0f)
                 {
                     curr.shockTime = cfg.posFreezeLen * animLenInv;
-
-                    //AniMorphPlugin.Logger.LogError($"[{transform.name}] " +
-                    //    $"len[{len:F3}] " +
-                    //    $"dot < 0[{projectionDot < 0f}]");
                 }
-                //else
-                //{
-                //    AniMorphPlugin.Logger.LogWarning($"[{transform.name}] " +
-                //        $"len[{len:F3}] " +
-                //        $"dot < 0[{projectionDot < 0f}]");
-                //}
                 return true;
             }
             return false;
@@ -926,26 +910,29 @@ namespace AniMorph
             return result;
         }
 
-        private float _sidewaysAngleLimit = 20f;
         //private Quaternion _upRotation = Quaternion.Euler(90f, 0f, 0f);
         //private Quaternion _downRotation = Quaternion.Euler(-90f, 0f, 0f);
 
 
-        protected Vector3 GetGravityAngularOffset(float masterDotFwd, float masterDotRight)
+        protected Vector3 GetRotSidewaysOffset(ref Config cfg, float dotFwd, float dotR)
         {
-            var dotFwd = masterDotFwd; // Vector3.Dot(Bone.forward, Vector3.up);
-            var dotRight = masterDotRight; // Vector3.Dot(Bone.right, Vector3.up);
+            var absDotFwd = Math.Abs(dotFwd);
+            var absDotR = Math.Abs(dotR);
 
-            //var absDotFwd = Math.Abs(dotFwd);
-            //var absDotRight = Math.Abs(dotRight);
-            var angleLimit = _sidewaysAngleLimit;
+
+            var angleLimit = cfg.rotSidewaysDeg;
+
+            if (!isLeftSide) dotR = -dotR;
+
+            AniMorphPlugin.Logger.LogDebug($"[{transform.name}]: dotFwd[{dotFwd:F3}] dotR[{dotR:F3}] dotSum[{dotFwd + dotR:F3}]");
+
+            //var dotDriver = absDotFwd > absDotR ? dotFwd : dotR;
 
             // A way to reduce angle spread when lying face up.
-            if (dotFwd > 0f) dotFwd *= 0.33f;
+            //if (dotFwd > 0f) dotFwd *= cfg.rotSidewaysFaceUpFactor;
 
-            if (isLeftSide) angleLimit = -angleLimit;
+            var result = new Vector3(0f, angleLimit * (dotFwd + dotR), 0f);
 
-            var result = new Vector3(0f, (angleLimit * (dotFwd + dotRight)), 0f);
 
             //var boneUp = Bone.up;
 
@@ -961,8 +948,25 @@ namespace AniMorph
 
             //var lookRot = Quaternion.LookRotation(-Vector3.up, boneUp);
             ////var result = new Vector3(0f, deviationY * masterFwdDot, 0f);
-            //AniMorph.Logger.LogDebug($"{GetType().Name}.{MethodBase.GetCurrentMethod().Name}:dotFwd[{dotFwd:F3}] dotRight[{dotRight:F3}] result({result.x:F3},{result.y:F3},{result.z:F3})");
             return result;
+            /*
+             * 
+             *                f(1)
+             *                r(0)
+             *                 |
+             *                 |
+             *  f(0) r(-1) --- o --- r(1) f(0)
+             *                 |
+             *                 |
+             *                r(0)
+             *                f(-1)
+             */
+
+
+
+
+
+
         }
 
 
@@ -1062,16 +1066,21 @@ namespace AniMorph
 
             cfg.sclStr = pluginConfig.SclStr.Value;
             cfg.sclRate = pluginConfig.SclRate.Value;
-            cfg.sclDistort = pluginConfig.SclDistortion.Value;
-            cfg.sclPreserveVolume = pluginConfig.SclPreserveVolume.Value;
+            cfg.sclDistort = pluginConfig.SclDistort.Value;
+            cfg.sclPreserveVolume = pluginConfig.SclPreserveVol.Value;
 
             if (tether != null)
             {
-                tether.multiplier = -1000 * pluginConfig.TetheringMultiplier.Value;
-                tether.frequency = pluginConfig.TetheringFrequency.Value;
-                tether.damping = pluginConfig.TetheringDamping.Value;
-                tether.maxAngle = pluginConfig.TetheringMaxAngle.Value;
+                tether.multiplier = -1000 * pluginConfig.TetherFactor.Value;
+                tether.frequency = pluginConfig.TetherFreq.Value;
+                tether.damping = pluginConfig.TetherDamp.Value;
+                tether.maxAngle = pluginConfig.TetherMaxDeg.Value;
             }
+
+            cfg.rotSidewaysDeg = (isLeftSide ? -1f : 1f) * pluginConfig.RotSidewaysDeg.Value;
+            cfg.rotSidewaysFaceUpFactor = 1f / pluginConfig.RotSidewaysFaceUpDivider.Value;
+
+
 
             cfg.gravityUpUp = pluginConfig.GravityUpUp.Value;
             cfg.gravityUpMid = pluginConfig.GravityUpMid.Value;
@@ -1348,6 +1357,10 @@ namespace AniMorph
             internal bool sclPreserveVolume;
             internal Vector3 sclVelocity;
             internal float sclBlend;
+
+            internal float rotSidewaysDeg;
+            internal float rotSidewaysFaceUpFactor;
+
 
 
             // When Dot(Bone.up, Vector3.up) points in up/middle/down direction.
