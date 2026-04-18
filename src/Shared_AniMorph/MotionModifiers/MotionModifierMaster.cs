@@ -39,6 +39,15 @@ namespace AniMorph
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
+
+            // --- Update Noise Params ---
+
+            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
+
+
+            // --- Update Offsets ---
+
             var effects = cfg.effects;
 
             posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, out var accel);
@@ -52,44 +61,24 @@ namespace AniMorph
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
-
-            //var sclModifier = Vector3.Scale(
-            //    abmxModifierData.ScaleModifier,
-            //    GetScaleOffset(
-            //        ref cfg,
-            //        ref prev,
-            //        velocity,
-            //        velocityLen,
-            //        deltaTime,
-            //        deltaTimeInv,
-            //        (cfg.effects & Effect.Accel) != 0,
-            //        (cfg.effects & Effect.Decel) != 0
-            //        )
-            //    );
-            //var sclModifier = 
-            //    GetSquashOffset(
-            //        ref cfg,
-            //        ref prev,
-            //        velocity,
-            //        accel,
-            //        velocityLen,
-            //        deltaTime,
-            //        deltaTimeInv
-            //    );
-
             var dotUp = Vector3.Dot(transform.up, Vector3.up);
             var dotR = Vector3.Dot(transform.right, Vector3.up);
             var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
 
-            if ((effects & Effect.GravPos) != 0)
-                posOffset += GetGravityPositionOffset(ref cfg, dotUp, dotR);
+            if ((effects & Effect.PosOffset) != 0)
+                posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
 
-            if ((effects & Effect.GravScl) != 0)
-                sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref cfg, dotFwd));
+            if ((effects & Effect.SclOffset) != 0)
+                sclOffset = Vector3.Scale(sclOffset, GetSclDotOffset(ref cfg, ref curr, dotFwd));
+
+            if ((effects & Effect.RotOffset) != 0)
+                rotOffset += GetRotDotOffset(ref cfg, ref curr, dotFwd, dotR);
 
 
-            var posPositive = cfg.posPositiveApp;
-            var posNegative = cfg.posNegativeApp;
+            // --- Prepare Application --- 
+
+            var posPositive = cfg.posAppPositive;
+            var posNegative = cfg.posAppNegative;
 
             var posSignScale = new Vector3(
                 posOffset.x > 0f ? posPositive.x : posNegative.x,
@@ -97,10 +86,18 @@ namespace AniMorph
                 posOffset.z > 0f ? posPositive.z : posNegative.z
                 );
 
-            // TODO Include into sign applications on init once dev phase is over.
             posOffset = Vector3.Scale(posOffset, posSignScale);
             rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
-            sclOffset = Vector3.Scale(sclOffset, cfg.sclApplication);
+
+            var sclApp = cfg.sclApplication;
+            sclOffset = new Vector3(
+                sclApp.x < 1f ? 1f + ((sclOffset.x - 1f) * sclApp.x) : sclOffset.x * sclApp.x,
+                sclApp.y < 1f ? 1f + ((sclOffset.y - 1f) * sclApp.y) : sclOffset.y * sclApp.y,
+                sclApp.z < 1f ? 1f + ((sclOffset.z - 1f) * sclApp.z) : sclOffset.z * sclApp.z
+                );
+
+
+            // --- Write Offsets ---
 
             var boneModifierData = abmxModifierData;
 
@@ -108,14 +105,35 @@ namespace AniMorph
             boneModifierData.RotationModifier = rotOffset;
             boneModifierData.ScaleModifier = sclOffset;
 
+
+            // --- Prepare For Next Frame ---
+
             prev.velocity = velocity;
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
 
+            curr.needNoisePos = cfg.noiseAmplPos > 0f;
+            curr.needNoiseRot = cfg.noiseAmplRot > 0f;
+            curr.needNoiseScl = cfg.noiseAmplScl > 0f;
+
+
+            // --- Update Slaves ---
+
             foreach (var slave in _slaves)
             {
-                slave.UpdateSlave(effects, dotFwd, dotR, dt, dtInv, animLenInv, posOffset, rotOffset, sclOffset);
+                slave.UpdateSlave(
+                    masterEffects: effects, 
+                    dotUp:         dotUp, 
+                    dotR:          dotR, 
+                    dotFwd:        dotFwd, 
+                    dt:            dt, 
+                    dtInv:         dtInv, 
+                    animLenInv:    animLenInv, 
+                    posOffset:     posOffset,
+                    rotOffset:     rotOffset, 
+                    sclOffset:     sclOffset
+                    );
             }
         }
 

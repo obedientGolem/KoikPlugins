@@ -19,7 +19,7 @@ namespace Koik_LateSwordAiming
         public const string GUID = "koik.lateSwordAiming";
         public const string Name = "LateSwordAiming" +
 #if DEBUG
-            " Debug"
+            " [DEBUG]"
 #endif
             ;
         public const string Version = "1.0.0";

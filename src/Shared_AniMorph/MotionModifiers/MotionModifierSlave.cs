@@ -1,4 +1,5 @@
-﻿using ADV.Commands.Object;
+﻿using ActionGame.Point;
+using ADV.Commands.Object;
 using KKABMX.GUI;
 using System;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ namespace AniMorph
             _masterIsParent = masterIsParent;
         }
 
-        internal void UpdateSlave(Effect masterEffects, float masterDotFwd, float masterDotRight, float dt, float dtInv, float animLenInv, Vector3 posOffset, Vector3 rotOffset, Vector3 sclOffset)
+        internal void UpdateSlave(Effect masterEffects, float dotUp, float dotR, float dotFwd, float dt, float dtInv, float animLenInv, Vector3 posOffset, Vector3 rotOffset, Vector3 sclOffset)
         {
             if (!active) return;
 
@@ -64,48 +65,49 @@ namespace AniMorph
             ref var prev = ref previous;
 
 
-            if ((cfg.effects & Effect.Rot) != 0)
+            // --- Update Noise Params ---
+
+            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
+
+
+            // --- Update Offsets ---
+
+            var effects = cfg.effects;
+
+            if ((effects & Effect.Rot) != 0)
                 rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
             else
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
-            if ((cfg.effects & Effect.Pos) != 0)
+            if ((effects & Effect.Pos) != 0)
             {
                 posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, /*out var velocityLen,*/ out var accel);
 
-                if ((cfg.effects & Effect.Tether) != 0)
+                if ((effects & Effect.Tether) != 0)
                     rotOffset += tether.GetTetheringOffset(velocity, dt);
 
-                if ((cfg.effects & Effect.Scl) != 0)
+                if ((effects & Effect.Scl) != 0)
                     sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, prev.cleanDeltaPos, dt);
-                    //sclOffset = GetScaleOffset(ref cfg, ref curr, ref prev, velocity, /*velocityLen,*/ dt, dtInv);
 
                 prev.velocity = velocity;
             }
 
+            if ((effects & Effect.PosOffset) != 0)
+                posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
 
-            // Not allowed axes are multiplied by zero, allowed by one.
-            //rotOffset = Vector3.Scale(rotOffset, rotApplication);
+            if ((effects & Effect.SclOffset) != 0)
+                sclOffset = Vector3.Scale(sclOffset, GetSclDotOffset(ref cfg, ref curr, dotFwd));
 
-            //var scaleModifier = GetSquashOffset(
-            //    ref cfg,
-            //    ref prev,
-            //    velocity, accel, velocityLen, deltaTime, invDeltaTime
-            //    );
+            if ((effects & Effect.RotOffset) != 0)
+                rotOffset += GetRotDotOffset(ref cfg, ref curr, dotFwd, dotR);
 
 
-            //var dotUp = Vector3.Dot(transform.up, Vector3.up);
-            //var dotR = Vector3.Dot(transform.right, Vector3.up);
-            //var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
+            // --- Prepare Application --- 
 
-            // Apply gravity position offset
-            if ((cfg.effects & Effect.GravRot) != 0)
-                rotOffset += GetRotSidewaysOffset(ref cfg, masterDotFwd, masterDotRight);
-            
-
-            var posPositive = cfg.posPositiveApp;
-            var posNegative = cfg.posNegativeApp;
+            var posPositive = cfg.posAppPositive;
+            var posNegative = cfg.posAppNegative;
 
             var posSignScale = new Vector3(
                 posOffset.x > 0f ? posPositive.x : posNegative.x,
@@ -113,9 +115,17 @@ namespace AniMorph
                 posOffset.z > 0f ? posPositive.z : posNegative.z
                 );
 
-            // TODO Include into sign applications on init once dev phase is over.
             posOffset = Vector3.Scale(posOffset, posSignScale);
-            sclOffset = Vector3.Scale(sclOffset, cfg.sclApplication);
+            rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
+
+            var sclApp = cfg.sclApplication;
+            sclOffset = new Vector3(
+                sclApp.x < 1f ? 1f + ((sclOffset.x - 1f) * sclApp.x) : sclOffset.x * sclApp.x,
+                sclApp.y < 1f ? 1f + ((sclOffset.y - 1f) * sclApp.y) : sclOffset.y * sclApp.y,
+                sclApp.z < 1f ? 1f + ((sclOffset.z - 1f) * sclApp.z) : sclOffset.z * sclApp.z
+                );
+
+            // --- Write Offsets ---
 
             var boneModifierData = abmxModifierData;
 
@@ -123,9 +133,16 @@ namespace AniMorph
             boneModifierData.RotationModifier = rotOffset;
             boneModifierData.ScaleModifier = sclOffset;
 
+
+            // --- Prepare For Next Frame ---
+
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
+
+            curr.needNoisePos = cfg.noiseAmplPos > 0f;
+            curr.needNoiseRot = cfg.noiseAmplRot > 0f;
+            curr.needNoiseScl = cfg.noiseAmplScl > 0f;
         }
 
 

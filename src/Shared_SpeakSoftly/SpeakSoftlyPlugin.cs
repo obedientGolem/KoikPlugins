@@ -31,7 +31,7 @@ namespace KK_SpeakSoftly
         public const string Name = "Speak Softly"
 
 #if DEBUG
-            + " (DEBUG)"
+            + " [DEBUG]"
 #endif
             ;
         public const string Version = "1.0.0";

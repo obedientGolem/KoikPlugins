@@ -18,12 +18,13 @@ namespace AniMorph
 {
     internal class MotionModifier
     {
-        private static readonly Vector3 vecOne = Vector3.one;
+        private readonly Vector3 vecOne = Vector3.one;
+        private readonly Vector3 vecZero = Vector3.zero;
+
         protected static readonly Effect[] effects = Enum.GetValues(typeof(Effect)) as Effect[];
 
         protected readonly Transform transform;
         protected readonly Tethering tether;
-        protected readonly bool isLeftSide;
         protected readonly BoneModifierData abmxModifierData = new();
 
         internal BoneModifierData GetBoneModifierData => abmxModifierData;
@@ -57,6 +58,7 @@ namespace AniMorph
             cfg.mass = value;
             cfg.massInv = 1f / value;
         }
+
         /// <summary>
         /// 
         /// </summary>
@@ -69,23 +71,30 @@ namespace AniMorph
             if (bone == null) 
                 throw new ArgumentNullException(nameof(bone));
 
-            baseConfig = new BaseConfig(
-                allowedEffects: baseCfg.allowedEffects,
-                posFactor: baseCfg.posFactor,
-                rotFactor: baseCfg.rotFactor,
-                sclFactor: baseCfg.sclFactor
-                );
+            baseConfig = baseCfg;
+
+            //baseConfig = new BaseConfig(
+            //    allowedEffects: baseCfg.allowedEffects,
+            //    posFactor: baseCfg.posFactor,
+            //    rotFactor: baseCfg.rotFactor,
+            //    sclFactor: baseCfg.sclFactor,
+            //    dotFlipSign: baseCfg.dotFlipSign,
+            //    dotScl_posFactor: baseCfg.dotScl_posFactor
+            //    );
 
             config = new Config(
-                posPositiveApp: Vector3.Scale(baseCfg.posPositiveApp, baseCfg.posApplication),
-                posNegativeApp: Vector3.Scale(baseCfg.posNegativeApp, baseCfg.posApplication),
+                posApplication: baseCfg.posApplication,
+                posAppPositive: baseCfg.posAppPositive,
+                posAppNegative: baseCfg.posAppNegative,
                 rotApplication: baseCfg.rotApplication,
                 sclApplication: baseCfg.sclApplication
                 );
 
+
             current = new();
             previous = new();
 
+            ref var cfg = ref config;
             ref var prev = ref previous;
 
             transform = bone;
@@ -107,7 +116,11 @@ namespace AniMorph
                 var localBonePosition = centeredBone.InverseTransformPoint(bone.position);
                 var divider = Mathf.Abs(localBonePosition.x) + Mathf.Abs(localBonePosition.z);
                 var result = divider == 0f ? (0f) : (localBonePosition.x / divider);
-                isLeftSide = result < 0f;
+                cfg.isLeftSide = result < 0f;
+            }
+            else
+            {
+                cfg.isLeftSide = baseCfg.isLeft;
             }
 
             // Skip mesh measurements
@@ -210,44 +223,56 @@ namespace AniMorph
             ref var curr = ref current;
             ref var prev = ref previous;
 
+            var effects = cfg.effects;
+
             var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
+
+            // --- Update Noise Params ---
+
+            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
+
+
+            // --- Update Offsets ---
+
             posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, out var accel);
 
-            if ((cfg.effects & Effect.Pos) == 0)
+            if ((effects & Effect.Pos) == 0)
                 posOffset = Vector3.zero;
 
-            if ((cfg.effects & Effect.Rot) != 0)
+            if ((effects & Effect.Rot) != 0)
                 rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
             else
-                // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
-            if ((cfg.effects & Effect.Scl) != 0)
+            if ((effects & Effect.Scl) != 0)
                 sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, prev.cleanDeltaPos, dt);
 
-            if ((cfg.effects & Effect.Tether) != 0)
+            if ((effects & Effect.Tether) != 0)
                 rotOffset += tether.GetTetheringOffset(velocity, dt);
+
 
             var dotUp = Vector3.Dot(transform.up, Vector3.up);
             var dotR = Vector3.Dot(transform.right, Vector3.up);
             var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
 
-            // Apply gravity position offset
-            if ((cfg.effects & Effect.GravPos) != 0)
-                posOffset += GetGravityPositionOffset(ref cfg, dotUp, dotR);
-            // Apply gravity scale offset
-            if ((cfg.effects & Effect.GravScl) != 0)
-                sclOffset = Vector3.Scale(sclOffset, GetGravityScaleOffset(ref cfg, dotFwd));
-            // Apply gravity rotation offset
-            if ((cfg.effects & Effect.GravRot) != 0)
-                rotOffset += GetRotSidewaysOffset(ref cfg, dotFwd, dotR);
+            if ((effects & Effect.PosOffset) != 0)
+                posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
+
+            if ((effects & Effect.SclOffset) != 0)
+                sclOffset = Vector3.Scale(sclOffset, GetSclDotOffset(ref cfg, ref curr, dotFwd));
+
+            if ((cfg.effects & Effect.RotOffset) != 0)
+                rotOffset += GetRotDotOffset(ref cfg, ref curr, dotFwd, dotR);
 
 
-            var posPositive = cfg.posPositiveApp;
-            var posNegative = cfg.posNegativeApp;
+            // --- Prepare Application --- 
+
+            var posPositive = cfg.posAppPositive;
+            var posNegative = cfg.posAppNegative;
 
             var posSignScale = new Vector3(
                 posOffset.x > 0f ? posPositive.x : posNegative.x,
@@ -257,7 +282,22 @@ namespace AniMorph
 
             posOffset = Vector3.Scale(posOffset, posSignScale);
             rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
-            sclOffset = Vector3.Scale(sclOffset, cfg.sclApplication);
+
+            var sclApp = cfg.sclApplication;
+            sclOffset = new Vector3(
+                sclApp.x < 1f ? 1f + ((sclOffset.x - 1f) * sclApp.x) : sclOffset.x * sclApp.x,
+                sclApp.y < 1f ? 1f + ((sclOffset.y - 1f) * sclApp.y) : sclOffset.y * sclApp.y,
+                sclApp.z < 1f ? 1f + ((sclOffset.z - 1f) * sclApp.z) : sclOffset.z * sclApp.z
+                );
+
+            if (cfg.dotScl_isPosFactor)
+                posOffset += Vector3.Scale(
+                    dotFwd > 0f ? cfg.dotScl_posFactorFaceUp : cfg.dotScl_posFactorFaceDown,
+                    sclOffset - vecOne
+                    );
+
+
+            // --- Write Offsets ---
 
             var boneModifierData = abmxModifierData;
 
@@ -265,10 +305,17 @@ namespace AniMorph
             boneModifierData.RotationModifier = rotOffset;
             boneModifierData.ScaleModifier = sclOffset;
 
+
+            // --- Prepare For Next Frame ---
+
             prev.velocity = velocity;
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
+
+            curr.needNoisePos = cfg.noiseAmplPos > 0f;
+            curr.needNoiseRot = cfg.noiseAmplRot > 0f;
+            curr.needNoiseScl = cfg.noiseAmplScl > 0f;
         }
 
 
@@ -440,9 +487,6 @@ namespace AniMorph
 
             prev.cleanAdjDeltaPosLen = cleanDeltaPos.magnitude * dtInv;
 
-            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
-            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
-
             // --- Shock state ---
             if (curr.shockTime > 0f)
             {
@@ -478,13 +522,17 @@ namespace AniMorph
 
             accel = springF + dampingF;
 
-            if (cfg.noiseAmplPos > 0f)
+            if (curr.needNoisePos)
+            {
+                curr.needNoisePos = false;
+
                 accel += GetNoiseVec(
                     cfg.noiseOctaves,
                     cfg.noiseVecPos,
                     cfg.noiseAmplPos * curr.noiseAmplFactor,
                     curr.noiseFreq,
                     out cfg.noiseVecPos);
+            }
 
             accel *= (cfg.massInv * dt);
 
@@ -598,13 +646,17 @@ namespace AniMorph
 
             accel -= cfg.rotDamping * Mathf.Exp(-absAngle * dt) * angVel;
 
-            if (cfg.noiseAmplRot > 0f)
+            if (curr.needNoiseRot)
+            {
+                curr.needNoiseRot = false;
+
                 accel += GetNoiseVec(
-                    cfg.noiseOctaves, 
-                    cfg.noiseVecRot, 
-                    cfg.noiseAmplRot * curr.noiseAmplFactor, 
-                    curr.noiseFreq, 
+                    cfg.noiseOctaves,
+                    cfg.noiseVecRot,
+                    cfg.noiseAmplRot * curr.noiseAmplFactor,
+                    curr.noiseFreq,
                     out cfg.noiseVecRot);
+            }
 
             angVel += Vector3.Scale(accel, cfg.rotApplication) * dt;
 
@@ -676,7 +728,7 @@ namespace AniMorph
 
         protected Vector3 GetSquashOffset(ref Config cfg, ref Current curr, ref Previous prev, Vector3 vel, Vector3 accel, float dt)
         {
-            var driver = Vector3.Lerp(accel, vel, cfg.sclBlend);
+            var driver = Vector3.Lerp(accel, vel, 0.5f); // cfg.sclBlend);
 
             var driverLen = driver.magnitude;
 
@@ -686,7 +738,9 @@ namespace AniMorph
             {
                 var basicTargetScl = Vector3.one;
 
-                if (cfg.noiseAmplScl > 0f)
+                if (curr.needNoiseScl)
+                    curr.needNoiseScl = false;
+
                     basicTargetScl += GetNoiseVec(
                         4,
                         cfg.noiseVecScl,
@@ -747,14 +801,18 @@ namespace AniMorph
 
             var targetScale = GetDirectionalScale(dirN, stretch, squash);
 
-            if (cfg.noiseAmplScl > 0f)
+            if (curr.needNoiseScl)
+            {
+                curr.needNoiseScl = false;
+
                 targetScale += GetNoiseVec(
-                    4,
+                    cfg.noiseOctaves,
                     cfg.noiseVecScl,
                     cfg.noiseAmplScl * curr.noiseAmplFactor,
                     curr.noiseFreq,
                     out cfg.noiseVecScl
                     );
+            }
             
             var result = Vector3.SmoothDamp(
                 prev.scale,
@@ -884,55 +942,72 @@ namespace AniMorph
         #region Dots
 
 
-        protected Vector3 GetGravityPositionOffset(ref Config config, float dotUp, float dotR)
+        protected Vector3 GetPosDotOffset(ref Config cfg, ref Current curr, float dotUp, float dotR)
         {
-            var result = Vector3.Lerp(config.gravityUpMid, dotUp > 0f ? config.gravityUpUp : config.gravityUpDown, Mathf.Abs(dotUp));
+            var result = Vector3.Lerp(cfg.posPitchOffsetFaceDown, dotUp > 0f ? Vector3.zero : cfg.posPitchOffsetUpsideDown, Mathf.Abs(dotUp));
 
-            result += Vector3.Lerp(config.gravityRightMid, dotR > 0f ? config.gravityRightUp : config.gravityRightDown, Mathf.Abs(dotR));
+            result += Vector3.Lerp(vecZero, dotR > 0f ? cfg.posRollOffsetR : cfg.posRollOffsetL, Mathf.Abs(dotR));
 
-            //AniMorph.Logger.LogDebug($"GravityPosOffset:dotUp[{dotUp:F3}] dotR[{dotR:F3}] result({result.x:F3},{result.y:F3},{result.z:F3})");
+            //if (curr.needNoisePos)
+            //{
+            //    curr.needNoisePos = false;
+            //    result += GetNoiseVec(
+            //        cfg.noiseOctaves,
+            //        cfg.noiseVecPos,
+            //        cfg.noiseAmplPos * curr.noiseAmplFactor,
+            //        curr.noiseFreq,
+            //        out cfg.noiseVecPos
+            //        );
+            //}
 
             return result;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="dotFwd"></param>
-        /// <returns>Offset for flat addition to the scale.</returns>
-        protected Vector3 GetGravityScaleOffset(ref Config config, float dotFwd)
+        protected Vector3 GetSclDotOffset(ref Config cfg, ref Current curr, float dotFwd)
         {
-            var result = Vector3.Lerp(config.gravityForwardMid, dotFwd > 0f ? config.gravityForwardUp : config.gravityForwardDown, Mathf.Abs(dotFwd));
-//#if DEBUG
-//            AniMorph.Logger.LogDebug($"{GetType().Name}.{MethodBase.GetCurrentMethod().Name}:dotFwd[{dotFwd:F3}] result({result.x:F3},{result.y:F3},{result.z:F3})");
-//#endif
+            var result = Vector3.Lerp(vecOne, dotFwd > 0f ? cfg.sclOffsetFaceUp : cfg.sclOffsetFaceDown, Mathf.Abs(dotFwd));
 
+            if (curr.needNoiseScl)
+            {
+                curr.needNoiseScl = false;
+                result += GetNoiseVec(
+                    cfg.noiseOctaves,
+                    cfg.noiseVecScl,
+                    cfg.noiseAmplScl * curr.noiseAmplFactor,
+                    curr.noiseFreq,
+                    out cfg.noiseVecScl
+                    );
+            }
             return result;
         }
 
-        //private Quaternion _upRotation = Quaternion.Euler(90f, 0f, 0f);
-        //private Quaternion _downRotation = Quaternion.Euler(-90f, 0f, 0f);
-
-
-        protected Vector3 GetRotSidewaysOffset(ref Config cfg, float dotFwd, float dotR)
+        protected Vector3 GetRotDotOffset(ref Config cfg, ref Current curr, float dotFwd, float dotR)
         {
-            var absDotFwd = Math.Abs(dotFwd);
-            var absDotR = Math.Abs(dotR);
-
-
             var angleLimit = cfg.rotSidewaysDeg;
 
-            if (!isLeftSide) dotR = -dotR;
+            if (!cfg.isLeftSide) dotR = -dotR;
 
-            AniMorphPlugin.Logger.LogDebug($"[{transform.name}]: dotFwd[{dotFwd:F3}] dotR[{dotR:F3}] dotSum[{dotFwd + dotR:F3}]");
+            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}]: dotFwd[{dotFwd:F3}] dotR[{dotR:F3}] dotSum[{dotFwd + dotR:F3}]");
 
             //var dotDriver = absDotFwd > absDotR ? dotFwd : dotR;
 
             // A way to reduce angle spread when lying face up.
-            //if (dotFwd > 0f) dotFwd *= cfg.rotSidewaysFaceUpFactor;
+            if (dotFwd > 0f) 
+                dotFwd *= cfg.rotSidewaysFaceUpFactor;
 
             var result = new Vector3(0f, angleLimit * (dotFwd + dotR), 0f);
 
+            if (curr.needNoiseRot)
+            {
+                curr.needNoiseRot = false;
+                result += GetNoiseVec(
+                    cfg.noiseOctaves,
+                    cfg.noiseVecRot,
+                    cfg.noiseAmplRot * curr.noiseAmplFactor,
+                    curr.noiseFreq,
+                    out cfg.noiseVecRot
+                    );
+            }
 
             //var boneUp = Bone.up;
 
@@ -949,24 +1024,6 @@ namespace AniMorph
             //var lookRot = Quaternion.LookRotation(-Vector3.up, boneUp);
             ////var result = new Vector3(0f, deviationY * masterFwdDot, 0f);
             return result;
-            /*
-             * 
-             *                f(1)
-             *                r(0)
-             *                 |
-             *                 |
-             *  f(0) r(-1) --- o --- r(1) f(0)
-             *                 |
-             *                 |
-             *                r(0)
-             *                f(-1)
-             */
-
-
-
-
-
-
         }
 
 
@@ -980,8 +1037,8 @@ namespace AniMorph
         {
             var bone = transform;
 
-            ref var prev = ref this.previous;
-            ref var cfg = ref this.config;
+            ref var prev = ref previous;
+            ref var cfg = ref config;
             var pos = bone.position;
             prev.position = pos;
             prev.cleanPos = pos;
@@ -1040,10 +1097,23 @@ namespace AniMorph
 
             cfg.effects = pluginConfig.Effects.Value;
 
+            active = cfg.effects != 0;
+
+            if (!active)
+            {
+                OnChangeAnimator();
+                return;
+            }
+
+            var isPos = (cfg.effects & Effect.Pos) != 0;
+            var isRot = ((cfg.effects & Effect.Rot) != 0);
+            var isScl = ((cfg.effects & Effect.Scl) != 0);
+            var isTether = ((cfg.effects & Effect.Tether) != 0);
+            var isPosOffset = ((cfg.effects & Effect.PosOffset) != 0);
+            var isRotOffset = ((cfg.effects & Effect.RotOffset) != 0);
+            var isSclOffset = ((cfg.effects & Effect.SclOffset) != 0);
+
             cfg.noiseOctaves = pluginConfig.NoiseOctaves.Value;
-            cfg.noiseAmplPos = baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value;
-            cfg.noiseAmplRot = baseCfg.rotFactor * (pluginConfig.NoiseAmplitudeRot.Value * 100f);
-            cfg.noiseAmplScl = baseCfg.sclFactor * (pluginConfig.NoiseAmplitudeScl.Value * 10f);
             // The backward way algos are setup forces us to have weird coefficient ranges,
             // and I'd rather have ugly values(tiny decimals) hidden and instead expose usual common values,
             // that will be converted here.
@@ -1056,20 +1126,22 @@ namespace AniMorph
             cfg.posBleedStr = pluginConfig.PosBleedStr.Value;
             cfg.posBleedLen = pluginConfig.PosBleedLen.Value;
 
-            //config.posGravityForce = new Vector3(0f, pluginConfig.PosGravity.Value, 0f);
-            //config.useLinearGravity = pluginConfig.PosGravity.Value != 0f;
-            //SetLinearMassMultiplier = pluginConfig.LinearMass.Value;
+            if (isRot)
+            {
+                cfg.rotSpring = (float)Math.Round(baseCfg.rotFactor * pluginConfig.RotSpring.Value * (1f / 60f), 3);
+                cfg.rotDamping = (baseCfg.rotFactor * pluginConfig.RotSpring.Value) * pluginConfig.RotDamping.Value;
+                cfg.rotRate = pluginConfig.RotRate.Value;
+            }
 
-            cfg.rotSpring = (float)Math.Round(baseCfg.rotFactor * pluginConfig.RotSpring.Value * (1f / 60f), 3);
-            cfg.rotDamping = (baseCfg.rotFactor * pluginConfig.RotSpring.Value) * pluginConfig.RotDamping.Value;
-            cfg.rotRate = pluginConfig.RotRate.Value;
+            if (isScl)
+            {
+                cfg.sclStr = pluginConfig.SclStr.Value;
+                cfg.sclRate = pluginConfig.SclRate.Value;
+                cfg.sclDistort = pluginConfig.SclDistort.Value;
+                cfg.sclPreserveVolume = pluginConfig.SclPreserveVol.Value;
+            }
 
-            cfg.sclStr = pluginConfig.SclStr.Value;
-            cfg.sclRate = pluginConfig.SclRate.Value;
-            cfg.sclDistort = pluginConfig.SclDistort.Value;
-            cfg.sclPreserveVolume = pluginConfig.SclPreserveVol.Value;
-
-            if (tether != null)
+            if (isTether && tether != null)
             {
                 tether.multiplier = -1000 * pluginConfig.TetherFactor.Value;
                 tether.frequency = pluginConfig.TetherFreq.Value;
@@ -1077,23 +1149,75 @@ namespace AniMorph
                 tether.maxAngle = pluginConfig.TetherMaxDeg.Value;
             }
 
-            cfg.rotSidewaysDeg = (isLeftSide ? -1f : 1f) * pluginConfig.RotSidewaysDeg.Value;
-            cfg.rotSidewaysFaceUpFactor = 1f / pluginConfig.RotSidewaysFaceUpDivider.Value;
+            if (isRotOffset)
+            {
+                cfg.rotSidewaysDeg = pluginConfig.RotOffsetRollDeg.Value;
 
+                if (baseCfg.dotFlipSign)
+                    cfg.rotSidewaysDeg = -cfg.rotSidewaysDeg;
+                if (cfg.isLeftSide)
+                    cfg.rotSidewaysDeg = -cfg.rotSidewaysDeg;
 
+                cfg.rotSidewaysFaceUpFactor = pluginConfig.RotOffsetRollFaceUpFactor.Value;
+            }
 
-            cfg.gravityUpUp = pluginConfig.GravityUpUp.Value;
-            cfg.gravityUpMid = pluginConfig.GravityUpMid.Value;
-            cfg.gravityUpDown = pluginConfig.GravityUpDown.Value;
-            // Scale uses vector multiplication rather then addition.
-            cfg.gravityForwardUp = Vector3.one + pluginConfig.GravityFwdUp.Value;
-            cfg.gravityForwardMid = Vector3.one + pluginConfig.GravityFwdMid.Value;
-            cfg.gravityForwardDown = Vector3.one + pluginConfig.GravityFwdDown.Value;
-            cfg.gravityRightUp = pluginConfig.GravityRightUp.Value;
-            cfg.gravityRightMid = pluginConfig.GravityRightMid.Value;
-            cfg.gravityRightDown = pluginConfig.GravityRightDown.Value;
+            if (isPosOffset)
+            {
+                cfg.posPitchOffsetFaceDown = new Vector3(0f, pluginConfig.PosOffsetPitchFaceDown.Value, 0f);
+                cfg.posPitchOffsetUpsideDown = new Vector3(0f, pluginConfig.PosOffsetPitchUpsideDown.Value, 0f);
 
-            active = cfg.effects != 0;
+                var posRollVec = pluginConfig.PosOffsetRoll.Value;
+                cfg.posRollOffsetL = posRollVec;
+                cfg.posRollOffsetR = new Vector3(-posRollVec.x, posRollVec.y, posRollVec.z);
+            }
+
+            if (isSclOffset)
+            {
+                cfg.sclOffsetFaceUp =
+                    ScaleVecFwd(
+                        pluginConfig.SclOffsetFaceUp.Value,
+                        pluginConfig.SclOffsetFaceUpPerpAxesFactor.Value
+                        );
+                cfg.sclOffsetFaceUpF = cfg.sclOffsetFaceUp - vecOne;
+
+                // Half scaled because:
+                // Only half of added Z volume are perpendicular axes, another half is subcutaneous fat from all around.
+                cfg.sclOffsetFaceDown =
+                    ScaleVecFwd(
+                        pluginConfig.SclOffsetFaceDown.Value,
+                        pluginConfig.SclOffsetFaceDownPerpAxesFactor.Value
+                        );
+                cfg.sclOffsetFaceDownF = cfg.sclOffsetFaceDown - vecOne;
+
+                var dotFlipSign = baseCfg.dotFlipSign;
+                if (dotFlipSign)
+                {
+                    var a = cfg.sclOffsetFaceUp;
+                    cfg.sclOffsetFaceUp = cfg.sclOffsetFaceDown;
+                    cfg.sclOffsetFaceDown = a;
+                }
+
+                var dotScl_posFactor = baseCfg.dotScl_posFactor;
+                var dotScl_isPosFactor = dotScl_posFactor != Vector3.zero;
+
+                cfg.dotScl_isPosFactor = dotScl_isPosFactor;
+
+                if (dotScl_isPosFactor)
+                {
+                    var dotScl_PosFactorFaceUp = Vector3.Scale(InvertVec(cfg.posAppNegative), dotScl_posFactor);
+                    var dotScl_PosFactorFaceDown = Vector3.Scale(InvertVec(cfg.posAppPositive), dotScl_posFactor);
+
+                    dotScl_PosFactorFaceUp.z = -dotScl_PosFactorFaceUp.z;
+
+                    cfg.dotScl_posFactorFaceUp = Vector3.Scale(dotScl_PosFactorFaceUp, cfg.sclOffsetFaceUp);
+                    cfg.dotScl_posFactorFaceDown = Vector3.Scale(dotScl_PosFactorFaceDown, cfg.sclOffsetFaceDown);
+                }
+            }
+
+            cfg.noiseAmplPos = (isPos || isPosOffset) ? baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value : 0f;
+            cfg.noiseAmplRot = (isRot || isRotOffset) ? baseCfg.rotFactor * (pluginConfig.NoiseAmplitudeRot.Value * 100f) : 0f;
+            cfg.noiseAmplScl = (isScl || isSclOffset) ? baseCfg.sclFactor * (pluginConfig.NoiseAmplitudeScl.Value * 10f) : 0f;
+
 
             OnChangeAnimator();
             OnSetClothesState(body, chara);
@@ -1119,6 +1243,28 @@ namespace AniMorph
 
             cfg.noiseFreq = (float)Math.Round(0.75f * Random.Range(0.85f, 1.15f), 2);
             
+
+            static Vector3 ScaleVecFwd(float z, float perpAxisFactor)
+            {
+                if (perpAxisFactor < 0f) throw new ArgumentOutOfRangeException(nameof(perpAxisFactor));
+
+                // Convert small offset to the scale value.
+                z += 1f;
+
+                var sqrt = Mathf.Sqrt(1f / z);
+
+                var perpAxis = 1f + ((1f * sqrt - 1f) * perpAxisFactor);
+
+                return new Vector3(perpAxis, perpAxis, z);
+            }
+            static Vector3 InvertVec(Vector3 v)
+            {
+                return new Vector3(
+                    v.x == 0f ? 0f : (1f / v.x),
+                    v.y == 0f ? 0f : (1f / v.y),
+                    v.z == 0f ? 0f : (1f / v.z)
+                    );
+            }
         }
 
         internal void OnSetClothesState(AniMorphPlugin.Body body, ChaControl chara)
@@ -1247,9 +1393,9 @@ namespace AniMorph
             Rot = 1 << 1,
             Scl = 1 << 2,
             Tether = 1 << 3,
-            GravPos = 1 << 4,
-            GravRot = 1 << 5,
-            GravScl = 1 << 6,
+            PosOffset = 1 << 4,
+            RotOffset = 1 << 5,
+            SclOffset = 1 << 6,
             DevAnything = 1 << 7,
         }
 
@@ -1284,36 +1430,41 @@ namespace AniMorph
             Double,
         }
         
-        protected class BaseConfig
-        {
-            // No point making it a struct as it is rarely accessed.
-            internal BaseConfig(Effect allowedEffects, float posFactor, float rotFactor, float sclFactor)
-            {
-                this.allowedEffects = allowedEffects;
-                this.posFactor = posFactor;
-                this.rotFactor = rotFactor;
-                this.sclFactor = sclFactor;
-            }
+        //protected class BaseConfig
+        //{
+        //    // No point making it a struct as it is rarely accessed.
+        //    internal BaseConfig(Effect allowedEffects, float posFactor, float rotFactor, float sclFactor, bool dotFlipSign, Vector3 dotScl_posFactor)
+        //    {
+        //        this.allowedEffects = allowedEffects;
+        //        this.posFactor = posFactor;
+        //        this.rotFactor = rotFactor;
+        //        this.sclFactor = sclFactor;
+        //        this.dotFlipSign = dotFlipSign;
+        //        this.dotScl_posFactor = dotScl_posFactor;
+        //    }
 
-            internal Effect allowedEffects;
-            internal float posFactor;
-            internal float rotFactor;
-            internal float sclFactor;
-        }
+        //    internal Effect allowedEffects;
+        //    internal float posFactor;
+        //    internal float rotFactor;
+        //    internal float sclFactor;
+
+        //    internal bool dotFlipSign;
+        //    internal Vector3 dotScl_posFactor;
+        //}
 
         protected struct Config
         {
-            internal Config(Vector3 posPositiveApp, Vector3 posNegativeApp, Vector3 rotApplication, Vector3 sclApplication)
+            internal Config(Vector3 posApplication, Vector3 posAppPositive, Vector3 posAppNegative, Vector3 rotApplication, Vector3 sclApplication)
             {
-                this.posPositiveApp = posPositiveApp;
-                this.posNegativeApp = posNegativeApp;
+                this.posAppPositive = Vector3.Scale(posApplication, posAppPositive);
+                this.posAppNegative = Vector3.Scale(posApplication, posAppNegative);
                 this.rotApplication = rotApplication;
                 this.sclApplication = sclApplication;
             }
 
             internal Effect effects;
-            internal Vector3 posPositiveApp;
-            internal Vector3 posNegativeApp;
+            internal Vector3 posAppPositive;
+            internal Vector3 posAppNegative;
             internal Vector3 rotApplication;
             internal Vector3 sclApplication;
 
@@ -1361,32 +1512,29 @@ namespace AniMorph
             internal float rotSidewaysDeg;
             internal float rotSidewaysFaceUpFactor;
 
+            internal Vector3 posPitchOffsetFaceDown;
+            internal Vector3 posPitchOffsetUpsideDown;
+            internal Vector3 posRollOffsetL;
+            internal Vector3 posRollOffsetR;
+
+            internal Vector3 sclOffsetFaceUp;
+            internal Vector3 sclOffsetFaceDown;
+            internal Vector3 sclOffsetFaceUpF;
+            internal Vector3 sclOffsetFaceDownF;
+
+            internal bool dotScl_isPosFactor;
+            internal Vector3 dotScl_posFactorFaceUp;
+            internal Vector3 dotScl_posFactorFaceDown;
 
 
-            // When Dot(Bone.up, Vector3.up) points in up/middle/down direction.
-            internal Vector3 gravityUpUp = Vector3.zero;
-            internal Vector3 gravityUpMid = new Vector3(0f, 0.02f, 0f);
-            internal Vector3 gravityUpDown = new Vector3(0f, 0.05f, 0f);
-
-            // When Dot(Bone.forward, Vector3.up) points in up/middle/down direction.
-            internal Vector3 gravityForwardUp = new Vector3(0.075f, 0.075f, -0.15f);
-            internal Vector3 gravityForwardMid;
-            // Half of Z volume are perpendicular axes, half is subcutaneous fat from all around.
-            internal Vector3 gravityForwardDown = new Vector3(-0.05f, -0.05f, 0.2f);
-
-            // When Dot(Bone.right, Vector3.up) points in up/middle/down direction.
-            internal Vector3 gravityRightUp = new Vector3(-0.025f, -0.02f, 0f);
-            internal Vector3 gravityRightMid;
-            internal Vector3 gravityRightDown = new Vector3(0.025f, -0.02f, 0f);
-
-
-
+            internal bool isLeftSide;
             // (20 .. 40)
             public float rotSlowSmooth = 25f;
             // (5 .. 12)
             public float rotFastSmooth = 8f;
             // (0.1 .. 0.3)
             public float rotHighFreqInf = 0.2f;
+
         }
 
         protected struct Current
@@ -1397,6 +1545,10 @@ namespace AniMorph
             internal float noiseAmplFactor;
             internal float noiseFreq;
             internal Quaternion cleanLocalRot;
+
+            internal bool needNoisePos;
+            internal bool needNoiseRot;
+            internal bool needNoiseScl;
         }
         
         // TODO class -> struct

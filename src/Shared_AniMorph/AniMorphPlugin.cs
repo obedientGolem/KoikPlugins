@@ -24,10 +24,10 @@ namespace AniMorph
 #endif
     internal class AniMorphPlugin : BaseUnityPlugin
     {
-        public const string GUID = "Koik.AnisotropicMorph";
-        public const string Name = "AnisotropicMorph"
+        public const string GUID = "koik.anisotropicmorph";
+        public const string Name = "Anisotropic Morph"
 #if DEBUG
-            + " (DEBUG)"
+            + " [DEBUG]"
 #endif
             ;
         public const string Version = "0.9";
@@ -37,15 +37,11 @@ namespace AniMorph
         public static ConfigEntry<bool> MaleEnableDB;
         public static ConfigEntry<FilterDeltaTimeKind> FilterDeltaTime;
 
+
         public static readonly Dictionary<Body, ConfigType> ConfigDic = [];
 
-
-        private static readonly Dictionary<Body, Effect> _allowedEffectsDic = new()
-        {
-            { Body.Breast, Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.GravPos | Effect.GravRot | Effect.GravScl },
-            { Body.Pelvis, Effect.Pos | Effect.Rot | Effect.Scl },
-        };
-
+        private static readonly Effect[] _effects = Enum.GetValues(typeof(Effect)) as Effect[];
+        private float _settingChangedTimestamp;
 
         private void Awake()
         {
@@ -78,14 +74,25 @@ namespace AniMorph
             HooksMaleEnableDB.ApplyHooks();
         }
 
+        private void Update()
+        {
+            if (_settingChangedTimestamp != 0f && (Time.time - _settingChangedTimestamp) > 0.2f)
+            {
+                _settingChangedTimestamp = 0f;
+                AniMorphCharaController.OnSettingChanged();
+            }
+        }
+
         private void BindConfig()
         {
+            #region Breast
+
             ConfigDic.Add(Body.Breast,
                 new(
                     body: Body.Breast,
                     config: Config,
                     order: 10000,
-                    effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.GravPos | Effect.GravRot | Effect.GravScl,
+                    effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
 
@@ -121,19 +128,23 @@ namespace AniMorph
                     tetherDamping: 0.3f,
                     tetherMaxDeg: 30,
 
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 0.2f,
 
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
-                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
-                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-                ));
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+
+                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUpPerpAxesFactor: 0.85f,
+                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDownPerpAxesFactor: 1.4f
+                    )
+                );
+
+            #endregion
+
+            #region Pelvis
 
             ConfigDic.Add(Body.Pelvis,
                 new(
@@ -178,24 +189,27 @@ namespace AniMorph
                     tetherDamping: 0.3f,
                     tetherMaxDeg: 30,
 
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 0.15f,
 
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
-                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
-                    gravityFwdUp: new Vector3(-0.1f, 0f, 0.15f),
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-                    ));
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
+                    sclOffsetFaceUp: -0.075f,
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
 
-            ConfigDic.Add(Body.Chest,
+            #endregion
+
+            #region Thighs
+
+            ConfigDic.Add(Body.Thighs,
                 new(
-                    body: Body.Chest,
+                    body: Body.Thighs,
                     config: Config,
                     order: 8000,
                     effect: Effect.Pos,
@@ -203,54 +217,55 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.None,
 
                     noiseOctaves: 4,
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 0.67f,
-                    noiseAmplitudeScl: 0.15f,
+                    noiseAmplitudePos: 0.125f,
+                    noiseAmplitudeRot: 0.125f,
+                    noiseAmplitudeScl: 0f,
 
 
-                    posSpring: 21f,
+                    posSpring: 30f,
                     posDamping: 0.2f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
+                    posFreezeLen: 0.02f,
+                    posBleedStr: 2f,
                     posBleedLen: 0.1f,
-                    //posGravity: 0f,
 
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
-                    //AngularApplicationMaster: Axis.Z,
-                    //AngularApplicationSlave: Axis.X | Axis.Y,
+                    rotSpring: null,
+                    rotDamping: null,
+                    rotRate: null,
 
-                    sclStr: 0.35f,
+                    sclStr: 40f,
                     sclRate: 8f,
-                    sclDistortion: 0.4f,
+                    sclDistortion: 0.5f,
                     sclPreserveVolume: true,
 
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
+                    tetherMultiplier: null,
+                    tetherFrequency: null,
+                    tetherDamping: null,
+                    tetherMaxDeg: null,
 
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
+                    rotOffsetRollDeg: 15,
+                    rotOffsetRollFaceUpFactor: 0.5f,
 
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
-                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
-                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-                ));
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.035f, 0f, 0f),
 
-            ConfigDic.Add(Body.Shoulders,
+                    sclOffsetFaceUp: 0.2f,
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
+
+            #endregion
+
+            #region Chest
+
+            ConfigDic.Add(Body.Chest,
                 new(
-                    body: Body.Shoulders,
+                    body: Body.Chest,
                     config: Config,
                     order: 7000,
                     effect: Effect.Pos,
@@ -289,25 +304,88 @@ namespace AniMorph
                     tetherDamping: 0.3f,
                     tetherMaxDeg: 30,
 
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 3,
 
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
-                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
-                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-                ));
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+
+                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
+
+            #endregion
+
+            #region Shoulders
+
+            ConfigDic.Add(Body.Shoulders,
+                new(
+                    body: Body.Shoulders,
+                    config: Config,
+                    order: 6000,
+                    effect: Effect.Pos,
+                    adjustForSize: true,
+                    disableWhenClothes: ClothesKind.None,
+
+                    noiseOctaves: 4,
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeScl: 0.15f,
+
+
+                    posSpring: 21f,
+                    posDamping: 0.2f,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
+                    sclPreserveVolume: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxDeg: 30,
+
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 3,
+
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+
+                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
+
+            #endregion
+
+            #region Tummy
 
             ConfigDic.Add(Body.Tummy,
                 new(
                     body: Body.Tummy,
                     config: Config,
-                    order: 6000,
+                    order: 5000,
                     effect: Effect.Pos | Effect.Rot,
                     adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
@@ -344,135 +422,23 @@ namespace AniMorph
                     tetherDamping: 0.3f,
                     tetherMaxDeg: 30,
 
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 3,
 
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: new Vector3(0f, 0.02f, 0f),
-                    gravityUpDown: new Vector3(0f, 0.05f, 0f),
-                    gravityFwdUp: new Vector3(0.075f, 0.075f, -0.15f),
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: new Vector3(-0.05f, -0.05f, 0.2f),
-                    gravityRightUp: new Vector3(-0.025f, -0.02f, 0f),
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: new Vector3(0.025f, -0.02f, 0f)
-                ));
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
-            ConfigDic.Add(Body.Thighs,
-                new(
-                    body: Body.Thighs,
-                    config: Config,
-                    order: 5000,
-                    effect: Effect.Pos,
-                    adjustForSize: true,
-                    disableWhenClothes: ClothesKind.None,
+                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
 
-                    noiseOctaves: 4,
-                    noiseAmplitudePos: 0.075f,
-                    noiseAmplitudeRot: 0.67f,
-                    noiseAmplitudeScl: 0.15f,
+            #endregion
 
-
-                    posSpring: 30f,
-                    posDamping: 0.2f,
-                    posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.02f,
-                    posBleedStr: 2f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0.1f,
-                    //LinearLimitPositive: Vector3.one,
-                    //LinearLimitNegative: Vector3.one,
-
-                    rotSpring: 30f,
-                    rotDamping: 5f,
-                    rotRate: 2f,
-                    //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
-                    //AngularApplicationSlave: Axis.Y,
-
-                    sclStr: 40f,
-                    sclRate: 8f,
-                    sclDistortion: 0.5f,
-                    sclPreserveVolume: true,
-
-                    tetherMultiplier: 0.5f,
-                    tetherFrequency: 3f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
-
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
-
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: Vector3.zero,
-                    gravityUpDown: Vector3.zero,
-                    gravityFwdUp: Vector3.zero,
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: Vector3.zero,
-                    gravityRightUp: Vector3.zero,
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: Vector3.zero));
-
-
-            //ConfigDic.Add(Body.Cheeks,
-            //    new(
-            //        body: Body.Cheeks,
-            //        config: Config,
-            //        order: 4000,
-            //        effect: Effect.Pos,
-            //        adjustForSize: true,
-            //        disableWhenClothes: ClothesKind.None,
-
-            //        noiseOctaves: 4,
-            //        noiseAffliction: NoiseAffliction.Pos | NoiseAffliction.Rot | NoiseAffliction.Scl,
-            //        noiseAmplitudePos: 0.075f,
-            //        noiseAmplitudeRot: 0.67f,
-            //        noiseAmplitudeScl: 0.15f,
-
-
-            //        posSpring: 30f,
-            //        posDamping: 0.2f,
-            //        posShockStr: 1f,
-            //        posShockThreshold: 0.15f,
-            //        posFreezeThreshold: 0.25f,
-            //        posFreezeLen: 0.02f,
-            //        posBleedStr: 2f,
-            //        posBleedLen: 0.1f,
-            //        //posGravity: 0.1f,
-            //        //LinearLimitPositive: Vector3.one,
-            //        //LinearLimitNegative: Vector3.one,
-
-            //        rotSpring: 30f,
-            //        rotDamping: 5f,
-            //        rotRate: 2f,
-            //        //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
-            //        //AngularApplicationSlave: Axis.Y,
-
-            //        sclAccelerationFactor: 40f,
-            //        sclDecelerationFactor: 0.5f,
-            //        sclLerpSpeed: 8f,
-            //        sclMaxDistortion: 0.5f,
-            //        sclUnevenDistribution: new Vector3(0.4f, 0.5f, 0.6f),
-            //        sclPreserveVolume: true,
-            //        sclDumbAcceleration: true,
-
-            //        tetherMultiplier: 0.5f,
-            //        tetherFrequency: 3f,
-            //        tetherDamping: 0.3f,
-            //        tetherMaxAngle: 30f,
-
-            //        gravityUpUp: Vector3.zero,
-            //        gravityUpMid: Vector3.zero,
-            //        gravityUpDown: Vector3.zero,
-            //        gravityFwdUp: Vector3.zero,
-            //        gravityFwdMid: Vector3.zero,
-            //        gravityFwdDown: Vector3.zero,
-            //        gravityRightUp: Vector3.zero,
-            //        gravityRightMid: Vector3.zero,
-            //        gravityRightDown: Vector3.zero));
-
-
+            #region Head
 
             ConfigDic.Add(Body.Head,
                 new(
@@ -497,15 +463,10 @@ namespace AniMorph
                     posFreezeLen: 0.02f,
                     posBleedStr: 2f,
                     posBleedLen: 0.1f,
-                    //posGravity: 0.1f,
-                    //LinearLimitPositive: Vector3.one,
-                    //LinearLimitNegative: Vector3.one,
 
                     rotSpring: 30f,
                     rotDamping: 5f,
                     rotRate: 2f,
-                    //AngularApplicationMaster: Axis.X | Axis.Y | Axis.Z,
-                    //AngularApplicationSlave: Axis.Y,
 
                     sclStr: 40f,
                     sclRate: 8f,
@@ -517,18 +478,21 @@ namespace AniMorph
                     tetherDamping: 0.3f,
                     tetherMaxDeg: 30,
 
-                    rotSidewaysDeg: 20,
-                    rotSidewaysFaceUpDivider: 3,
+                    rotOffsetRollDeg: null,
+                    rotOffsetRollFaceUpFactor: null,
 
-                    gravityUpUp: Vector3.zero,
-                    gravityUpMid: Vector3.zero,
-                    gravityUpDown: Vector3.zero,
-                    gravityFwdUp: Vector3.zero,
-                    gravityFwdMid: Vector3.zero,
-                    gravityFwdDown: Vector3.zero,
-                    gravityRightUp: Vector3.zero,
-                    gravityRightMid: Vector3.zero,
-                    gravityRightDown: Vector3.zero));
+                    posOffsetPitchFaceDown: null,
+                    posOffsetPitchUpsideDown: null,
+                    posOffsetRoll: null,
+
+                    sclOffsetFaceUp: null,
+                    sclOffsetFaceUpPerpAxesFactor: null,
+                    sclOffsetFaceDown: null,
+                    sclOffsetFaceDownPerpAxesFactor: null
+                    )
+                );
+
+            #endregion
         }
 
 
@@ -561,26 +525,25 @@ namespace AniMorph
             }
         }
 
-
         private void OnSettingChanged(object sender, EventArgs e)
         {
-#if !DEBUG
+            _settingChangedTimestamp = Time.time;
+
             AdjustAllowedEffects();
-#endif
-            AniMorphCharaController.OnSettingChanged();
         }
 
         private void AdjustAllowedEffects()
         {
-            foreach (Effect effect in Enum.GetValues(typeof(Effect)))
+            foreach (var kv in ConfigDic)
             {
-                if ((_allowedEffectsDic[Body.Breast] & effect) == 0)
+                var allowedEffects = kv.Value.allowedEffects;
+
+                foreach (var effect in _effects)
                 {
-                    ConfigDic[Body.Breast].Effects.Value &= ~effect;
-                }
-                if ((_allowedEffectsDic[Body.Pelvis] & effect) == 0)
-                {
-                    ConfigDic[Body.Pelvis].Effects.Value &= ~effect;
+                    if ((allowedEffects & effect) == 0)
+                    {
+                        kv.Value.Effects.Value &= ~effect;
+                    }
                 }
             }
         }
@@ -671,32 +634,32 @@ namespace AniMorph
                 float posBleedStr,
                 float posBleedLen,
 
-                float rotSpring,
-                float rotDamping,
-                float rotRate,
+                float? rotSpring,
+                float? rotDamping,
+                float? rotRate,
 
-                float sclStr,
-                float sclRate,
-                float sclDistortion,
-                bool sclPreserveVolume,
+                float? sclStr,
+                float? sclRate,
+                float? sclDistortion,
+                bool? sclPreserveVolume,
 
-                float tetherMultiplier,
-                float tetherFrequency,
-                float tetherDamping,
-                int tetherMaxDeg,
+                float? tetherMultiplier,
+                float? tetherFrequency,
+                float? tetherDamping,
+                int? tetherMaxDeg,
 
-                Vector3 gravityUpUp,
-                Vector3 gravityUpMid,
-                Vector3 gravityUpDown,
-                Vector3 gravityFwdUp,
-                Vector3 gravityFwdMid,
-                Vector3 gravityFwdDown,
-                Vector3 gravityRightUp,
-                Vector3 gravityRightMid,
-                Vector3 gravityRightDown,
+                int? rotOffsetRollDeg,
+                float? rotOffsetRollFaceUpFactor,
 
-                int rotSidewaysDeg,
-                int rotSidewaysFaceUpDivider
+                float? posOffsetPitchFaceDown,
+                float? posOffsetPitchUpsideDown,
+                Vector3? posOffsetRoll,
+
+                float? sclOffsetFaceUp,
+                float? sclOffsetFaceUpPerpAxesFactor,
+                float? sclOffsetFaceDown,
+                float? sclOffsetFaceDownPerpAxesFactor
+
                 )
             {
                 var name = body.ToString();
@@ -727,6 +690,12 @@ namespace AniMorph
                 //    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
 
 
+                var isRotation = rotSpring != null && rotDamping != null && rotRate != null;
+                var isScl = sclStr != null && sclDistortion != null && sclRate != null && sclPreserveVolume != null;
+                var isTether = tetherMultiplier != null && tetherFrequency != null && tetherDamping != null && tetherMaxDeg != null;
+                var isPosOffset = posOffsetPitchFaceDown != null && posOffsetPitchUpsideDown != null && posOffsetRoll != null;
+                var isRotOffset = rotOffsetRollDeg != null && rotOffsetRollFaceUpFactor != null;
+                var isSclOffset = sclOffsetFaceUp != null && sclOffsetFaceUpPerpAxesFactor != null && sclOffsetFaceDown != null && sclOffsetFaceDownPerpAxesFactor != null;
 
                 NoiseOctaves = config.Bind(name, "NoiseOctaves", noiseOctaves,
                     new ConfigDescription("", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { Order = order - 7 }));
@@ -771,73 +740,116 @@ namespace AniMorph
                     new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 26, ShowRangeAsPercent = false }));
 
 
+                if (isRotation)
+                {
+                    RotSpring = config.Bind(name, "Rotation Spring", (float)rotSpring,
+                        new ConfigDescription("Strength of the rotational lag.",
+                        new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
 
-                RotSpring = config.Bind(name, "Rotation Spring", rotSpring,
-                    new ConfigDescription("Strength of the rotational lag.",
-                    new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
+                    RotDamping = config.Bind(name, "Rotation Damping", (float)rotDamping,
+                        new ConfigDescription("Strength of negation of the rotational lag.",
+                        new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
 
-                RotDamping = config.Bind(name, "Rotation Damping", rotDamping,
-                    new ConfigDescription("Strength of negation of the rotational lag.", 
-                    new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false  }));
-
-                RotRate = config.Bind(name, "Rotation Interpolation Speed", rotRate,
-                    new ConfigDescription("How fast the rotation offset changes.", 
-                    new AcceptableValueRange<float>(0f, 10f), new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
-
-
-
-                SclStr = config.Bind(name, "Scale Strength", sclStr,
-                    new ConfigDescription("How much the velocity influences the scale.", 
-                    new AcceptableValueRange<float>(0f, 50f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
-
-                SclDistort = config.Bind(name, "Scale Distortion", sclDistortion,
-                    new ConfigDescription("How much the scale can change, 1 ± this value.",
-                    new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 70, ShowRangeAsPercent = false }));
-
-                SclRate = config.Bind(name, "Scale Interpolation Speed", sclRate,
-                    new ConfigDescription("How fast the scale offset changes.", 
-                    new AcceptableValueRange<float>(0f, 20f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
-
-                SclPreserveVol = config.Bind(name, "Scale Preserve Volume", sclPreserveVolume,
-                    new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));
+                    RotRate = config.Bind(name, "Rotation Interpolation Speed", (float)rotRate,
+                        new ConfigDescription("How fast the rotation offset changes.",
+                        new AcceptableValueRange<float>(0f, 10f), new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
+                }
 
 
+                if (isScl)
+                {
+                    SclStr = config.Bind(name, "Scale Strength", (float)sclStr,
+                        new ConfigDescription("How much the velocity influences the scale.",
+                        new AcceptableValueRange<float>(0f, 50f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
 
-                TetherFactor = config.Bind(name, "TetheringMultiplier", tetherMultiplier,
-                    new ConfigDescription("Strength of tethering", new AcceptableValueRange<float>(-5f, 5f), new ConfigurationManagerAttributes { Order = order - 95, ShowRangeAsPercent = false }));
+                    SclDistort = config.Bind(name, "Scale Distortion", (float)sclDistortion,
+                        new ConfigDescription("How much the scale can change, 1 ± this value.",
+                        new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 70, ShowRangeAsPercent = false }));
 
-                TetherFreq = config.Bind(name, "TetheringFrequency", tetherFrequency,
-                    new ConfigDescription("Ceiling for the amount oscillation per second", null, new ConfigurationManagerAttributes { Order = order - 100 }));
+                    SclRate = config.Bind(name, "Scale Interpolation Speed", (float)sclRate,
+                        new ConfigDescription("How fast the scale offset changes.",
+                        new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
 
-                TetherDamp = config.Bind(name, "TetheringDamping", tetherDamping,
-                    new ConfigDescription("Strength of negation of tethering", new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = order - 105, ShowRangeAsPercent = false }));
+                    SclPreserveVol = config.Bind(name, "Scale Preserve Volume", (bool)sclPreserveVolume,
+                        new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));
+                }
+                
 
-                TetherMaxDeg = config.Bind(name, "TetheringMaxAngle", tetherMaxDeg,
-                    new ConfigDescription("Tethering won't exceed this value in degrees ", 
-                    new AcceptableValueRange<int>(10, 60), new ConfigurationManagerAttributes { Order = order - 110 }));
+                if (isTether)
+                {
+                    TetherFactor = config.Bind(name, "TetheringMultiplier", (float)tetherMultiplier,
+                        new ConfigDescription("Strength of tethering", new AcceptableValueRange<float>(-5f, 5f),
+                        new ConfigurationManagerAttributes { Order = order - 95, ShowRangeAsPercent = false }));
+
+                    TetherFreq = config.Bind(name, "TetheringFrequency", (float)tetherFrequency,
+                        new ConfigDescription("Ceiling for the amount oscillation per second",
+                        null, new ConfigurationManagerAttributes { Order = order - 100 }));
+
+                    TetherDamp = config.Bind(name, "TetheringDamping", (float)tetherDamping,
+                        new ConfigDescription("Strength of negation of tethering",
+                        new AcceptableValueRange<float>(0f, 2f), new ConfigurationManagerAttributes { Order = order - 105, ShowRangeAsPercent = false }));
+
+                    TetherMaxDeg = config.Bind(name, "TetheringMaxAngle", (int)tetherMaxDeg,
+                        new ConfigDescription("Tethering won't exceed this value in degrees ",
+                        new AcceptableValueRange<int>(10, 60), new ConfigurationManagerAttributes { Order = order - 110 }));
+                }
 
 
-                RotSidewaysDeg = config.Bind(name, "RotSidewaysDeg", rotSidewaysDeg,
-                    new ConfigDescription("", 
-                    new AcceptableValueRange<int>(10, 60), new ConfigurationManagerAttributes { Order = order - 115, ShowRangeAsPercent = false }));
+                if (isRotOffset)
+                {
+                    RotOffsetRollDeg = config.Bind(name, "RotOffsetRollDeg", (int)rotOffsetRollDeg,
+                    new ConfigDescription("",
+                    new AcceptableValueRange<int>(10, 30), new ConfigurationManagerAttributes { Order = order - 115, ShowRangeAsPercent = false }));
 
-                RotSidewaysFaceUpDivider = config.Bind(name, "RotSidewaysFaceUpDivider", rotSidewaysFaceUpDivider,
-                    new ConfigDescription("", 
-                    new AcceptableValueRange<int>(1, 5), new ConfigurationManagerAttributes { Order = order - 120, ShowRangeAsPercent = false }));
+                    RotOffsetRollFaceUpFactor = config.Bind(name, "RotOffsetRollFaceUpFactor", (float)rotOffsetRollFaceUpFactor,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 120, ShowRangeAsPercent = false }));
+                }
 
 
+                if (isPosOffset)
+                {
+                    PosOffsetPitchFaceDown = config.Bind(name, "PosOffsetPitchFaceDown", (float)posOffsetPitchFaceDown,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(0f, 0.1f), new ConfigurationManagerAttributes { Order = order - 125, ShowRangeAsPercent = false }));
 
-                // Not a slightest clue how to explain to users what the hell dots(cosines) do together with transform's directions.
-                GravityUpUp = config.Bind(name, "gravityUpUp", gravityUpUp, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 115, IsAdvanced = true }));
-                GravityUpMid = config.Bind(name, "gravityUpMid", gravityUpMid, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 116, IsAdvanced = true }));
-                GravityUpDown = config.Bind(name, "gravityUpDown", gravityUpDown, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 117, IsAdvanced = true }));
-                GravityFwdUp = config.Bind(name, "gravityFwdUp", gravityFwdUp, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 118, IsAdvanced = true }));
-                GravityFwdMid = config.Bind(name, "gravityFwdMid", gravityFwdMid, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 119, IsAdvanced = true }));
-                GravityFwdDown = config.Bind(name, "gravityFwdDown", gravityFwdDown, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 120, IsAdvanced = true }));
-                GravityRightUp = config.Bind(name, "gravityRightUp", gravityRightUp, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 121, IsAdvanced = true }));
-                GravityRightMid = config.Bind(name, "gravityRightMid", gravityRightMid, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 122, IsAdvanced = true }));
-                GravityRightDown = config.Bind(name, "gravityRightDown", gravityRightDown, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 123, IsAdvanced = true }));
+                    PosOffsetPitchUpsideDown = config.Bind(name, "PosOffsetPitchUpsideDown", (float)posOffsetPitchUpsideDown,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(0f, 0.1f), new ConfigurationManagerAttributes { Order = order - 130, ShowRangeAsPercent = false }));
 
+                    PosOffsetRoll = config.Bind(name, "PosOffsetRoll", (Vector3)posOffsetRoll,
+                        new ConfigDescription("",
+                        null, new ConfigurationManagerAttributes { Order = order - 135, ShowRangeAsPercent = false }));
+                }
+
+
+                if (isSclOffset)
+                {
+                    SclOffsetFaceUp = config.Bind(name, "SclOffsetFaceUp", (float)sclOffsetFaceUp,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(-1f, 1f), new ConfigurationManagerAttributes { Order = order - 140, ShowRangeAsPercent = false }));
+
+                    SclOffsetFaceUpPerpAxesFactor = config.Bind(name, "SclOffsetFaceUpPerpAxesFactor", (float)sclOffsetFaceUpPerpAxesFactor,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = order - 145, ShowRangeAsPercent = false }));
+
+                    SclOffsetFaceDown = config.Bind(name, "SclOffsetFaceDown", (float)sclOffsetFaceDown,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(-1f, 1f), new ConfigurationManagerAttributes { Order = order - 150, ShowRangeAsPercent = false }));
+
+                    SclOffsetFaceDownPerpAxesFactor = config.Bind(name, "SclOffsetFaceDownPerpAxesFactor", (float)sclOffsetFaceDownPerpAxesFactor,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = order - 155, ShowRangeAsPercent = false }));
+                }
+
+                allowedEffects |= Effect.Pos;
+
+                if (isRotation) allowedEffects |= Effect.Rot;
+                if (isScl) allowedEffects |= Effect.Scl;
+                if (isTether) allowedEffects |= Effect.Tether;
+                if (isPosOffset) allowedEffects |= Effect.PosOffset;
+                if (isRotOffset) allowedEffects |= Effect.RotOffset;
+                if (isSclOffset) allowedEffects |= Effect.SclOffset;
             }
 
             public ConfigEntry<Effect> Effects;
@@ -883,18 +895,20 @@ namespace AniMorph
             public ConfigEntry<int> TetherMaxDeg;
 
 
-            public ConfigEntry<Vector3> GravityUpUp;
-            public ConfigEntry<Vector3> GravityUpMid;
-            public ConfigEntry<Vector3> GravityUpDown;
-            public ConfigEntry<Vector3> GravityFwdUp;
-            public ConfigEntry<Vector3> GravityFwdMid;
-            public ConfigEntry<Vector3> GravityFwdDown;
-            public ConfigEntry<Vector3> GravityRightUp;
-            public ConfigEntry<Vector3> GravityRightMid;
-            public ConfigEntry<Vector3> GravityRightDown;
+            public ConfigEntry<int> RotOffsetRollDeg;
+            public ConfigEntry<float> RotOffsetRollFaceUpFactor;
 
-            public ConfigEntry<int> RotSidewaysDeg;
-            public ConfigEntry<int> RotSidewaysFaceUpDivider;
+            public ConfigEntry<float> PosOffsetPitchFaceDown;
+            public ConfigEntry<float> PosOffsetPitchUpsideDown;
+            public ConfigEntry<Vector3> PosOffsetRoll;
+
+            public ConfigEntry<float> SclOffsetFaceUp;
+            public ConfigEntry<float> SclOffsetFaceUpPerpAxesFactor;
+            public ConfigEntry<float> SclOffsetFaceDown;
+            public ConfigEntry<float> SclOffsetFaceDownPerpAxesFactor;
+
+            internal Effect allowedEffects;
+
         }
 
         #endregion
