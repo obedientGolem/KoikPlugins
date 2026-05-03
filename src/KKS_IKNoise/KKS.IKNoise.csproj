@@ -20,7 +20,7 @@
     <DebugType>none</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>..\..\bin\KKS\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;KKS</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;KKS;NOVR;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -30,7 +30,7 @@
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>..\..\bin\KKS\</OutputPath>
-    <DefineConstants>TRACE;KKS</DefineConstants>
+    <DefineConstants>TRACE;KKS;NOVR;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

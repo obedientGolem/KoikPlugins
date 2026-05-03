@@ -10,6 +10,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IKNoiseModifierLimb.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IKNoiseHooks.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IKNoiseModifier.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IKNoiseEffector.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IKNoisePlugin.cs" />

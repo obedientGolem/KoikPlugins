@@ -77,7 +77,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.IK.Plugin", "src\KKS_IK
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared.IK.Plugin", "src\Shared_IK_Plugin\Shared.IK.Plugin.shproj", "{D93DA3DC-1CA0-4630-948D-C2D957B29AA5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Private", "Private", "{280DEB6F-DC14-47F4-80C6-2EB08C26E53F}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dev", "dev", "{280DEB6F-DC14-47F4-80C6-2EB08C26E53F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK_Things", "src\KK_Things\KK_Things.csproj", "{0AC84096-BF99-4568-BA82-04B545A7AF8D}"
 EndProject
@@ -96,6 +96,10 @@ EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared_LateSwordAiming", "src\Shared_LateSwordAiming\Shared_LateSwordAiming.shproj", "{D3E2BB7A-D0D6-4C7E-99AE-3C23902EEF25}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK_LateSwordAiming", "src\KK_LateSwordAiming\KK_LateSwordAiming.csproj", "{73012E53-D93B-4AB7-B9C8-07B60F489850}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK.IKNoise.VR", "src\KK_VR_IKNoise\KK.IKNoise.VR.csproj", "{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.IKNoise.VR", "src\KKS_VR_IKNoise\KKS.IKNoise.VR.csproj", "{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -199,6 +203,14 @@ Global
 		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -239,6 +251,8 @@ Global
 		{1DC4ECBD-3832-4430-96D2-D5A8E4795697} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
 		{D3E2BB7A-D0D6-4C7E-99AE-3C23902EEF25} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
 		{73012E53-D93B-4AB7-B9C8-07B60F489850} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
+		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
+		{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F0CE8428-C023-43B1-9D5B-4B49E396736A}
@@ -259,8 +273,10 @@ Global
 		src\Shared_Blink\Shared_Blink.projitems*{7514a7bb-f7e8-4fe2-a4a5-2a1404449901}*SharedItemsImports = 13
 		src\Shared_AnimFilter\Shared_AnimFilter.projitems*{75585f98-75a2-4f09-948c-9b552ee5fbf9}*SharedItemsImports = 13
 		src\Shared_Kokyu\Shared_Kokyu.projitems*{779a2a16-025d-4c2c-8135-46298fbb9933}*SharedItemsImports = 4
+		src\Shared_IKNoise\Shared_IKNoise.projitems*{7afe562c-0eb7-4dd8-b6b4-20e3b1f71b5c}*SharedItemsImports = 4
 		src\Shared_SpeakSoftly\Shared_SpeakSoftly.projitems*{85350087-670a-46dd-bb50-a85a11d9f48b}*SharedItemsImports = 4
 		src\Shared_IKNoise\Shared_IKNoise.projitems*{86374143-d83f-4a7c-b23b-07512c8972fc}*SharedItemsImports = 4
+		src\Shared_IKNoise\Shared_IKNoise.projitems*{8f0b4e69-3da6-4ee4-9f17-3d14fbe8d76e}*SharedItemsImports = 4
 		src\Shared_BirbExGauge\Shared_BirbExGauge.projitems*{94302fe6-41ee-469e-9174-e690455cfa05}*SharedItemsImports = 4
 		src\Shared_IKAmplifier\Shared_IKAmplifier.projitems*{97b8de54-feae-4f8b-aaf5-b592e1aacae1}*SharedItemsImports = 13
 		src\Shared_Kokyu\Shared_Kokyu.projitems*{989f659d-bdee-4091-9c13-8f6b2afb50a8}*SharedItemsImports = 13

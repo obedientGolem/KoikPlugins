@@ -18,8 +18,6 @@ namespace AniMorph
 {
     internal class MotionModifier
     {
-        private readonly Vector3 vecOne = Vector3.one;
-        private readonly Vector3 vecZero = Vector3.zero;
 
         protected static readonly Effect[] effects = Enum.GetValues(typeof(Effect)) as Effect[];
 
@@ -27,10 +25,14 @@ namespace AniMorph
         protected readonly Tethering tether;
         protected readonly BoneModifierData abmxModifierData = new();
 
+        protected readonly Vector3 vecZero = Vector3.zero;
+        protected readonly Vector3 vecOne = Vector3.one;
+
+
         internal BoneModifierData GetBoneModifierData => abmxModifierData;
 
         protected bool active;
-        protected BoneModifier abmxModifier;
+        protected BoneModifier _abmxModifier;
         // Big struct, only ref access.
         protected Config config;
         // Class, rare access.
@@ -40,10 +42,13 @@ namespace AniMorph
         // Big struct, only ref access.
         protected Current current;
 
+        private BoneController _boneController;
+
 
         private readonly float _baseScaleVolume;
         private readonly float _baseScaleMagnitude;
-        private readonly bool _isAnimatedRotation;
+        private bool _animRot;
+        private int _animRotFrameCount;
 
         //private BoneModifierData _combineModifiersCachedReturn;
 
@@ -66,7 +71,7 @@ namespace AniMorph
         /// <param name="bone">Bone that will be modified.</param>
         /// <param name="bakedMesh">Baked skinned mesh</param>
         /// <param name="skinnedMesh"></param>
-        internal MotionModifier(AniMorphEffector.BaseConfig baseCfg, Transform bone, Transform centeredBone, bool isAnimatedRotation)
+        internal MotionModifier(BaseConfig baseCfg, Transform bone, Transform centeredBone)
         {
             if (bone == null) 
                 throw new ArgumentNullException(nameof(bone));
@@ -106,7 +111,6 @@ namespace AniMorph
             prev.adjustedRot = Quaternion.identity;
             _baseScaleVolume = bone.localScale.x * bone.localScale.y * bone.localScale.z;
             _baseScaleMagnitude = bone.localScale.magnitude;
-            _isAnimatedRotation = isAnimatedRotation;
 
 
             if (centeredBone != null)
@@ -468,12 +472,18 @@ namespace AniMorph
 
                 prev.velocity += cleanVelDelta * cfg.posShockStr;
 
+                var fpsFactor = Mathf.Min(1f, dtInv * (1f / 60f));
+                var scaleFactor = Mathf.Min(1f, animLenInv * (1f / 2.25f)) * (fpsFactor * fpsFactor);
                 // TODO Add slowdown instead of freeze?
-                curr.bleedTime = cfg.posBleedLen * animLenInv;
+                curr.bleedTime = cfg.posBleedLen * scaleFactor;
 
                 if (len > cfg.posFreezeThreshold || projectDot < 0f)
                 {
-                    curr.shockTime = cfg.posFreezeLen * animLenInv;
+                    curr.shockTime = cfg.posFreezeLen * scaleFactor;
+
+                    //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
+                    //    $"Shock[{curr.shockTime:F4}]!" +
+                    //    $"");
                 }
                 return true;
             }
@@ -575,11 +585,44 @@ namespace AniMorph
                 return currLocalRot;
         }
 
+        private int _prevFrameCount;
+        private int ConsecutiveFrameCounter
+        {
+            get => field;
+
+            set
+            {
+                var frameCount = Time.frameCount;
+
+                if (value == 0 || frameCount - _prevFrameCount > 1)
+                {
+                    field = 0;
+                }
+                else
+                {
+                    field += value;
+                }
+                _prevFrameCount = frameCount;
+            }
+        }
+
         protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv)
         {
             var currRot = transform.rotation;
             var currLocalRot = transform.localRotation;
             var isDynamic = currLocalRot != prev.localRot;
+
+            if (isDynamic)
+            {
+                if (!_animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
+                {
+                    UpdateDynamicRot(true);
+                }
+            }
+            else if (_animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
+            {
+                UpdateDynamicRot(false);
+            }
 
             if (!isDynamic)
             {
@@ -1033,47 +1076,21 @@ namespace AniMorph
         #region OnHooks
 
 
-        internal virtual void OnChangeAnimator()
+        internal virtual void Reset()
         {
             var bone = transform;
 
-            ref var prev = ref previous;
-            ref var cfg = ref config;
-            var pos = bone.position;
-            prev.position = pos;
-            prev.cleanPos = pos;
-            prev.cleanDeltaPos = Vector3.zero;
-            prev.cleanVelDelta = Vector3.zero;
-            prev.posOffset = Vector3.zero;
-            prev.rotOffset = Vector3.zero;
-            prev.adjustedRot = bone.rotation;
-            //previous.cleanRot = bone.rotation;
-            prev.localRot = bone.localRotation;
-            prev.velocity = Vector3.zero;
-            prev.torque = Vector3.zero;
-            prev.scale = Vector3.one;
-            prev.sclTotalAccel = 0f;
-            prev.sclTotalDecel = 0f;
-            abmxModifierData.Clear();
+            abmxModifierData?.Clear();
+            current.Clear();
+            previous.Clear(bone);
+            tether?.Clear();
 
-
-            if (_isAnimatedRotation)
+            if (_abmxModifier == null)
             {
-                // TODO
-                // Cache it?
-                var boneController = transform.GetComponentInParent<BoneController>();
+                var boneController = bone.GetComponentInParent<BoneController>();
                 if (boneController != null)
                 {
-                    // Added in ABMX 5.4+
-                    abmxModifier = boneController.CollectBaselineOnUpdate(transform.name, BoneLocation.Unknown, KKABMX.Core.Baseline.Rotation);
-                }
-            }
-            else if (abmxModifier == null)
-            {
-                var boneController = transform.GetComponentInParent<BoneController>();
-                if (boneController != null)
-                {
-                    abmxModifier = boneController.GetModifier(bone.name, BoneLocation.BodyTop);
+                    _abmxModifier = boneController.GetModifier(bone.name, BoneLocation.BodyTop);
                 }
             }
             
@@ -1085,7 +1102,45 @@ namespace AniMorph
             //}
         }
 
-        internal virtual void OnSettingChanged(AniMorphPlugin.Body body, ChaControl chara)
+        private void UpdateDynamicRot(bool dynamic)
+        {
+            ConsecutiveFrameCounter = 0;
+            _animRot = dynamic;
+
+            AniMorphPlugin.Logger.LogWarning($"[{transform.name}] [UpdateDynamicRot] isDynamic[{dynamic}]");
+
+            if (_boneController == null)
+            {
+                var boneController = transform.GetComponentInParent<BoneController>();
+
+                if (boneController == null) return;
+
+                _boneController = boneController;
+            }
+            
+            if (_abmxModifier == null)
+            {
+                var abmxModifier = _boneController.GetModifier(transform.name, BoneLocation.BodyTop);
+
+                if (abmxModifier == null) return;
+
+                _abmxModifier = abmxModifier;
+            }
+
+            if (dynamic)
+            {
+                _abmxModifier.AddCollectPartialBaseline(Baseline.Rotation);
+            }
+            else
+            {
+                _abmxModifier.RemoveCollectPartialBaseline(Baseline.Rotation);
+
+                _boneController.NeedsBaselineUpdate = true;
+            }
+            
+        }
+
+        internal virtual void OnSettingChanged(Body body, ChaControl chara)
         {
 #if DEBUG
             AniMorphPlugin.Logger.LogDebug($"[{transform.name}] - {GetType().Name}.OnSettingChanged: [{chara.name}:{body}]");
@@ -1101,7 +1156,7 @@ namespace AniMorph
 
             if (!active)
             {
-                OnChangeAnimator();
+                Reset();
                 return;
             }
 
@@ -1214,12 +1269,12 @@ namespace AniMorph
                 }
             }
 
-            cfg.noiseAmplPos = (isPos || isPosOffset) ? baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value : 0f;
+            cfg.noiseAmplPos = (isPos) ? baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value : 0f;
             cfg.noiseAmplRot = (isRot || isRotOffset) ? baseCfg.rotFactor * (pluginConfig.NoiseAmplitudeRot.Value * 100f) : 0f;
             cfg.noiseAmplScl = (isScl || isSclOffset) ? baseCfg.sclFactor * (pluginConfig.NoiseAmplitudeScl.Value * 10f) : 0f;
 
 
-            OnChangeAnimator();
+            Reset();
             OnSetClothesState(body, chara);
 
 
@@ -1267,9 +1322,10 @@ namespace AniMorph
             }
         }
 
-        internal void OnSetClothesState(AniMorphPlugin.Body body, ChaControl chara)
+
+        internal void OnSetClothesState(Body body, ChaControl chara)
         {
-            var pluginConfig = AniMorphPlugin.ConfigDic[body];
+            var pluginConfig = ConfigDic[body];
 
             var settingValue = pluginConfig.DisableWhenClothes.Value;
 
@@ -1277,7 +1333,7 @@ namespace AniMorph
 
             var slotList = new List<int>();
 
-            foreach (var enumValue in AniMorphPlugin.ClothesKindValues)
+            foreach (var enumValue in ClothesKindValues)
             {
                 var activeSlot = (settingValue & enumValue) != 0;
 
@@ -1300,7 +1356,7 @@ namespace AniMorph
             var wasActive = active;
             active = pluginConfig.Effects.Value != 0;
 
-            if (!wasActive && active) OnChangeAnimator();
+            if (!wasActive && active) Reset();
         }
 
         internal virtual void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
@@ -1546,9 +1602,21 @@ namespace AniMorph
             internal float noiseFreq;
             internal Quaternion cleanLocalRot;
 
+            internal bool animRot;
+
             internal bool needNoisePos;
             internal bool needNoiseRot;
             internal bool needNoiseScl;
+
+            internal void Clear()
+            {
+                highTorque = false;
+
+                shockTime = 0f;
+                bleedTime = 0f;
+
+                animRot = false;
+            }
         }
         
         // TODO class -> struct
@@ -1601,6 +1669,10 @@ namespace AniMorph
             {
                 var pos = bone.position;
 
+                velocity = Vector3.zero;
+                velocityLen = 0f;
+                _animLoopVelLen = 0f;
+                torque = Vector3.zero;
                 position = pos;
                 cleanPos = pos;
                 cleanDeltaPos = Vector3.zero;
@@ -1608,9 +1680,6 @@ namespace AniMorph
                 posOffset = Vector3.zero;
                 rotOffset = Vector3.zero;
                 adjustedRot = bone.rotation;
-                localRot = bone.localRotation;
-                velocity = Vector3.zero;
-                torque = Vector3.zero;
                 scale = Vector3.one;
                 sclTotalAccel = 0f;
                 sclTotalDecel = 0f;

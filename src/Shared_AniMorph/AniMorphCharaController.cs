@@ -18,11 +18,11 @@ namespace AniMorph
 {
     internal class AniMorphCharaController : CharaCustomFunctionController
     {
-        public AniMorphEffector BoneEffector => _boneEffector;
+        public AniMorphEffector BoneEffector => boneEffector;
         private static readonly List<AniMorphCharaController> _instances = [];
 
 
-        private AniMorphEffector _boneEffector;
+        private AniMorphEffector boneEffector;
 
 #if DEBUG
 
@@ -103,20 +103,14 @@ namespace AniMorph
 
         private void OnDisable()
         {
-            _boneEffector?.OnDisable();
+            boneEffector?.OnDisable();
         }
 
         private bool IsProperScene
         {
             get
             {
-                var scene =
-#if KK
-                 Scene.Instance.AddSceneName;
-#elif KKS
-                 Scene.AddSceneName;
-#endif
-                return StudioAPI.InsideStudio || scene.Equals("HProc");
+                return StudioAPI.InsideStudio || AniMorphPlugin.IsSceneLoaded("HProc") || AniMorphPlugin.IsSceneLoaded("Talk");
             }
         }
 
@@ -147,7 +141,7 @@ namespace AniMorph
                 {
                     if (forceStart) RemoveBoneEffector();
 
-                    if (_boneEffector == null)
+                    if (boneEffector == null)
                     {
                         StartCoroutine(StartCo(boneController));
                     }
@@ -159,10 +153,10 @@ namespace AniMorph
             }
             void RemoveBoneEffector()
             {
-                if (_boneEffector == null) return;
+                if (boneEffector == null) return;
 
-                boneController.RemoveBoneEffect(_boneEffector);
-                _boneEffector = null;
+                boneController.RemoveBoneEffect(boneEffector);
+                boneEffector = null;
                 boneController.NeedsBaselineUpdate = true;
             }
 
@@ -210,23 +204,17 @@ namespace AniMorph
             var count = 3;
             var endOfFrame = CoroutineUtils.WaitForEndOfFrame;
 
-            // Don't filter lags (unless huge) in the studio or if setting.
-            var settingValue = AniMorphPlugin.FilterDeltaTime.Value;
-            var bigDeltaTime = 
-                StudioAPI.InsideStudio ? 1f 
-                : (settingValue == AniMorphPlugin.FilterDeltaTimeKind.Enable || settingValue == AniMorphPlugin.FilterDeltaTimeKind.OnlyInGame) ? (1f / 30f) 
-                : 1f;
-
-            while (count-- > 0 || Time.deltaTime > bigDeltaTime) // || count++ < 1000)
+            while (count-- > 0 || AniMorphPlugin.IsLagSpike)
             {
 #if DEBUG
                 AniMorphPlugin.Logger.LogDebug($"StartCo:deltaTime[{Time.deltaTime:F3}]");
 #endif
                 yield return endOfFrame;
             }
-            _boneEffector = new AniMorphEffector(ChaControl);
-            boneController.AddBoneEffect(_boneEffector);
+            boneEffector = new AniMorphEffector(ChaControl);
+            boneController.AddBoneEffect(boneEffector);
         }
+
         private float _devMoveRadius = 1f / 3f;
         private float _devMoveSpeed = 2.5f;
         private Vector3 _devMove = new(1f, 1f / 3f, 1f / 3f);
@@ -314,7 +302,7 @@ namespace AniMorph
             }
 #endif
 
-            _boneEffector?.OnUpdate();
+            boneEffector?.OnUpdate();
         }
 
         public static void OnSettingChanged()
@@ -322,14 +310,14 @@ namespace AniMorph
             foreach (var instance in _instances)
             {
                 instance.HandleEnable();
-                instance._boneEffector?.OnSettingChanged();
+                instance.boneEffector?.OnSettingChanged();
             }
         }
 
         protected override void OnReload(GameMode currentGameMode)
         {
 #if DEBUG
-            AniMorphPlugin.Logger.LogDebug($"{GetType().Name}.{MethodBase.GetCurrentMethod().Name}:Pop");
+            AniMorphPlugin.Logger.LogWarning($"[{ChaControl.name}] OnReload");
 #endif
             if (ChaControl != null && IsProperScene)
             {
@@ -355,7 +343,7 @@ namespace AniMorph
             {
                 if (instance.ChaControl == chara)
                 {
-                    instance._boneEffector?.OnSetClothesState(chara);
+                    instance.boneEffector?.OnSetClothesState(chara);
                     return;
                 }
             }

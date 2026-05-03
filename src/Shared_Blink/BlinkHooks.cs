@@ -35,7 +35,9 @@ namespace Blink
 
             if (fbsCtrl == null)
             {
+#if DEBUG
                 BlinkPlugin.Logger.LogError($"Blink effect wasn't created due to the absence of {nameof(FaceBlendShape)} type on {chara.name}");
+#endif
                 return null;
             }
 

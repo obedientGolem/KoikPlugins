@@ -16,12 +16,8 @@ namespace AniMorph
     {
         private readonly MotionModifierSlave[] _slaves;
 
-        internal MotionModifierMaster(
-            AniMorphEffector.BaseConfig cfg,
-            Transform transform,
-            MotionModifierSlave[] slaveModifiers, 
-            bool isAnimatedBone
-            ) : base(cfg, transform, null, isAnimatedBone)
+        internal MotionModifierMaster(BaseConfig cfg, Transform transform, MotionModifierSlave[] slaveModifiers) 
+            : base(cfg, transform, null)
         {
             _slaves = slaveModifiers;
         }
@@ -60,6 +56,9 @@ namespace AniMorph
             else
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
+
+            if ((effects & Effect.Scl) != 0)
+                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, accel, dt);
 
             var dotUp = Vector3.Dot(transform.up, Vector3.up);
             var dotR = Vector3.Dot(transform.right, Vector3.up);

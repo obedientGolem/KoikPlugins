@@ -1,93 +1,116 @@
-﻿using RootMotion.FinalIK;
+﻿#if VR_DIR
+using KK.RootMotion.FinalIK;
+#else
+using RootMotion.FinalIK;
+#endif
 using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using Random = UnityEngine.Random;
+using static IKNoise.IKNoiseEffector;
 
 namespace IKNoise
 {
     internal class IKNoiseModifier
     {
-        internal IKNoiseModifier(IKEffector[] effectors)
+        internal IKNoiseModifier(IKEffector[] effectors, Cfg cfg, BaseCfg baseCfg)
         {
-            _ikEffector = effectors;
-            _len = effectors.Length;
-            _elements = new Element[_len];
-            for (var i = 0; i < _len; i++)
+            var len = effectors.Length;
+            _ikEffectors = effectors;
+            _elements = new Element[len];
+            currNoiseVec = new Vector3[len];
+            for (var i = 0; i < len; i++)
             {
                 _elements[i] = new(effectors[i].bone);
             }
-            _tempVectors = new Vector3[_len];
-            _invLen = 1f / _len;
+            this.len = len;
+            lenInv = 1f / len;
+            this.cfg = cfg;
+            this.baseCfg = baseCfg;
+
+            LimitMovements(90);
         }
-        private bool _enabled;
-
-        private readonly Element[] _elements;
-        private readonly IKEffector[] _ikEffector;
-        private readonly Vector3[] _tempVectors;
-
-        private readonly int _len;
-        private readonly float _invLen;
-
-        private float _baseFreq = 0.5f;
-        private float _baseAmpl = 0.05f;
-
-        private float _freqVelFactor;
-        private float _amplVelFactor;
-
-        private float _freqAnimFactor;
-        private float _amplAnimFactor;
-
-        private float currVelocityLen;
-        private float currTorqueLen;
-
-        private float currVelFactor;
-        private float currAnimFactor;
 
 
-        internal void UpdateModifier(float dt, float dtInv, float animLenInv)
+        protected Cfg cfg;
+        protected BaseCfg baseCfg;
+
+        protected readonly Element[] _elements;
+        protected readonly IKEffector[] _ikEffectors;
+        internal readonly Vector3[] currNoiseVec;
+
+
+        protected readonly int len;
+        protected readonly float lenInv;
+
+
+        protected float _baseFreq;
+        protected float _baseAmpl;
+
+        protected float _freqVelFactor;
+        protected float _amplVelFactor;
+
+        protected float _freqAnimFactor;
+        protected float _amplAnimFactor;
+
+#if DEBUG
+        protected float devCurrVelFactor;
+        protected float devCurrAnimFactor;
+#endif
+
+        internal virtual void UpdateModifier(float dt, float dtInv, float animLenInv)
         {
-            if (!_enabled) return;
-
-            UpdateVelocity(dt, dtInv);
+            var velLen = GetVelocityLen(dt, dtInv);
             //UpdateTorque(dt, dtInv);
 
-            var xOffset = 0f;
+            var velLenFactor = velLen * (100f / 3f);
 
-            var freq = _baseFreq + (currVelocityLen * (1f / 0.03f) * _freqVelFactor) + (animLenInv * _freqAnimFactor);
-            var ampl = _baseAmpl + (currVelocityLen * (1f / 0.03f) * _amplAnimFactor) + (animLenInv * _amplAnimFactor);
+            var freq = _baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor);
+            var ampl = _baseAmpl + (velLenFactor * _amplVelFactor) + (animLenInv * _amplAnimFactor);
+#if DEBUG
+            devCurrVelFactor = velLenFactor;
+            devCurrAnimFactor = animLenInv;
+#endif
+            var syncAxisX = cfg.syncAxisX;
+            var x = 0f;
 
-            currVelFactor = currVelocityLen * (1f / 0.03f);
-            currAnimFactor = animLenInv;
-
-            for (var i = 0; i < _len; i++)
+            for (var i = 0; i < len; i++)
             {
-                var noiseVec = _elements[i].GetNoiseVecPos(freq * dt, ampl);
-                
-                if (i > 0) 
-                    noiseVec = new Vector3(xOffset, noiseVec.y, noiseVec.z);
-                else
-                    xOffset = noiseVec.x;
-                
-                _tempVectors[i] = noiseVec;
-            }
+                ref var e = ref _elements[i];
 
-            for (var i = 0; i < _len; i++)
-            {
-                var effector = _ikEffector[i];
+                var noiseVec = e.GetNoiseVecPos(freq * dt, ampl);
 
-                effector.positionOffset = effector.bone.InverseTransformDirection(_tempVectors[i]);
+                var effector = _ikEffectors[i];
+
+                var result = effector.bone.InverseTransformDirection(noiseVec);
+
+                if (syncAxisX)
+                {
+                    if (i == 0)
+                        x = result.x;
+                    else
+                        result.x = x;
+                }
+
+                var posSignScale = new Vector3(
+                    result.x > 0f ? e.appPositive.x : e.appNegative.x,
+                    result.y > 0f ? e.appPositive.y : e.appNegative.y,
+                    result.z > 0f ? e.appPositive.z : e.appNegative.z
+                    );
+
+                result = Vector3.Scale(result, posSignScale);
+
+                effector.positionOffset = result;
+                currNoiseVec[i] = noiseVec;
             }
         }
 
-
-
-        private void UpdateVelocity(float dt, float dtInv)
+        protected float GetVelocityLen(float dt, float dtInv)
         {
             var totalVelocity = Vector3.zero;
 
-            for (var i = 0; i < _len; i++)
+            for (var i = 0; i < len; i++)
             {
                 ref var element = ref _elements[i];
 
@@ -99,15 +122,14 @@ namespace IKNoise
 
                 totalVelocity += element.velocity;
             }
-
-            currVelocityLen = (totalVelocity * _invLen).magnitude;
+            return (totalVelocity * lenInv).magnitude;
         }
 
-        private void UpdateTorque(float dt, float dtInv)
+        protected float GetTorqueLen(float dt, float dtInv)
         {
             var totalTorque = Vector3.zero;
 
-            for (var i = 0; i < _len; i++)
+            for (var i = 0; i < len; i++)
             {
                 ref var element = ref _elements[i];
 
@@ -125,30 +147,120 @@ namespace IKNoise
                 totalTorque += element.torque;
             }
 
-            currTorqueLen = (totalTorque * _invLen).magnitude;
+            return (totalTorque * lenInv).magnitude;
+        }
+
+        internal Vector3 GetAvgPosition()
+        {
+            var vec = new Vector3();
+
+            foreach (var element in _elements)
+                vec += element.transform.position;
+
+            return vec * lenInv;
+        }
+
+        internal float GetAvgDegVerticalAlignment()
+        {
+            var totalDeg = 0f;
+#if VR
+            var isLimb = baseCfg.body == Body.Arms || baseCfg.body == Body.Legs;
+#endif
+            var isSpine = baseCfg.body == Body.Spine;
+            foreach (var e in _elements)
+            {
+#if VR
+                var transform = isLimb ? e.transform.GetChild(0) : isSpine ? e.transform : e.transform.parent;
+#else
+                var transform = isSpine ? e.transform : e.transform.parent;
+#endif
+                if (transform == null) transform = e.transform;
+
+                var dot = Vector3.Dot(transform.rotation * baseCfg.axisForDotUp, Vector3.up);
+
+                totalDeg += Mathf.Acos(dot) * Mathf.Rad2Deg;
+            }
+            return totalDeg * lenInv;
+        }
+
+        internal void LimitMovements(float deg)
+        {
+            if (deg < baseCfg.angleLimit)
+            {
+//                var hMoveF = TwoThirds;
+
+//                var vMoveUpF = TwoThirds;
+//                var vMoveDownF = OneThird;
+//#if VR
+//                var isLimb = baseCfg.body == Body.Arms || baseCfg.body == Body.Legs;
+//                if (isLimb)
+//                {
+//                    hMoveF = 0f;
+//                    vMoveUpF = OneThird;
+//                    vMoveDownF = 0f;
+//                }
+//#endif
+//                var vAxis = baseCfg.verticalAxis;
+
+                for (var i = 0; i < len; i++)
+                {
+                    ref var e = ref _elements[i];
+
+                    //var vecPositive = new Vector3(
+                    //    vAxis.x == 0f ? hMoveF : vMoveUpF,
+                    //    vAxis.y == 0f ? hMoveF : vMoveUpF,
+                    //    vAxis.z == 0f ? hMoveF : vMoveUpF
+                    //    );
+                    
+                    //var vecNegative = new Vector3(
+                    //    vAxis.x == 0f ? hMoveF : vMoveDownF,
+                    //    vAxis.y == 0f ? hMoveF : vMoveDownF,
+                    //    vAxis.z == 0f ? hMoveF : vMoveDownF
+                    //    );
+
+                    e.appPositive = Vector3.Scale(baseCfg.appPositive[i], baseCfg.appFSideUpPositive);
+                    e.appNegative = Vector3.Scale(baseCfg.appNegative[i], baseCfg.appFSideUpNegative);
+                }
+            }
+            else if (deg > (180f - baseCfg.angleLimit))
+            {
+                for (var i = 0; i < len; i++)
+                {
+                    ref var e = ref _elements[i];
+
+                    e.appPositive = Vector3.Scale(baseCfg.appPositive[i], baseCfg.appFSideDownPositive);
+                    e.appNegative = Vector3.Scale(baseCfg.appNegative[i], baseCfg.appFSideDownNegative);
+                }
+            }
+            else
+            {
+                for (var i = 0; i < len; i++)
+                {
+                    ref var e = ref _elements[i];
+
+                    e.appPositive = baseCfg.appPositive[i];
+                    e.appNegative = baseCfg.appNegative[i];
+                }
+            }
         }
 
 
         #region OnHooks
 
 
-        internal void OnSettingChanged(ConfigType config, int sex)
+        internal void OnSettingChanged(ConfigType config, int sex, float sceneFactor)
         {
-            _enabled = (config.EnableSex.Value & (Sex)(sex + 1)) != 0;
-
-            if (!_enabled) return;
-            
             _baseFreq = config.BaseFreq.Value;
 
-            var freq = _baseFreq * config.Freq.Value;
+            var freq = config.Freq.Value;
 
             _freqAnimFactor = freq * (1f - config.FreqSclRatio.Value);
             _freqVelFactor = freq * config.FreqSclRatio.Value;
 
 
-            _baseAmpl = config.BaseAmpl.Value;
+            _baseAmpl = config.BaseAmpl.Value * sceneFactor;
 
-            var ampl = _baseAmpl * config.Ampl.Value;
+            var ampl = config.Ampl.Value;
 
             _amplAnimFactor = ampl * (1f - config.AmplSclRatio.Value);
             _amplVelFactor = ampl * config.AmplSclRatio.Value;
@@ -158,8 +270,24 @@ namespace IKNoise
         #endregion
 
 
-        private struct Element
+        #region Types
+
+
+        protected struct Element
         {
+            internal Vector3 appPositive;
+            internal Vector3 appNegative;
+
+            internal readonly Transform transform;
+
+            internal Vector3 prevPos;
+            internal Quaternion prevRot;
+
+            internal Vector3 velocity;
+            internal Vector3 torque;
+
+            private Vector3 noiseVec;
+
             internal Element(Transform transform)
             {
                 this.transform = transform;
@@ -195,7 +323,6 @@ namespace IKNoise
                 return new Vector3(x, y, z);
             }
 
-
             internal Vector3 GetPosDelta()
             {
                 var currPos = transform.position;
@@ -217,16 +344,9 @@ namespace IKNoise
 
                 return result;
             }
-
-            internal readonly Transform transform;
-
-            internal Vector3 prevPos;
-            internal Quaternion prevRot;
-
-            internal Vector3 velocity;
-            internal Vector3 torque;
-            private Vector3 noiseVec;
         }
 
+
+        #endregion
     }
 }

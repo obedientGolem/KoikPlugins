@@ -15,50 +15,47 @@ namespace AniMorph
 {
     internal class AniMorphEffector : BoneEffect
     {
-        private const float OneThird = (1f / 3f);
-        private const float TwoThirds = (2f / 3f);
-
         // --- Cheeks ---
         //private const string Cheeks  = "cf_J_CheekUpBase";
 
         // --- Head ---
-        private const string Head    = "cf_s_head";
-        private const string Neck    = "cf_s_neck";
+        private const string Head = "cf_s_head";
+        private const string Neck = "cf_s_neck";
 
         // --- Chest ---
-        private const string Spine3  = "cf_s_spine03";
-        private const string Spine2  = "cf_s_spine02";
-        private const string Spine1  = "cf_s_spine01";
+        private const string Spine3 = "cf_s_spine03";
+        private const string Spine2 = "cf_s_spine02";
+        private const string Spine1 = "cf_s_spine01";
 
         // --- Shoulders ---
-        private const string ShldrL  = "cf_s_shoulder02_L";
-        private const string Arm1L   = "cf_s_arm01_L";
-        private const string Arm2L   = "cf_s_arm02_L";
-        private const string Arm3L   = "cf_s_arm03_L";
-        private const string FArm1L  = "cf_s_forearm01_L";
-        private const string FArm2L  = "cf_s_forearm02_L";
+        private const string ShldrL = "cf_s_shoulder02_L";
+        private const string Arm1L = "cf_s_arm01_L";
+        private const string Arm2L = "cf_s_arm02_L";
+        private const string Arm3L = "cf_s_arm03_L";
+        private const string FArm1L = "cf_s_forearm01_L";
+        private const string FArm2L = "cf_s_forearm02_L";
 
-        private const string ShldrR  = "cf_s_shoulder02_R";
-        private const string Arm1R   = "cf_s_arm01_R";
-        private const string Arm2R   = "cf_s_arm02_R";
-        private const string Arm3R   = "cf_s_arm03_R";
-        private const string FArm1R  = "cf_s_forearm01_R";
-        private const string FArm2R  = "cf_s_forearm02_R";
+        private const string ShldrR = "cf_s_shoulder02_R";
+        private const string Arm1R = "cf_s_arm01_R";
+        private const string Arm2R = "cf_s_arm02_R";
+        private const string Arm3R = "cf_s_arm03_R";
+        private const string FArm1R = "cf_s_forearm01_R";
+        private const string FArm2R = "cf_s_forearm02_R";
 
         // --- Breast ---
-        private const string Bust    = "cf_d_bust00";
-        private const string Bust1L  = "cf_d_bust01_L";
-        private const string Bust1R  = "cf_d_bust01_R";
+        private const string Bust = "cf_d_bust00";
+        private const string Bust1L = "cf_d_bust01_L";
+        private const string Bust1R = "cf_d_bust01_R";
 
         // --- Tummy ---
-        private const string Waist1  = "cf_s_waist01";        // Position reset by the HScene xyz(false, true, true)
+        private const string Waist1 = "cf_s_waist01";        // Position reset by the HScene xyz(false, true, true)
 
         // --- Pelvis ---
-        private const string Waist2  = "cf_s_waist02";        // Position reset by the HScene xyz(false, false, true)
-        private const string Kokan   = "cf_d_kokan";
-        private const string Ana     = "cf_d_ana";
-        private const string ButtL   = "cf_s_siri_L";         // Reset by the HScene xyz(true, true, true)
-        private const string ButtR   = "cf_s_siri_R";         // Reset by the HScene xyz(true, true, true)
+        private const string Waist2 = "cf_s_waist02";        // Position reset by the HScene xyz(false, false, true)
+        private const string Kokan = "cf_d_kokan";
+        private const string Ana = "cf_d_ana";
+        private const string ButtL = "cf_s_siri_L";         // Reset by the HScene xyz(true, true, true)
+        private const string ButtR = "cf_s_siri_R";         // Reset by the HScene xyz(true, true, true)
 
         // --- Thighs ---
         private const string Thigh1R = "cf_s_thigh01_R";
@@ -357,7 +354,6 @@ namespace AniMorph
                     ]
             },
             {
-                // Master
                 new (
                     name:           Spine2,
                     allowedEffects: Effect.DevAnything,
@@ -371,21 +367,40 @@ namespace AniMorph
                         new (
                             name:           Spine3,
                             allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos,
+                            inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                             posApplication: Vector3.one,
                             posAppPositive: new Vector3(1f, OneThird, 1f),
                             posAppNegative: Vector3.one,
                             rotApplication: Vector3.one,
                             sclApplication: Vector3.one
                             ),
+                        //new(
+                        //    name:           Neck,
+                        //    allowedEffects: Effect.Pos,
+                        //    inheritEffects: Effect.None,
+                        //    posApplication: Vector3.one,
+                        //    posAppPositive: Vector3.one,
+                        //    posAppNegative: Vector3.one,
+                        //    rotApplication: Vector3.one,
+                        //    sclApplication: Vector3.one                    ),
+                        //new (
+                        //    name:           Head,
+                        //    allowedEffects: Effect.Rot,
+                        //    inheritEffects: Effect.Pos,
+                        //    posApplication: Vector3.one,
+                        //    posAppPositive: Vector3.one,
+                        //    posAppNegative: Vector3.one,
+                        //    rotApplication: Vector3.one,
+                        //    sclApplication: Vector3.one
+                        //    ),
                     ]
             },
             {
 
                 new (
                     name:           Neck,
-                    allowedEffects: Effect.None,
-                    inheritEffects: Effect.Pos,
+                    allowedEffects: Effect.Pos | Effect.Rot,
+                    inheritEffects: Effect.None,
                     posApplication: Vector3.one,
                     posAppPositive: Vector3.one,
                     posAppNegative: Vector3.one,
@@ -395,7 +410,7 @@ namespace AniMorph
                     [
                         new (
                             name:           Head,
-                            allowedEffects: Effect.Pos | Effect.Rot,
+                            allowedEffects: Effect.Rot,
                             inheritEffects: Effect.Pos,
                             posApplication: Vector3.one,
                             posAppPositive: Vector3.one,
@@ -420,7 +435,7 @@ namespace AniMorph
                         new (
                             name:           Waist1,
                             allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos,
+                            inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                             posApplication: new Vector3(1f, 1f, 1f),
                             posAppPositive: new Vector3(1f, 1f, 1f),
                             posAppNegative: new Vector3(1f, 1f, TwoThirds),
@@ -431,26 +446,26 @@ namespace AniMorph
             }
         };
 
-        private static readonly List<string> _bonesWithAnimRot =
-        [
-            // Animated rotation
-            Bust1L,
-            // Animated rotation
-            Bust1R, 
-            // Animated rotation
-            Bust,
-            //BoneName.Butt,
-            //// Static rotation
-            //BoneName.Waist02,
-            // Animated rotation
-            ButtL,
-            // Animated rotation
-            ButtR,
-            // I think it's not.
-            // Animated rotation
-            // Kokan,
-           // Head,
-       ];
+        //private static readonly List<string> _bonesWithAnimRot = new()
+        //{
+        //    // Animated rotation
+        //    Bust1L,
+        //    // Animated rotation
+        //    Bust1R,
+        //    // Animated rotation
+        //    Bust, 
+        //    //BoneName.Butt,
+        //    //// Static rotation
+        //    //BoneName.Waist02,
+        //    // Animated rotation
+        //    ButtL,
+        //    // Animated rotation
+        //    ButtR,
+        //    // I think it's not.
+        //    // Animated rotation
+        //    // Kokan,
+        //    // Head,
+        //};
 
         // BodyPart + boneNames-defaultMass pairs
         private static readonly Dictionary<Body, BodyPartMeasurement> _bonesToCheckForSizeDic = new()
@@ -473,11 +488,14 @@ namespace AniMorph
 
         private bool _filterDeltaTime;
         private bool _updated;
+        private bool _animChange;
+        private float _animChangeTimestamp;
 
         private float _prevAnimNormTime = 1f;
         private int _animLoopFrameCount;
 
         private readonly Animator _animator;
+
             
 
         #region Initialization
@@ -611,9 +629,9 @@ namespace AniMorph
                 // Perform null checks
                 if (_mainDic.ContainsKey(cfg.name) || bone == null) return;
 
-                var isAnimRot = _bonesWithAnimRot.Contains(cfg.name);
+                //var isAnimRot = _bonesWithAnimRot.Contains(cfg.name);
 
-                _mainDic.Add(cfg.name, new MotionModifier(cfg,bone, centerBone, isAnimRot));
+                _mainDic.Add(cfg.name, new MotionModifier(cfg,bone, centerBone));
             }
 
             void AddToDicTandem(BaseConfig cfgMaster, BaseConfig[] cfgSlaves, Transform tformMaster, Transform[] tformSlaves)
@@ -635,17 +653,17 @@ namespace AniMorph
 
                 for (var i = 0; i < cfgSlaves.Length; i++)
                 {
-                    var isAnimRot = _bonesWithAnimRot.Contains(cfgSlaves[i].name);
+                    //var isAnimRot = _bonesWithAnimRot.Contains(cfgSlaves[i].name);
 
-                    slaveModifiers[i] = new MotionModifierSlave(cfgSlaves[i], tformSlaves[i], tformMaster, isAnimRot);
+                    slaveModifiers[i] = new MotionModifierSlave(cfgSlaves[i], tformSlaves[i], tformMaster);
 
                     _mainDic.Add(cfgSlaves[i].name, slaveModifiers[i]);
                 }
 
                 // Add master with slaves
-                var isAnimatedBone = _bonesWithAnimRot.Contains(cfgMaster.name);
+                //var isAnimatedBone = _bonesWithAnimRot.Contains(cfgMaster.name);
 
-                _mainDic.Add(cfgMaster.name, new MotionModifierMaster(cfgMaster, tformMaster, slaveModifiers, isAnimatedBone));
+                _mainDic.Add(cfgMaster.name, new MotionModifierMaster(cfgMaster, tformMaster, slaveModifiers));
 
             }
             bool GetCenteredBone(string boneName, out string centeredBoneName)
@@ -675,15 +693,28 @@ namespace AniMorph
             {
                 _mainDic[name].OnUpdate();
             }
+        }
 
+        private bool IsSeriousLagSpike
+        {
+            get
+            {
+                var value = IsFade || (IsLagSpike && _animChangeTimestamp > Time.time);
+
+                if (!value && field)
+                    ResetModifiers();
+                
+                field = value;
+
+                return field;
+            }
         }
 
         private void UpdateModifiers()
         {
-            // For some reason it doesn't work on Update(),
-            // can't remember why exactly though.
-            var dt = Time.deltaTime;
-            if (dt == 0f) return;
+            if (IsSeriousLagSpike || IsPause) return;
+
+            var dt = IsLagSpike ? dtAvg : Time.deltaTime;
 
             var animState = _animator.GetCurrentAnimatorStateInfo(0);
 
@@ -708,24 +739,30 @@ namespace AniMorph
                 _animLoopFrameCount = 0;
             }
 
+            var dtInv = AniMorphPlugin.dtInv;
 
-            // Opt for lesser evil during the lag spike,
-            if (_filterDeltaTime && dt > (1f / 15f)) dt = (1f / 15f);
-
-            var dtInv = (1f / dt);
-            foreach (var key in _effectsToUpdate)
+            foreach (var effect in _effectsToUpdate)
             {
                 if (isNewAnimLoop)
                 {
-                    var motion = _mainDic[key];
+                    var motion = _mainDic[effect];
 
                     motion.OnAnimationLoopStart(animLoopFrameCountInv, dt);
                     motion.UpdateModifier(dt, dtInv, animLenInv);
                 }
                 else
                 {
-                    _mainDic[key].UpdateModifier(dt, dtInv, animLenInv);
+                    _mainDic[effect].UpdateModifier(dt, dtInv, animLenInv);
                 }
+            }
+        }
+
+
+        private void ResetModifiers()
+        {
+            foreach (var value in _mainDic.Values)
+            {
+                value.Reset();
             }
         }
 
@@ -743,7 +780,17 @@ namespace AniMorph
             if (!_updated)
             {
                 _updated = true;
-                UpdateModifiers();
+
+                if (_animChange)
+                {
+                    _animChange = false;
+
+                    ResetModifiers();
+                }
+                else
+                {
+                    UpdateModifiers();
+                }
             }
 
             return _mainDic[bone].GetBoneModifierData;
@@ -764,12 +811,6 @@ namespace AniMorph
 
                 keyValuePair.Value.SetMass(mass);
             }
-
-            var deltaTimeSettingValue = AniMorphPlugin.FilterDeltaTime.Value;
-
-            _filterDeltaTime = deltaTimeSettingValue == AniMorphPlugin.FilterDeltaTimeKind.Enable
-                    || (deltaTimeSettingValue == AniMorphPlugin.FilterDeltaTimeKind.OnlyInGame && !StudioAPI.InsideStudio)
-                    || (deltaTimeSettingValue == AniMorphPlugin.FilterDeltaTimeKind.OnlyInStudio && StudioAPI.InsideStudio);
         }
 
         internal void OnSetClothesState(ChaControl chara)
@@ -804,12 +845,10 @@ namespace AniMorph
             _ => throw new NotImplementedException(name)
         };
 
-        internal void OnChangeAnimator()
+        internal void OnLoadAnimation()
         {
-            foreach (var name in _effectsToUpdate)
-            {
-                _mainDic[name].OnChangeAnimator();
-            }
+            _animChange = true;
+            _animChangeTimestamp = Time.time + 3f;
         }
 
         internal void OnSetPlay(string animName)

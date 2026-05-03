@@ -1,22 +1,58 @@
-﻿using ADV.Commands.Base;
-using KKAPI;
-using KKAPI.Chara;
-using System.Collections.Generic;
-#if VR
+﻿#if VR_DIR
 using KK.RootMotion;
 using KK.RootMotion.FinalIK;
-#elif NOVR
+#else
 using RootMotion;
 using RootMotion.FinalIK;
 #endif
+using KKAPI;
+using KKAPI.Chara;
+using System.Collections.Generic;
+using KKAPI.MainGame;
+using UnityEngine;
+using System.Collections;
+using UnityEngine.SceneManagement;
+using KKAPI.Studio;
+using System;
+
 
 namespace IKNoise
 {
     internal class IKNoiseCharaController : CharaCustomFunctionController
     {
-        private static List<IKNoiseCharaController> _instances = [];
-        private IKNoiseEffector _effector;
+        private static readonly List<IKNoiseCharaController> _instances = [];
+        internal IKNoiseEffector effector;
 
+        private bool IsProperScene(out Scene scene)
+        {
+                var setting = IKNoisePlugin.EnableScene.Value;
+
+                var actScene =
+#if KK
+                Manager.Game.Instance.actScene;
+#else
+                ActionScene.instance;
+#endif
+            if ((setting & Scene.Adv) != 0 && actScene != null && actScene.AdvScene != null && actScene.AdvScene.isActiveAndEnabled)
+            {
+                scene = Scene.Adv;
+                return true;
+            }
+
+            if ((setting & Scene.Talk) != 0 && IKNoisePlugin.IsSceneLoaded("Talk"))
+            {
+                scene = Scene.Talk;
+                return true;
+            }
+
+            if ((setting & Scene.HScene) != 0 && IKNoisePlugin.IsSceneLoaded("HProc"))
+            {
+                scene = Scene.HScene; 
+                return true;
+            }
+            scene = Scene.None; 
+            return false;            
+        }
 
         protected override void OnCardBeingSaved(GameMode currentGameMode)
         {
@@ -32,7 +68,7 @@ namespace IKNoise
 
         private void LateUpdate()
         {
-            _effector?.OnLateUpdate();
+            effector?.OnLateUpdate();
         }
 
         internal static void OnSettingChanged()
@@ -45,13 +81,57 @@ namespace IKNoise
         {
             var sex = ChaControl.sex;
 
-            enabled = (IKNoisePlugin.Enable.Value & (Sex)(sex + 1)) != 0;
+            enabled = (IKNoisePlugin.EnableSex.Value & (Sex)(sex + 1)) != 0;
 
-            if (enabled)
+            if (!enabled || !IsProperScene(out var scene))
             {
-                _effector ??= new(ChaControl);
-                _effector.OnSettingChanged(sex);
+                effector = null;
+                return;
             }
+
+            if (effector == null)
+            {
+                var anim = ChaControl.animBody;
+                var fbbik = anim != null ? anim.GetComponent<FullBodyBipedIK>() : null;
+
+                if (anim != null && fbbik != null)
+                {
+                    effector = new(anim, fbbik);
+                }
+                else
+                {
+                    StopAllCoroutines();
+                    StartCoroutine(StartCo());
+                }
+            }
+
+            effector?.OnSettingChanged(sex, GetSceneAmplFactor(scene));
+
+            static float GetSceneAmplFactor(Scene scene)
+            {
+                return scene switch
+                {
+                    Scene.Adv => IKNoisePlugin.AdvSceneFactor.Value,
+                    Scene.Talk => IKNoisePlugin.TalkSceneFactor.Value,
+                    Scene.HScene => IKNoisePlugin.HSceneFactor.Value,
+                    _ => throw new NotImplementedException(nameof(scene))
+                };
+            }
+        }
+
+        private IEnumerator StartCo()
+        {
+            var i = 0;
+
+            var wait = new WaitForSeconds(1f);
+
+            while (ChaControl.animBody == null || ChaControl.animBody.GetComponent<FullBodyBipedIK>() == null)
+            {
+                if (i++ > 30) yield break;
+
+                yield return wait;
+            }
+            OnSettingChangedIntern();
         }
 
         protected override void Awake()
@@ -67,6 +147,5 @@ namespace IKNoise
 
             _instances.Remove(this);
         }
-
     }
 }

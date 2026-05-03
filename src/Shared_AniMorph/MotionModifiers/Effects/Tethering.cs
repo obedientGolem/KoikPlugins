@@ -36,6 +36,12 @@ namespace AniMorph
             _influenceX = 1f - Mathf.Abs(_influenceZ);
         }
 
+        internal void Clear()
+        {
+            _velocity = Vector3.zero;
+            _position = Vector3.zero;
+        }
+
 
         internal Vector3 GetTetheringOffset(Vector3 velocity, float deltaTime)
         {

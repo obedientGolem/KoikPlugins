@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static AniMorph.MotionModifier;
 
 namespace AniMorph
@@ -18,7 +19,6 @@ namespace AniMorph
     [BepInProcess(KoikatuAPI.GameProcessName)]
     [BepInProcess(KoikatuAPI.StudioProcessName)]
     [BepInDependency(KKABMX_Core.GUID, KKABMX_Core.Version)]
-
 #if KK
     [BepInProcess(KoikatuAPI.GameProcessNameSteam)]
 #endif
@@ -32,23 +32,97 @@ namespace AniMorph
             ;
         public const string Version = "0.9";
         internal new static ManualLogSource Logger;
+        private static AniMorphPlugin _instance;
 
         public static ConfigEntry<Gender> Enable;
         public static ConfigEntry<bool> MaleEnableDB;
-        public static ConfigEntry<FilterDeltaTimeKind> FilterDeltaTime;
 
+        internal static bool IsLagSpike {
+            get => field;
+            set
+            {
+#if DEBUG
+                if (value)
+                    Logger.LogWarning($"[IsLagSpike] = [true] dt[{Time.deltaTime:F3}] avgDt[{dtAvg:F3}] dtCeil[{_instance._dtCeiling:F3}]");
+#endif
+                field = value;
+            }
+        }
+
+        internal static bool IsPause
+        {
+            get => field;
+            set
+            {
+                if (!value && field)
+                {
+                    var inst = _instance;
+
+                    //inst.ConsecutiveFrameCounter = 0;
+                    inst._startT = Time.time;
+                    inst._startFrame = Time.frameCount;
+                }
+                field = value;
+            }
+        }
+
+        internal static bool IsFade { get; private set; }
+
+        internal static float dtInv;
+
+
+        internal const float OneThird = (1f / 3f);
+        internal const float TwoThirds = (2f / 3f);
 
         public static readonly Dictionary<Body, ConfigType> ConfigDic = [];
 
         private static readonly Effect[] _effects = Enum.GetValues(typeof(Effect)) as Effect[];
+
+
         private float _settingChangedTimestamp;
+
+
+        internal static float dtAvg;
+
+        private float _dtCeiling = 1f;
+        private int _startFrame;
+        private float _startT;
+        private float _prevNT;
+
+        //private int _prevFrameCount;
+        //private int ConsecutiveFrameCounter
+        //{
+        //    get => field;
+
+        //    set
+        //    {
+        //        var frameCount = Time.frameCount;
+
+        //        if (value == 0 || frameCount - _prevFrameCount > 1)
+        //        {
+        //            field = 0;
+        //        }
+        //        else
+        //        {
+        //            field += value;
+        //        }
+        //        _prevFrameCount = frameCount;
+        //    }
+        //}
+
+        private static readonly List<string> _currLoadedScenes = [];
+
+
+        #region UnityMethods
+
 
         private void Awake()
         {
+            _instance = this;
+
             Logger = base.Logger;
 
             Enable = Config.Bind("", "Enable", Gender.Male | Gender.Female, new ConfigDescription("Choose none to disable", null, new ConfigurationManagerAttributes { Order = 100 }));
-
 
             CharacterApi.RegisterExtraBehaviour<AniMorphCharaController>(GUID);
 
@@ -62,16 +136,16 @@ namespace AniMorph
                     AddSettingChangedParam(value, handler);
             }
 
-
             MaleEnableDB = Config.Bind("", "MaleEnableDB", true, new ConfigDescription("Force enable Dynamic Bones on males in Main Game as they are usually turned off", null, new ConfigurationManagerAttributes { Order = 99 }));
-            FilterDeltaTime = Config.Bind("", "FilterFPS", FilterDeltaTimeKind.OnlyInGame, new ConfigDescription("Filter lags and stutters of the frame rate to avoid visual glitches", null, new ConfigurationManagerAttributes { Order = 98 }));
 
             MaleEnableDB.SettingChanged += (_, _) => HooksMaleEnableDB.ApplyHooks();
-            FilterDeltaTime.SettingChanged += OnSettingChanged;
             // Avoid hooking this one up for UpdateConfig().
 
             Hooks.ApplyHooks();
             HooksMaleEnableDB.ApplyHooks();
+
+            SceneManager.sceneLoaded += OnSceneLoaded;
+            SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
 
         private void Update()
@@ -81,7 +155,73 @@ namespace AniMorph
                 _settingChangedTimestamp = 0f;
                 AniMorphCharaController.OnSettingChanged();
             }
+
+            UpdateDeltaTimeVariables();
         }
+
+
+        #endregion
+
+
+        #region DeltaTimeCheck
+
+
+        private void UpdateDeltaTimeVariables()
+        {
+            var dt = Time.deltaTime;
+
+            if (dt == 0f)
+            {
+                IsPause = true;
+                return;
+            }
+            else
+            {
+                IsPause = false;
+            }
+            
+            dtInv = 1f / dt;
+
+            IsLagSpike = (dt > _dtCeiling); // && ConsecutiveFrameCounter++ > (int)(dtInv * (3f / 60f)));
+
+            IsFade = SceneApi.GetIsFadeNow();
+
+            var t = Time.time;
+
+            var nt = t - (int)t;
+
+            if (nt < _prevNT)
+            {
+                var currFrame = Time.frameCount;
+
+                var frames = currFrame - _startFrame;
+
+                var newDtAvg = frames == 0 ? dt : (t - _startT) / frames;
+
+                newDtAvg = Mathf.Min(_dtCeiling, newDtAvg);
+                dtAvg = newDtAvg;
+                _dtCeiling = newDtAvg * (1f + OneThird);
+
+                _startT = t;
+                _startFrame = currFrame;
+            }
+            _prevNT = nt;
+        }
+
+
+        #endregion
+
+
+        #region SceneCheck
+
+
+        internal static bool IsSceneLoaded(string name) => _currLoadedScenes.Contains(name);
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode) => _currLoadedScenes.Add(scene.name); 
+        private void OnSceneUnloaded(Scene scene) => _currLoadedScenes.Remove(scene.name);
+
+
+        #endregion
+
 
         private void BindConfig()
         {
@@ -110,13 +250,10 @@ namespace AniMorph
                     posFreezeLen: 0.05f,
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
-                    //posGravity: 0f,
 
                     rotSpring: 15f,
                     rotDamping: 0.2f,
                     rotRate: 2f,
-                    //AngularApplicationMaster: Axis.Z,
-                    //AngularApplicationSlave: Axis.X | Axis.Y,
 
                     sclStr: 0.35f,
                     sclRate: 8f,
@@ -564,14 +701,6 @@ namespace AniMorph
             Thighs,
         }
 
-        public enum FilterDeltaTimeKind
-        {
-            Disable,
-            Enable,
-            OnlyInStudio,
-            OnlyInGame,
-        }
-
         [Flags]
         public enum Axis
         {
@@ -768,7 +897,7 @@ namespace AniMorph
 
                     SclRate = config.Bind(name, "Scale Interpolation Speed", (float)sclRate,
                         new ConfigDescription("How fast the scale offset changes.",
-                        new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
+                        new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
 
                     SclPreserveVol = config.Bind(name, "Scale Preserve Volume", (bool)sclPreserveVolume,
                         new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));

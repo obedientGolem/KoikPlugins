@@ -18,11 +18,7 @@ namespace AniMorph
         private Vector3 _localVecToMaster;
         private readonly Transform _master;
 
-        internal MotionModifierSlave(
-            AniMorphEffector.BaseConfig cfg,
-            Transform bone, 
-            Transform master, 
-            bool animatedBone) : base(cfg, bone, master, animatedBone)
+        internal MotionModifierSlave(BaseConfig cfg, Transform bone, Transform master) : base(cfg, bone, master)
         {
             _master = master;
             _inheritEffects = cfg.inheritEffects;
@@ -163,9 +159,9 @@ namespace AniMorph
             }
         }
 
-        internal override void OnChangeAnimator()
+        internal override void Reset()
         {
-            base.OnChangeAnimator();
+            base.Reset();
 
             if (_master == null) return;
 

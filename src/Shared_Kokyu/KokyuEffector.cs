@@ -343,10 +343,6 @@ namespace Kokyu
                     CaressPatch.TryEnable(customChaCtrl);
                 }
             }
-#if DEBUG
-            KokyuPlugin.Logger.LogDebug($"{GetType().Name}.{MethodInfo.GetCurrentMethod().Name}: " +
-                $"isH[{AnimTracker.IsHScene}] isMainChara[{GameAPI.GetCurrentHeroine().chaCtrl == customChaCtrl.ChaControl}]");
-#endif
         }
 
         internal void OnRestart()

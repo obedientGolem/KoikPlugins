@@ -55,7 +55,7 @@ namespace AniMorph
 
             if (component == null) return;
 
-            component.BoneEffector?.OnChangeAnimator();
+            component.BoneEffector?.OnLoadAnimation();
 #if KK
             if (__instance.sex == 1 || !AniMorphPlugin.MaleEnableDB.Value) return;
 
@@ -133,9 +133,6 @@ namespace AniMorph
         [HarmonyPatch(typeof(ChaControl), nameof(ChaControl.SetClothesState))]
         public static void SetClothesStatePostfix(int clothesKind, byte state, ChaControl __instance)
         {
-#if DEBUG
-            AniMorphPlugin.Logger.LogDebug($"{MethodBase.GetCurrentMethod().Name}:clothesKind[{clothesKind}] state[{state}]");
-#endif
             AniMorphCharaController.OnSetClothesState(__instance);
         }
     }
