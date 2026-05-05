@@ -13,15 +13,14 @@ namespace AniMorph
 {
     internal class MotionModifierSlave : MotionModifier
     {
-        private /*readonly*/ Effect _inheritEffects;
-        private readonly bool _masterIsParent;
-        private Vector3 _localVecToMaster;
-        private readonly Transform _master;
+        protected readonly bool _masterIsParent;
+        protected Vector3 _localVecToMaster;
+        protected readonly Transform _master;
+        protected bool devRotatedPosOffset;
 
-        internal MotionModifierSlave(BaseConfig cfg, Transform bone, Transform master) : base(cfg, bone, master)
+        internal MotionModifierSlave(BaseConfig baseCfg, Transform bone, Transform master) : base(baseCfg, bone, master)
         {
             _master = master;
-            _inheritEffects = cfg.inheritEffects;
             var masterIsParent = false;
             var parent = bone.transform.parent;
             while (parent != null)
@@ -36,18 +35,41 @@ namespace AniMorph
             _masterIsParent = masterIsParent;
         }
 
-        internal void UpdateSlave(Effect masterEffects, float dotUp, float dotR, float dotFwd, float dt, float dtInv, float animLenInv, Vector3 posOffset, Vector3 rotOffset, Vector3 sclOffset)
+        internal virtual void UpdateSlave(
+            Effect masterEffects, 
+
+            float dotUp, float dotR, float dotFwd, 
+
+            float dt, float dtInv, float animLenInv, 
+
+            Vector3 posOffset, Vector3 posOffsetRot, Vector3 rotOffset, Vector3 sclOffset
+            )
         {
             if (!active) return;
 
-            var inheritEffects = _inheritEffects;
 
-            if ((inheritEffects & Effect.Pos) == 0)
-                posOffset = Vector3.zero;
-            else if ((masterEffects & Effect.Rot) != 0 && !_masterIsParent)
+            ref var cfg = ref config;
+            ref var curr = ref current;
+            ref var prev = ref previous;
+
+
+            // --- Inherit offsets ---
+
+            var inheritEffects = cfg.inheritEffects;
+
+            if ((inheritEffects & Effect.Pos) != 0)
             {
-                posOffset += _localVecToMaster - (Quaternion.Euler(rotOffset) * _localVecToMaster);
+                if (devRotatedPosOffset)
+                    posOffset = transform.rotation * posOffsetRot;
+                else
+                    posOffset = transform.InverseTransformDirection(posOffset);
+
+                if ((masterEffects & Effect.Rot) != 0 && !_masterIsParent)
+                    posOffset += _localVecToMaster - (Quaternion.Euler(rotOffset) * _localVecToMaster);
+
             }
+            else
+                posOffset = Vector3.zero;
 
             if ((inheritEffects & Effect.Rot) == 0)
                 rotOffset = Vector3.zero;
@@ -55,10 +77,6 @@ namespace AniMorph
             if ((inheritEffects & Effect.Scl) == 0)
                 sclOffset = Vector3.one;
 
-
-            ref var cfg = ref config;
-            ref var curr = ref current;
-            ref var prev = ref previous;
 
 
             // --- Update Noise Params ---
@@ -71,25 +89,26 @@ namespace AniMorph
 
             var effects = cfg.effects;
 
+            var slavePosOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
+
+            if ((effects & Effect.Pos) != 0)
+                posOffset += slavePosOffset;
+
             if ((effects & Effect.Rot) != 0)
                 rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
             else
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
-            if ((effects & Effect.Pos) != 0)
-            {
-                posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, /*out var velocityLen,*/ out var accel);
+            if ((effects & Effect.Scl) != 0)
+                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, dt);
 
-                if ((effects & Effect.Tether) != 0)
-                    rotOffset += tether.GetTetheringOffset(velocity, dt);
+            if ((effects & Effect.Tether) != 0)
+                rotOffset += tether.GetTetheringOffset(velocity, dt);
+            
 
-                if ((effects & Effect.Scl) != 0)
-                    sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, prev.cleanDeltaPos, dt);
-
-                prev.velocity = velocity;
-            }
-
+            // --- Update Dots ---
+            
             if ((effects & Effect.PosOffset) != 0)
                 posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
 
@@ -121,6 +140,7 @@ namespace AniMorph
                 sclApp.z < 1f ? 1f + ((sclOffset.z - 1f) * sclApp.z) : sclOffset.z * sclApp.z
                 );
 
+
             // --- Write Offsets ---
 
             var boneModifierData = abmxModifierData;
@@ -132,32 +152,12 @@ namespace AniMorph
 
             // --- Prepare For Next Frame ---
 
+            prev.velocity = velocity;
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
-
-            curr.needNoisePos = cfg.noiseAmplPos > 0f;
-            curr.needNoiseRot = cfg.noiseAmplRot > 0f;
-            curr.needNoiseScl = cfg.noiseAmplScl > 0f;
         }
 
-
-        internal override void OnSettingChanged(AniMorphPlugin.Body body, ChaControl chara)
-        {
-            base.OnSettingChanged(body, chara);
-
-            ref var cfg = ref config;
-
-            // --- Clean-up effects ---
-            if (baseConfig.allowedEffects == Effect.DevAnything) return;
-
-            foreach (Effect effect in effects)
-            {
-                if ((baseConfig.allowedEffects & effect) != 0) continue;
-
-                config.effects &= ~effect;
-            }
-        }
 
         internal override void Reset()
         {

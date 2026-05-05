@@ -9,10 +9,8 @@ using System.Reflection;
 using UnityEngine;
 using static AniMorph.AniMorphEffector;
 using static AniMorph.AniMorphPlugin;
-using static RootMotion.FinalIK.AimPoser;
-using static RootMotion.FinalIK.Grounding;
-using static RootMotion.FinalIK.IKSolver;
 using Random = UnityEngine.Random;
+using Axis = AniMorph.AniMorphPlugin.Axis;
 
 namespace AniMorph
 {
@@ -47,8 +45,6 @@ namespace AniMorph
 
         private readonly float _baseScaleVolume;
         private readonly float _baseScaleMagnitude;
-        private bool _animRot;
-        private int _animRotFrameCount;
 
         //private BoneModifierData _combineModifiersCachedReturn;
 
@@ -88,6 +84,8 @@ namespace AniMorph
             //    );
 
             config = new Config(
+                inheritEffects: baseCfg.inheritEffects,
+
                 posApplication: baseCfg.posApplication,
                 posAppPositive: baseCfg.posAppPositive,
                 posAppNegative: baseCfg.posAppNegative,
@@ -229,7 +227,6 @@ namespace AniMorph
 
             var effects = cfg.effects;
 
-            var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
@@ -242,7 +239,7 @@ namespace AniMorph
 
             // --- Update Offsets ---
 
-            posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, out var accel);
+            var posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
 
             if ((effects & Effect.Pos) == 0)
                 posOffset = Vector3.zero;
@@ -253,7 +250,7 @@ namespace AniMorph
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
             if ((effects & Effect.Scl) != 0)
-                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, prev.cleanDeltaPos, dt);
+                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, dt);
 
             if ((effects & Effect.Tether) != 0)
                 rotOffset += tether.GetTetheringOffset(velocity, dt);
@@ -316,10 +313,6 @@ namespace AniMorph
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
-
-            curr.needNoisePos = cfg.noiseAmplPos > 0f;
-            curr.needNoiseRot = cfg.noiseAmplRot > 0f;
-            curr.needNoiseScl = cfg.noiseAmplScl > 0f;
         }
 
 
@@ -329,24 +322,32 @@ namespace AniMorph
         #region Shared Functions
 
 
-        private Vector3 GetNoiseVec(int octaves, Vector3 noiseVec, float ampl, float freq, out Vector3 cfgNoiseVec)
+        private Vector3 GetNoiseVec(Vector3 noiseVec, float ampl, float freq, out Vector3 outNoiseVec)
         {
-            cfgNoiseVec = new(noiseVec.x + freq, noiseVec.y + freq, noiseVec.z + freq);
+            outNoiseVec = new(noiseVec.x + freq, noiseVec.y + freq, noiseVec.z + freq);
 
             var x = 0f;
             var y = 0f;
             var z = 0f;
 
-            for (var i = 0; i < octaves; i++)
+            for (var i = 0; i < 4; i++)
             {
                 x += (Mathf.PerlinNoise(noiseVec.x + freq, 0f) - 0.5f) * ampl;
+
                 y += (Mathf.PerlinNoise(0f, noiseVec.y + freq) - 0.5f) * ampl;
-                z += (Mathf.PerlinNoise(noiseVec.z + freq, noiseVec.z + freq) - 0.5f) * ampl;
+
+                var zArg = noiseVec.z + freq;
+                z += (Mathf.PerlinNoise(zArg, zArg) - 0.5f) * ampl;
 
                 ampl *= 0.5f;
                 freq *= 2f;
             }
+
             noiseVec = new Vector3(x, y, z);
+
+            AniMorphPlugin.Logger.LogDebug($"[{transform.name}][{Time.frameCount}] " +
+                $"noiseVec({noiseVec.x:F3},{noiseVec.y:F3},{noiseVec.z:F3}) ampl[{ampl:F3}] freq[{freq:F3}] " +
+                $"outNoiseVec({outNoiseVec.x:F3},{outNoiseVec.y:F3},{outNoiseVec.z:F3})");
 
             return noiseVec;
         }
@@ -491,7 +492,7 @@ namespace AniMorph
         }
 
         protected Vector3 GetPosOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv,            
-            out Vector3 velocity, out Vector3 accel)
+            out Vector3 velocity)
         {
             var cleanDeltaPos = GetCleanDeltaPos(ref prev);
 
@@ -505,7 +506,7 @@ namespace AniMorph
                 prev.cleanDeltaPos = cleanDeltaPos;
 
                 velocity = prev.velocity;
-                accel = Vector3.zero;
+                //accel = Vector3.zero;
 
                 return cleanDeltaPos - velocity;
             }
@@ -514,7 +515,7 @@ namespace AniMorph
             else if (IsPosShock(ref cfg, ref curr, ref prev, cleanDeltaPos, dtInv, animLenInv))
             {
                 velocity = prev.velocity;
-                accel = Vector3.zero;
+                //accel = Vector3.zero;
 
                 return cleanDeltaPos - velocity;
             }
@@ -530,18 +531,16 @@ namespace AniMorph
             var springF = Mathf.Exp(-(prev.velocityLen * 20f)) * (-cfg.posSpring * dtInv) * cleanDeltaPos;
             var dampingF = /*FastExp(prev.velocityLen * 10f) * */-cfg.posDamping * velocity;
 
-            accel = springF + dampingF;
+            var accel = springF + dampingF;
 
-            if (curr.needNoisePos)
+            if (cfg.noisePosAmpl != 0f)
             {
-                curr.needNoisePos = false;
-
                 accel += GetNoiseVec(
-                    cfg.noiseOctaves,
-                    cfg.noiseVecPos,
-                    cfg.noiseAmplPos * curr.noiseAmplFactor,
+                    cfg.noisePosVec,
+                    cfg.noisePosAmpl * curr.noiseAmplFactor,
                     curr.noiseFreq,
-                    out cfg.noiseVecPos);
+                    out cfg.noisePosVec
+                    );
             }
 
             accel *= (cfg.massInv * dt);
@@ -614,31 +613,36 @@ namespace AniMorph
 
             if (isDynamic)
             {
-                if (!_animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
+                if (!curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
                 {
                     UpdateDynamicRot(true);
+                    curr.animRot = true;
                 }
-            }
-            else if (_animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
-            {
-                UpdateDynamicRot(false);
-            }
 
-            if (!isDynamic)
+                curr.cleanLocalRot = currLocalRot;
+            }
+            else
             {
+                if (curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
+                {
+                    UpdateDynamicRot(false);
+                    curr.animRot = false;
+                }
+
                 var inverseOffset = Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
 
                 currRot = currRot * inverseOffset;
 
                 curr.cleanLocalRot = currLocalRot * inverseOffset;
             }
-            else
-                curr.cleanLocalRot = currLocalRot;
+
+            var currRotInverse = Quaternion.Inverse(currRot);
+
+            curr.rotInverse = currRotInverse;
 
             var delta = currRot * Quaternion.Inverse(prev.adjustedRot);
 
             delta.ToAngleAxis(out var angle, out var axis);
-
 
             if (angle > 180f)
                 angle -= 360f;
@@ -656,7 +660,7 @@ namespace AniMorph
 
                 prev.torque = angVel;
 
-                return (Quaternion.Inverse(currRot) * prev.adjustedRot).eulerAngles;
+                return (currRotInverse * prev.adjustedRot).eulerAngles;
             }
 
 
@@ -689,16 +693,14 @@ namespace AniMorph
 
             accel -= cfg.rotDamping * Mathf.Exp(-absAngle * dt) * angVel;
 
-            if (curr.needNoiseRot)
+            if (cfg.noiseRotAmpl != 0f)
             {
-                curr.needNoiseRot = false;
-
-                accel += GetNoiseVec(
-                    cfg.noiseOctaves,
-                    cfg.noiseVecRot,
-                    cfg.noiseAmplRot * curr.noiseAmplFactor,
+                accel += Vector3.Scale(cfg.noiseRotAxisFactor, GetNoiseVec(
+                    cfg.noiseRotVec,
+                    cfg.noiseRotAmpl * curr.noiseAmplFactor,
                     curr.noiseFreq,
-                    out cfg.noiseVecRot);
+                    out cfg.noiseRotVec
+                    ));
             }
 
             angVel += Vector3.Scale(accel, cfg.rotApplication) * dt;
@@ -728,14 +730,14 @@ namespace AniMorph
             //var rot = angVelocityLen == 0f ?
             //    prev.adjustedRot :
             //    Quaternion.AngleAxis(angVelocityLen * dt * cfg.rotRate, angVel * (1f / angVelocityLen)) * prev.adjustedRot;
-            var newRot = Quaternion.Euler(angVel * dt * config.rotRate) * prev.adjustedRot;
+            var newRot = Quaternion.Euler(angVel * (dt * config.rotRate)) * prev.adjustedRot;
 
 
             //previous.cleanRot = cleanRot
             prev.adjustedRot = newRot;
             prev.torque = angVel;
 
-            var result = Quaternion.Inverse(currRot) * newRot;
+            var result = currRotInverse * newRot;
 
             if (absAngle > 45f)
             {
@@ -769,8 +771,10 @@ namespace AniMorph
 
         private float devSclDeadZone = 0f; //0.005f;
 
-        protected Vector3 GetSquashOffset(ref Config cfg, ref Current curr, ref Previous prev, Vector3 vel, Vector3 accel, float dt)
+        protected Vector3 GetSquashOffset(ref Config cfg, ref Current curr, ref Previous prev, Vector3 vel, float dt)
         {
+            var accel = prev.cleanDeltaPos;
+
             var driver = Vector3.Lerp(accel, vel, 0.5f); // cfg.sclBlend);
 
             var driverLen = driver.magnitude;
@@ -781,16 +785,15 @@ namespace AniMorph
             {
                 var basicTargetScl = Vector3.one;
 
-                if (curr.needNoiseScl)
-                    curr.needNoiseScl = false;
-
-                    basicTargetScl += GetNoiseVec(
-                        4,
-                        cfg.noiseVecScl,
-                        cfg.noiseAmplScl * curr.noiseAmplFactor,
+                if (cfg.noiseSclAmpl != 0f)
+                {
+                    basicTargetScl += Vector3.Scale(cfg.noiseSclAxisFactor, GetNoiseVec(
+                        cfg.noiseSclVec,
+                        cfg.noiseSclAmpl * curr.noiseAmplFactor,
                         curr.noiseFreq,
-                        out cfg.noiseVecScl
-                        );
+                        out cfg.noiseSclVec
+                        ));
+                }
 
                 var staticResult = Vector3.SmoothDamp(
                     prev.scale,
@@ -835,7 +838,7 @@ namespace AniMorph
             var dirN = dir.normalized;
             //var velAccelFactor = Mathf.Pow(driverLen * squashStrength, 1.3f);
             var factor = driverLen * cfg.sclStr;
-            factor *= FastExp(factor * (1f / 3f));
+            factor *= FastExp(factor * OneThird);
             var stretch = 1f + Mathf.Clamp(factor, 0f, cfg.sclDistort);
             var squash = Mathf.Clamp(1f / Mathf.Sqrt(stretch), 1f - cfg.sclDistort, 1f);
             // Exaggerated
@@ -844,17 +847,14 @@ namespace AniMorph
 
             var targetScale = GetDirectionalScale(dirN, stretch, squash);
 
-            if (curr.needNoiseScl)
+            if (cfg.noiseSclAmpl != 0f)
             {
-                curr.needNoiseScl = false;
-
-                targetScale += GetNoiseVec(
-                    cfg.noiseOctaves,
-                    cfg.noiseVecScl,
-                    cfg.noiseAmplScl * curr.noiseAmplFactor,
+                targetScale += Vector3.Scale(cfg.noiseSclAxisFactor, GetNoiseVec(
+                    cfg.noiseSclVec,
+                    cfg.noiseSclAmpl * curr.noiseAmplFactor,
                     curr.noiseFreq,
-                    out cfg.noiseVecScl
-                    );
+                    out cfg.noiseSclVec
+                    ));
             }
             
             var result = Vector3.SmoothDamp(
@@ -868,7 +868,7 @@ namespace AniMorph
             {
                 // Preserve original volume
                 var stretchVolume = result.x * result.y * result.z;
-                var volumeCorrection = Mathf.Pow(1f / stretchVolume, (1f / 3f));
+                var volumeCorrection = Mathf.Pow(1f / stretchVolume, OneThird);
                 result *= volumeCorrection;
             }
 
@@ -991,18 +991,6 @@ namespace AniMorph
 
             result += Vector3.Lerp(vecZero, dotR > 0f ? cfg.posRollOffsetR : cfg.posRollOffsetL, Mathf.Abs(dotR));
 
-            //if (curr.needNoisePos)
-            //{
-            //    curr.needNoisePos = false;
-            //    result += GetNoiseVec(
-            //        cfg.noiseOctaves,
-            //        cfg.noiseVecPos,
-            //        cfg.noiseAmplPos * curr.noiseAmplFactor,
-            //        curr.noiseFreq,
-            //        out cfg.noiseVecPos
-            //        );
-            //}
-
             return result;
         }
 
@@ -1010,17 +998,6 @@ namespace AniMorph
         {
             var result = Vector3.Lerp(vecOne, dotFwd > 0f ? cfg.sclOffsetFaceUp : cfg.sclOffsetFaceDown, Mathf.Abs(dotFwd));
 
-            if (curr.needNoiseScl)
-            {
-                curr.needNoiseScl = false;
-                result += GetNoiseVec(
-                    cfg.noiseOctaves,
-                    cfg.noiseVecScl,
-                    cfg.noiseAmplScl * curr.noiseAmplFactor,
-                    curr.noiseFreq,
-                    out cfg.noiseVecScl
-                    );
-            }
             return result;
         }
 
@@ -1040,17 +1017,6 @@ namespace AniMorph
 
             var result = new Vector3(0f, angleLimit * (dotFwd + dotR), 0f);
 
-            if (curr.needNoiseRot)
-            {
-                curr.needNoiseRot = false;
-                result += GetNoiseVec(
-                    cfg.noiseOctaves,
-                    cfg.noiseVecRot,
-                    cfg.noiseAmplRot * curr.noiseAmplFactor,
-                    curr.noiseFreq,
-                    out cfg.noiseVecRot
-                    );
-            }
 
             //var boneUp = Bone.up;
 
@@ -1105,10 +1071,9 @@ namespace AniMorph
         private void UpdateDynamicRot(bool dynamic)
         {
             ConsecutiveFrameCounter = 0;
-            _animRot = dynamic;
-
+#if DEBUG
             AniMorphPlugin.Logger.LogWarning($"[{transform.name}] [UpdateDynamicRot] isDynamic[{dynamic}]");
-
+#endif
             if (_boneController == null)
             {
                 var boneController = transform.GetComponentInParent<BoneController>();
@@ -1140,6 +1105,7 @@ namespace AniMorph
             
         }
 
+
         internal virtual void OnSettingChanged(Body body, ChaControl chara)
         {
 #if DEBUG
@@ -1152,7 +1118,18 @@ namespace AniMorph
 
             cfg.effects = pluginConfig.Effects.Value;
 
-            active = cfg.effects != 0;
+            // --- Clean-up effects ---
+            if (baseConfig.allowedEffects != Effect.DevAnything)
+            {
+                foreach (Effect effect in effects)
+                {
+                    if ((baseConfig.allowedEffects & effect) != 0) continue;
+
+                    cfg.effects &= ~effect;
+                }
+            }
+
+            active = cfg.effects != Effect.None || cfg.inheritEffects != Effect.None;
 
             if (!active)
             {
@@ -1168,7 +1145,6 @@ namespace AniMorph
             var isRotOffset = ((cfg.effects & Effect.RotOffset) != 0);
             var isSclOffset = ((cfg.effects & Effect.SclOffset) != 0);
 
-            cfg.noiseOctaves = pluginConfig.NoiseOctaves.Value;
             // The backward way algos are setup forces us to have weird coefficient ranges,
             // and I'd rather have ugly values(tiny decimals) hidden and instead expose usual common values,
             // that will be converted here.
@@ -1269,10 +1245,20 @@ namespace AniMorph
                 }
             }
 
-            cfg.noiseAmplPos = (isPos) ? baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value : 0f;
-            cfg.noiseAmplRot = (isRot || isRotOffset) ? baseCfg.rotFactor * (pluginConfig.NoiseAmplitudeRot.Value * 100f) : 0f;
-            cfg.noiseAmplScl = (isScl || isSclOffset) ? baseCfg.sclFactor * (pluginConfig.NoiseAmplitudeScl.Value * 10f) : 0f;
+            cfg.noisePosAmpl = isPos ? baseCfg.posFactor * pluginConfig.NoiseAmplitudePos.Value : 0f;
+            cfg.noiseRotAmpl = isRot ? baseCfg.rotFactor * (pluginConfig.NoiseAmplitudeRot.Value * 100f) : 0f;
+            cfg.noiseSclAmpl = isScl ? baseCfg.sclFactor * (pluginConfig.NoiseAmplitudeScl.Value * 10f) : 0f;
 
+            cfg.noisePosAxisFactor = baseCfg.noisePosAxisFactor;
+            cfg.noiseRotAxisFactor = baseCfg.noiseRotAxisFactor;
+            cfg.noiseSclAxisFactor = baseCfg.noiseSclAxisFactor;
+
+
+            cfg.noisePosVec = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
+            cfg.noiseRotVec = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
+            cfg.noiseSclVec = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
+
+            cfg.noiseFreq = (float)Math.Round(0.75f * Random.Range(0.85f, 1.15f), 2);
 
             Reset();
             OnSetClothesState(body, chara);
@@ -1290,27 +1276,41 @@ namespace AniMorph
                     break;
 
             }
-
-            // Add seed to the Perlin noise.
-            cfg.noiseVecPos = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
-            cfg.noiseVecRot = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
-            cfg.noiseVecScl = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
-
-            cfg.noiseFreq = (float)Math.Round(0.75f * Random.Range(0.85f, 1.15f), 2);
             
 
-            static Vector3 ScaleVecFwd(float z, float perpAxisFactor)
+            static Vector3 ScaleVecFwd(Vector3 vec, float perpAxisFactor)
             {
                 if (perpAxisFactor < 0f) throw new ArgumentOutOfRangeException(nameof(perpAxisFactor));
 
-                // Convert small offset to the scale value.
-                z += 1f;
+                var j = 0;
+                var bigAxis = Mathf.Abs(vec.x);
 
-                var sqrt = Mathf.Sqrt(1f / z);
+                for (var i = 1; i < 3; i++)
+                {
+                    var absAxis = Mathf.Abs(vec[i]);
+
+                    if (absAxis > bigAxis)
+                    {
+                        j = i;
+                        bigAxis = absAxis;
+                    }
+                }
+
+                // Convert small offset to the scale value.
+                vec[j] += 1f;
+
+                var sqrt = Mathf.Sqrt(1f / vec[j]);
 
                 var perpAxis = 1f + ((1f * sqrt - 1f) * perpAxisFactor);
 
-                return new Vector3(perpAxis, perpAxis, z);
+                for (var i = 0; i < 3; i++)
+                {
+                    if (i == j) continue;
+
+                    vec[i] = perpAxis;
+                }
+
+                return vec;
             }
             static Vector3 InvertVec(Vector3 v)
             {
@@ -1326,6 +1326,8 @@ namespace AniMorph
         internal void OnSetClothesState(Body body, ChaControl chara)
         {
             var pluginConfig = ConfigDic[body];
+
+            if (pluginConfig.DisableWhenClothes == null) return;
 
             var settingValue = pluginConfig.DisableWhenClothes.Value;
 
@@ -1508,10 +1510,12 @@ namespace AniMorph
         //    internal Vector3 dotScl_posFactor;
         //}
 
-        protected struct Config
+        protected class Config
         {
-            internal Config(Vector3 posApplication, Vector3 posAppPositive, Vector3 posAppNegative, Vector3 rotApplication, Vector3 sclApplication)
+            internal Config(Effect inheritEffects, Vector3 posApplication, Vector3 posAppPositive, Vector3 posAppNegative, Vector3 rotApplication, Vector3 sclApplication)
             {
+                this.inheritEffects = inheritEffects;
+
                 this.posAppPositive = Vector3.Scale(posApplication, posAppPositive);
                 this.posAppNegative = Vector3.Scale(posApplication, posAppNegative);
                 this.rotApplication = rotApplication;
@@ -1519,19 +1523,25 @@ namespace AniMorph
             }
 
             internal Effect effects;
+            internal Effect inheritEffects;
+
             internal Vector3 posAppPositive;
             internal Vector3 posAppNegative;
             internal Vector3 rotApplication;
             internal Vector3 sclApplication;
 
-            internal int noiseOctaves;
-            internal Vector3 noiseVecPos;
-            internal Vector3 noiseVecRot;
-            internal Vector3 noiseVecScl;
-            internal float noiseAmplPos;
-            internal float noiseAmplRot;
-            internal float noiseAmplScl;
             internal float noiseFreq;
+            internal Vector3 noisePosVec;
+            internal Vector3 noiseRotVec;
+            internal Vector3 noiseSclVec;
+
+            internal float noisePosAmpl;
+            internal float noiseRotAmpl;
+            internal float noiseSclAmpl;
+
+            internal Vector3 noisePosAxisFactor;
+            internal Vector3 noiseRotAxisFactor;
+            internal Vector3 noiseSclAxisFactor;
 
             internal float posSpring;
             internal float posDamping;
@@ -1585,11 +1595,11 @@ namespace AniMorph
 
             internal bool isLeftSide;
             // (20 .. 40)
-            public float rotSlowSmooth = 25f;
+            internal float rotSlowSmooth = 25f;
             // (5 .. 12)
-            public float rotFastSmooth = 8f;
+            internal float rotFastSmooth = 8f;
             // (0.1 .. 0.3)
-            public float rotHighFreqInf = 0.2f;
+            internal float rotHighFreqInf = 0.2f;
 
         }
 
@@ -1601,12 +1611,9 @@ namespace AniMorph
             internal float noiseAmplFactor;
             internal float noiseFreq;
             internal Quaternion cleanLocalRot;
+            internal Quaternion rotInverse;
 
             internal bool animRot;
-
-            internal bool needNoisePos;
-            internal bool needNoiseRot;
-            internal bool needNoiseScl;
 
             internal void Clear()
             {

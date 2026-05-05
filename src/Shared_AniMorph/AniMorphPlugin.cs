@@ -233,14 +233,11 @@ namespace AniMorph
                     config: Config,
                     order: 10000,
                     effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
-                    adjustForSize: true,
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
 
-                    noiseOctaves: 4,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
-
 
                     posSpring: 21f,
                     posDamping: 0.2f,
@@ -272,9 +269,9 @@ namespace AniMorph
                     posOffsetPitchUpsideDown: 0.05f,
                     posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
-                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUp: new Vector3(0f, 0f, -0.15f),
                     sclOffsetFaceUpPerpAxesFactor: 0.85f,
-                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDown: new Vector3(0f, 0f, 0.2f),
                     sclOffsetFaceDownPerpAxesFactor: 1.4f
                     )
                 );
@@ -289,14 +286,11 @@ namespace AniMorph
                     config: Config,
                     order: 9000,
                     effect: Effect.Pos | Effect.Rot | Effect.Scl,
-                    adjustForSize: true,
                     disableWhenClothes: ClothesKind.Panty,
 
-                    noiseOctaves: 4,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
-
 
                     posSpring: 21f,
                     posDamping: 0.5f,
@@ -333,9 +327,9 @@ namespace AniMorph
                     posOffsetPitchUpsideDown: 0.05f,
                     posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
-                    sclOffsetFaceUp: -0.075f,
+                    sclOffsetFaceUp: new Vector3(0f, 0f, -0.075f),
                     sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
                     sclOffsetFaceDownPerpAxesFactor: 1f
                     )
                 );
@@ -350,14 +344,11 @@ namespace AniMorph
                     config: Config,
                     order: 8000,
                     effect: Effect.Pos,
-                    adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseOctaves: 4,
                     noiseAmplitudePos: 0.125f,
                     noiseAmplitudeRot: 0.125f,
                     noiseAmplitudeScl: 0f,
-
 
                     posSpring: 30f,
                     posDamping: 0.2f,
@@ -389,9 +380,9 @@ namespace AniMorph
                     posOffsetPitchUpsideDown: 0.05f,
                     posOffsetRoll: new Vector3(0.035f, 0f, 0f),
 
-                    sclOffsetFaceUp: 0.2f,
+                    sclOffsetFaceUp: new Vector3(0f, 0f, 0.2f),
                     sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDown: new Vector3(0f, 0f, 0.2f),
                     sclOffsetFaceDownPerpAxesFactor: 1f
                     )
                 );
@@ -406,14 +397,11 @@ namespace AniMorph
                     config: Config,
                     order: 7000,
                     effect: Effect.Pos,
-                    adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseOctaves: 4,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
-
 
                     posSpring: 21f,
                     posDamping: 0.2f,
@@ -448,9 +436,9 @@ namespace AniMorph
                     posOffsetPitchUpsideDown: 0.05f,
                     posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
-                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
                     sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
                     sclOffsetFaceDownPerpAxesFactor: 1f
                     )
                 );
@@ -465,14 +453,11 @@ namespace AniMorph
                     config: Config,
                     order: 6000,
                     effect: Effect.Pos,
-                    adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseOctaves: 4,
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
-
 
                     posSpring: 21f,
                     posDamping: 0.2f,
@@ -507,9 +492,9 @@ namespace AniMorph
                     posOffsetPitchUpsideDown: 0.05f,
                     posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
-                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
                     sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
                     sclOffsetFaceDownPerpAxesFactor: 1f
                     )
                 );
@@ -524,14 +509,11 @@ namespace AniMorph
                     config: Config,
                     order: 5000,
                     effect: Effect.Pos | Effect.Rot,
-                    adjustForSize: true,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseOctaves: 4,
                     noiseAmplitudePos: 0.45f,
                     noiseAmplitudeRot: 5f,
                     noiseAmplitudeScl: 0.15f,
-
 
                     posSpring: 21f,
                     posDamping: 0.5f,
@@ -566,9 +548,9 @@ namespace AniMorph
                     posOffsetPitchUpsideDown: 0.05f,
                     posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
 
-                    sclOffsetFaceUp: -0.15f,
+                    sclOffsetFaceUp: new Vector3(0f, 0f, 0.15f),
                     sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: 0.2f,
+                    sclOffsetFaceDown: new Vector3(0f, 0f, 0.2f),
                     sclOffsetFaceDownPerpAxesFactor: 1f
                     )
                 );
@@ -583,14 +565,10 @@ namespace AniMorph
                     config: Config,
                     order: 3000,
                     effect: Effect.Pos,
-                    adjustForSize: true,
-                    disableWhenClothes: ClothesKind.None,
 
-                    noiseOctaves: 4,
-                    noiseAmplitudePos: 0.075f,
-                    noiseAmplitudeRot: 0.67f,
-                    noiseAmplitudeScl: 0.15f,
-
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 5f,
+                    noiseAmplitudeScl: 0f,
 
                     posSpring: 30f,
                     posDamping: 0.2f,
@@ -603,29 +581,7 @@ namespace AniMorph
 
                     rotSpring: 30f,
                     rotDamping: 5f,
-                    rotRate: 2f,
-
-                    sclStr: 40f,
-                    sclRate: 8f,
-                    sclDistortion: 0.5f,
-                    sclPreserveVolume: true,
-
-                    tetherMultiplier: 0.5f,
-                    tetherFrequency: 3f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
-
-                    rotOffsetRollDeg: null,
-                    rotOffsetRollFaceUpFactor: null,
-
-                    posOffsetPitchFaceDown: null,
-                    posOffsetPitchUpsideDown: null,
-                    posOffsetRoll: null,
-
-                    sclOffsetFaceUp: null,
-                    sclOffsetFaceUpPerpAxesFactor: null,
-                    sclOffsetFaceDown: null,
-                    sclOffsetFaceDownPerpAxesFactor: null
+                    rotRate: 2f
                     )
                 );
 
@@ -746,13 +702,15 @@ namespace AniMorph
                 int order,
 
                 Effect effect,
-                bool adjustForSize,
-                ClothesKind disableWhenClothes,
+                //bool adjustForSize,
 
-                int noiseOctaves,
                 float noiseAmplitudePos,
                 float noiseAmplitudeRot,
                 float noiseAmplitudeScl,
+
+                //Axis noisePosAxes,
+                //Axis noiseRotAxes,
+                //Axis noiseSclAxes,
 
                 float posSpring,
                 float posDamping,
@@ -763,31 +721,33 @@ namespace AniMorph
                 float posBleedStr,
                 float posBleedLen,
 
-                float? rotSpring,
-                float? rotDamping,
-                float? rotRate,
+                ClothesKind? disableWhenClothes = null,
 
-                float? sclStr,
-                float? sclRate,
-                float? sclDistortion,
-                bool? sclPreserveVolume,
+                float? rotSpring = null,
+                float? rotDamping = null,
+                float? rotRate = null,
 
-                float? tetherMultiplier,
-                float? tetherFrequency,
-                float? tetherDamping,
-                int? tetherMaxDeg,
+                float? sclStr = null,
+                float? sclRate = null,
+                float? sclDistortion = null,
+                bool? sclPreserveVolume = null,
 
-                int? rotOffsetRollDeg,
-                float? rotOffsetRollFaceUpFactor,
+                float? tetherMultiplier = null,
+                float? tetherFrequency = null,
+                float? tetherDamping = null,
+                int? tetherMaxDeg = null,
 
-                float? posOffsetPitchFaceDown,
-                float? posOffsetPitchUpsideDown,
-                Vector3? posOffsetRoll,
+                int? rotOffsetRollDeg = null,
+                float? rotOffsetRollFaceUpFactor = null,
 
-                float? sclOffsetFaceUp,
-                float? sclOffsetFaceUpPerpAxesFactor,
-                float? sclOffsetFaceDown,
-                float? sclOffsetFaceDownPerpAxesFactor
+                float? posOffsetPitchFaceDown = null,
+                float? posOffsetPitchUpsideDown = null,
+                Vector3? posOffsetRoll = null,
+
+                Vector3? sclOffsetFaceUp = null,
+                float? sclOffsetFaceUpPerpAxesFactor = null,
+                Vector3? sclOffsetFaceDown = null,
+                float? sclOffsetFaceDownPerpAxesFactor = null
 
                 )
             {
@@ -806,11 +766,12 @@ namespace AniMorph
                 "gravityScale – scale of the bone is adjusted based on the rotation of the bone in the world space as imitation of the gravity",
                 null, new ConfigurationManagerAttributes { Order = order }));
 
-                DisableWhenClothes = config.Bind(name, "DisableClothed", disableWhenClothes,
+                DisableWhenClothes = disableWhenClothes == null ? null :config.Bind(name, "DisableClothed", (ClothesKind)disableWhenClothes,
                     new ConfigDescription("Don't apply effects when particular piece of clothing is fully present", null, new ConfigurationManagerAttributes { Order = order - 5 }));
 
-                AdjustForSize = config.Bind(name, "AdjustForSize", adjustForSize,
-                    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
+
+                //AdjustForSize = config.Bind(name, "AdjustForSize", adjustForSize,
+                //    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
 
                 // ExtraChaos Rot 
                 // RotAxes
@@ -826,25 +787,32 @@ namespace AniMorph
                 var isRotOffset = rotOffsetRollDeg != null && rotOffsetRollFaceUpFactor != null;
                 var isSclOffset = sclOffsetFaceUp != null && sclOffsetFaceUpPerpAxesFactor != null && sclOffsetFaceDown != null && sclOffsetFaceDownPerpAxesFactor != null;
 
-                NoiseOctaves = config.Bind(name, "NoiseOctaves", noiseOctaves,
-                    new ConfigDescription("", new AcceptableValueRange<int>(1, 4), new ConfigurationManagerAttributes { Order = order - 7 }));
-
                 NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", noiseAmplitudePos,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 12, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
 
                 NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", noiseAmplitudeRot,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 13, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
 
                 NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", noiseAmplitudeScl,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 14, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
+
+
+                //NoisePosAxes = config.Bind(name, "NoisePosAxes", noisePosAxes,
+                //    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 11 }));
+
+                //NoiseRotAxes = config.Bind(name, "NoiseRotAxes", noiseRotAxes,
+                //    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 12 }));
+
+                //NoiseSclAxes = config.Bind(name, "NoiseSclAxes", noiseSclAxes,
+                //    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = order - 13 }));
 
 
 
-                PosSpring = config.Bind(name, "Position Spring", posSpring,
+                PosSpring = config.Bind(name, "PosSpring", posSpring,
                     new ConfigDescription("Strength of the positional lag.",
                     new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
 
-                PosDamping = config.Bind(name, "Position Damping", posDamping,
+                PosDamping = config.Bind(name, "PosDamping", posDamping,
                     new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
                 PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
@@ -954,17 +922,17 @@ namespace AniMorph
 
                 if (isSclOffset)
                 {
-                    SclOffsetFaceUp = config.Bind(name, "SclOffsetFaceUp", (float)sclOffsetFaceUp,
+                    SclOffsetFaceUp = config.Bind(name, "SclOffsetFaceUp", (Vector3)sclOffsetFaceUp,
                         new ConfigDescription("",
-                        new AcceptableValueRange<float>(-1f, 1f), new ConfigurationManagerAttributes { Order = order - 140, ShowRangeAsPercent = false }));
+                        null, new ConfigurationManagerAttributes { Order = order - 140, ShowRangeAsPercent = false }));
 
                     SclOffsetFaceUpPerpAxesFactor = config.Bind(name, "SclOffsetFaceUpPerpAxesFactor", (float)sclOffsetFaceUpPerpAxesFactor,
                         new ConfigDescription("",
-                        new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = order - 145, ShowRangeAsPercent = false }));
+                        null, new ConfigurationManagerAttributes { Order = order - 145, ShowRangeAsPercent = false }));
 
-                    SclOffsetFaceDown = config.Bind(name, "SclOffsetFaceDown", (float)sclOffsetFaceDown,
+                    SclOffsetFaceDown = config.Bind(name, "SclOffsetFaceDown", (Vector3)sclOffsetFaceDown,
                         new ConfigDescription("",
-                        new AcceptableValueRange<float>(-1f, 1f), new ConfigurationManagerAttributes { Order = order - 150, ShowRangeAsPercent = false }));
+                        null, new ConfigurationManagerAttributes { Order = order - 150, ShowRangeAsPercent = false }));
 
                     SclOffsetFaceDownPerpAxesFactor = config.Bind(name, "SclOffsetFaceDownPerpAxesFactor", (float)sclOffsetFaceDownPerpAxesFactor,
                         new ConfigDescription("",
@@ -982,13 +950,16 @@ namespace AniMorph
             }
 
             public ConfigEntry<Effect> Effects;
-            public ConfigEntry<bool> AdjustForSize;
+            //public ConfigEntry<bool> AdjustForSize;
             public ConfigEntry<ClothesKind> DisableWhenClothes;
 
-            public ConfigEntry<int> NoiseOctaves;
             public ConfigEntry<float> NoiseAmplitudePos;
             public ConfigEntry<float> NoiseAmplitudeRot;
             public ConfigEntry<float> NoiseAmplitudeScl;
+
+            //public ConfigEntry<Axis> NoisePosAxes;
+            //public ConfigEntry<Axis> NoiseRotAxes;
+            //public ConfigEntry<Axis> NoiseSclAxes;
 
 
             //public ConfigEntry<float> PosGravity;
@@ -1031,9 +1002,9 @@ namespace AniMorph
             public ConfigEntry<float> PosOffsetPitchUpsideDown;
             public ConfigEntry<Vector3> PosOffsetRoll;
 
-            public ConfigEntry<float> SclOffsetFaceUp;
+            public ConfigEntry<Vector3> SclOffsetFaceUp;
             public ConfigEntry<float> SclOffsetFaceUpPerpAxesFactor;
-            public ConfigEntry<float> SclOffsetFaceDown;
+            public ConfigEntry<Vector3> SclOffsetFaceDown;
             public ConfigEntry<float> SclOffsetFaceDownPerpAxesFactor;
 
             internal Effect allowedEffects;

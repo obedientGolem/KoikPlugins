@@ -25,13 +25,12 @@ namespace AniMorph
 
         internal override void UpdateModifier(float dt, float dtInv, float animLenInv)
         {
-            if (!active) return;
+            //if (!active) return;
 
             ref var cfg = ref config;
             ref var curr = ref current;
             ref var prev = ref previous;
 
-            var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
@@ -46,23 +45,44 @@ namespace AniMorph
 
             var effects = cfg.effects;
 
-            posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity, out var accel);
+            var posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
 
             if ((effects & Effect.Pos) == 0)
                 posOffset = Vector3.zero;
 
             if ((effects & Effect.Rot) != 0)
+            {
                 rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+            }
             else
+            {
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
+                // Required for correct inheritance of position offset by slaves.
+                curr.rotInverse = Quaternion.Inverse(transform.rotation);
+            }
 
             if ((effects & Effect.Scl) != 0)
-                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, accel, dt);
+                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, dt);
+
+
+            // --- Update Dots ---
 
             var dotUp = Vector3.Dot(transform.up, Vector3.up);
             var dotR = Vector3.Dot(transform.right, Vector3.up);
             var dotFwd = Vector3.Dot(transform.forward, Vector3.up);
+
+            if ((effects & Effect.PosOffset) != 0)
+                posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
+
+            if ((effects & Effect.SclOffset) != 0)
+                sclOffset = Vector3.Scale(sclOffset, GetSclDotOffset(ref cfg, ref curr, dotFwd));
+
+            if ((effects & Effect.RotOffset) != 0)
+                rotOffset += GetRotDotOffset(ref cfg, ref curr, dotFwd, dotR);
+
+
+            // --- Update Dots ---
 
             if ((effects & Effect.PosOffset) != 0)
                 posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
@@ -112,12 +132,11 @@ namespace AniMorph
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
 
-            curr.needNoisePos = cfg.noiseAmplPos > 0f;
-            curr.needNoiseRot = cfg.noiseAmplRot > 0f;
-            curr.needNoiseScl = cfg.noiseAmplScl > 0f;
-
 
             // --- Update Slaves ---
+            
+            var posOffsetRot = curr.rotInverse * posOffset;
+            posOffset = transform.TransformDirection(posOffset);
 
             foreach (var slave in _slaves)
             {
@@ -128,9 +147,10 @@ namespace AniMorph
                     dotFwd:        dotFwd, 
                     dt:            dt, 
                     dtInv:         dtInv, 
-                    animLenInv:    animLenInv, 
+                    animLenInv:    animLenInv,
                     posOffset:     posOffset,
-                    rotOffset:     rotOffset, 
+                    posOffsetRot:  posOffsetRot,
+                    rotOffset:     rotOffset,
                     sclOffset:     sclOffset
                     );
             }

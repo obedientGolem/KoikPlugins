@@ -33,32 +33,47 @@ namespace KK_Things
         private ConfigEntry<Vector3> AmbientGroundColor;
         private ConfigEntry<Vector3> AmbientEquatorColor;
 
+
+        private ConfigEntry<Color> DirLightColor;
+        private ConfigEntry<Color> ReverseDirLightColor;
+
         private void Awake()
         {
             Logger = base.Logger;
 
 
-            TweakAmbientLight = Config.Bind(name, "Enabled", true,
+            TweakAmbientLight = Config.Bind("", "Enabled", true,
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 100 }));
 
-            TweakDirLight = Config.Bind(name, "EnabledExtraDirLight", true,
+            TweakDirLight = Config.Bind("", "EnabledExtraDirLight", true,
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 99 }));
 
-            AmbientMode = Config.Bind(name, "AmbientMode", UnityEngine.Rendering.AmbientMode.Trilight,
-                    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 90 }));
+            DirLightColor = Config.Bind("", "DirLightColor", new Color(1f, 0.913f, 0.745f),
+                    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 98 }));
+
+
+            ReverseDirLightColor = Config.Bind("", "ReverseDirLightColor", new Color(0.25f, 0f, 0.5f),
+                    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 97 }));
+
+
+
+            AmbientMode = Config.Bind("", "AmbientMode", UnityEngine.Rendering.AmbientMode.Trilight,
+                    new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 60 }));
+
+            
 
 
 
             AmbientLight = Config.Bind("", "AmbientLight", new Vector3(0.5f, 0.5f, 0.5f),
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 50 }));
 
-            AmbientSkyColor = Config.Bind("", "AmbientSkyColor", new Vector3(0.4f, 0.4f, 0.4f),
+            AmbientSkyColor = Config.Bind("", "AmbientSkyColor", new Vector3(1f, 1f, 1f),
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 40 }));
 
-            AmbientGroundColor = Config.Bind("", "AmbientGroundColor", new Vector3(0.3f, 0.3f, 0.3f),
+            AmbientGroundColor = Config.Bind("", "AmbientGroundColor", new Vector3(0.6f, 0.55f, 0.55f),
                 new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 30 }));
 
-            AmbientEquatorColor = Config.Bind("", "AmbientEquatorColor", new Vector3(0.6f, 0.6f, 0.6f),
+            AmbientEquatorColor = Config.Bind("", "AmbientEquatorColor", new Vector3(0.8f, 0.8f, 0.85f),
                 new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 20 }));
 
             Config.SettingChanged += OnSettingChanged;
@@ -144,24 +159,24 @@ namespace KK_Things
                 .Where(t => t.name.Equals(ExtraDirLightName))
                 .FirstOrDefault();
 
-            var copy = child != null ? child.GetComponent<Light>() : null;
+            var reverseDirLight = child != null ? child.GetComponent<Light>() : null;
 
-            if (copy == null)
+            if (reverseDirLight == null)
             {
-                copy = Instantiate(dirLight, dirLight.transform);
-                copy.gameObject.name = ExtraDirLightName;
-                copy.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                reverseDirLight = Instantiate(dirLight, dirLight.transform);
+                reverseDirLight.gameObject.name = ExtraDirLightName;
+                reverseDirLight.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
             }
 
 
-            //dirLight.color = new Color(0.9f, 0.85f, 0.85f);
+            dirLight.color = DirLightColor.Value;
             dirLight.intensity = 0.4f;
 
-            copy.color = new Color(0.55f, 0.5f, 0.6f);
-            copy.intensity = 0.4f;
+            reverseDirLight.color = ReverseDirLightColor.Value;
+            reverseDirLight.intensity = 0.4f;
 
             _dirLight = dirLight;
-            _dirLightCopy = copy;
+            _dirLightCopy = reverseDirLight;
 #if DEBUG
             Logger.LogWarning($"UpdateDirLight: Successfully updated!");
 #endif
