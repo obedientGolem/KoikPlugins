@@ -233,7 +233,7 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
             curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
 
 
@@ -345,9 +345,9 @@ namespace AniMorph
 
             noiseVec = new Vector3(x, y, z);
 
-            AniMorphPlugin.Logger.LogDebug($"[{transform.name}][{Time.frameCount}] " +
-                $"noiseVec({noiseVec.x:F3},{noiseVec.y:F3},{noiseVec.z:F3}) ampl[{ampl:F3}] freq[{freq:F3}] " +
-                $"outNoiseVec({outNoiseVec.x:F3},{outNoiseVec.y:F3},{outNoiseVec.z:F3})");
+            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}][{Time.frameCount}] " +
+            //    $"noiseVec({noiseVec.x:F3},{noiseVec.y:F3},{noiseVec.z:F3}) ampl[{ampl:F3}] freq[{freq:F3}] " +
+            //    $"outNoiseVec({outNoiseVec.x:F3},{outNoiseVec.y:F3},{outNoiseVec.z:F3})");
 
             return noiseVec;
         }
@@ -437,7 +437,7 @@ namespace AniMorph
             }
             //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
             //    $"dynamic({x},{y},{z}) dynamicRot[{prev.localRot != transform.localRotation}) " +
-            //    $"prevLocalRot[{prev.localRot.eulerAngles}] localRot[{transform.localRotation.eulerAngles}] " +
+            //    //$"prevLocalRot[{prev.localRot.eulerAngles}] localRot[{transform.localRotation.eulerAngles}] " +
             //    //$"cleanDeltaPos({cleanDeltaPos.x:F3},{cleanDeltaPos.y:F3},{cleanDeltaPos.z:F3}) " +
             //    //$"cleanPos({cleanPos.x:F3},{cleanPos.y:F3},{cleanPos.z:F3}) " +
             //    //$"prevCleanPos({prev.cleanPos.x:F3},{prev.cleanPos.y:F3},{prev.cleanPos.z:F3}) " +
@@ -466,7 +466,9 @@ namespace AniMorph
             // --- Shock detection --- 
             var len = cleanVelDelta.magnitude * dtInv;
 
-            if (len > cfg.posShockThreshold || projectDot < 0f)
+            var isDot = projectDot < 0f;
+
+            if (len > cfg.posShockThreshold || (isDot && (len > cfg.posShockThreshold * OneThird)))
             {
                 //var shockPower = Mathf.Pow(Mathf.Sqrt(cleanVelDeltaSqrLen), 1.2f);
                 //velocity += cleanVelDelta.normalized * shockPower * shockFactor;
@@ -478,15 +480,22 @@ namespace AniMorph
                 // TODO Add slowdown instead of freeze?
                 curr.bleedTime = cfg.posBleedLen * scaleFactor;
 
-                if (len > cfg.posFreezeThreshold || projectDot < 0f)
+                if (len > cfg.posFreezeThreshold || isDot)
                 {
                     curr.shockTime = cfg.posFreezeLen * scaleFactor;
 
-                    //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
-                    //    $"Shock[{curr.shockTime:F4}]!" +
+                    //AniMorphPlugin.Logger.LogWarning($"[{transform.name}] " +
+                    //    $"Freeze[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
                     //    $"");
                 }
-                return true;
+                //else
+                //{
+
+                //    AniMorphPlugin.Logger.LogInfo($"[{transform.name}] " +
+                //        $"Shock[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
+                //        $"");
+                //}
+                    return true;
             }
             return false;
         }
@@ -535,12 +544,12 @@ namespace AniMorph
 
             if (cfg.noisePosAmpl != 0f)
             {
-                accel += GetNoiseVec(
+                accel += Vector3.Scale(cfg.noisePosAxisFactor, GetNoiseVec(
                     cfg.noisePosVec,
                     cfg.noisePosAmpl * curr.noiseAmplFactor,
                     curr.noiseFreq,
                     out cfg.noisePosVec
-                    );
+                    ));
             }
 
             accel *= (cfg.massInv * dt);
@@ -572,13 +581,18 @@ namespace AniMorph
 
         protected Quaternion GetCleanLocalRot(ref Previous prev)
         {
-            var currLocalRot = transform.localRotation;
+            // ABMX uses rotOffset to rotate a transform in its local space,
+            // i.e. currRot = currRot * offset, therefore prevRot = Inverse(offset) * currRot
 
-            if (currLocalRot == prev.localRot)
+
+            var currLocalRot = transform.localRotation;
+            var isDynamic = currLocalRot != prev.localRot;
+
+            if (!isDynamic)
             {
                 var inverseOffset = Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
 
-                return currLocalRot * inverseOffset;
+                return inverseOffset * currLocalRot;
             }
             else
                 return currLocalRot;
@@ -607,7 +621,7 @@ namespace AniMorph
 
         protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv)
         {
-            var currRot = transform.rotation;
+            var currCleanRot = transform.rotation;
             var currLocalRot = transform.localRotation;
             var isDynamic = currLocalRot != prev.localRot;
 
@@ -631,16 +645,17 @@ namespace AniMorph
 
                 var inverseOffset = Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
 
-                currRot = currRot * inverseOffset;
+                currCleanRot = currCleanRot * inverseOffset;
 
-                curr.cleanLocalRot = currLocalRot * inverseOffset;
+                curr.cleanLocalRot = inverseOffset * currLocalRot;
             }
 
-            var currRotInverse = Quaternion.Inverse(currRot);
+            var currCleanRotInverse = Quaternion.Inverse(currCleanRot);
 
-            curr.rotInverse = currRotInverse;
+            curr.cleanRotInverse = currCleanRotInverse;
 
-            var delta = currRot * Quaternion.Inverse(prev.adjustedRot);
+            // Global delta between clean current rotation and rotation we setup in the previous frame.
+            var delta = currCleanRot * Quaternion.Inverse(prev.adjustedRot);
 
             delta.ToAngleAxis(out var angle, out var axis);
 
@@ -649,22 +664,24 @@ namespace AniMorph
 
             var absAngle = Mathf.Abs(angle);
             var accel = Vector3.zero;
-            var angVel = prev.torque;
+            var torque = prev.torque;
 
+            // Disabled for debug.
             if (devRotFreeze > 0f)
             {
                 devRotFreeze -= dt;
 
-                accel -= cfg.rotDamping * angVel;
-                angVel += accel * dt;
+                accel -= cfg.rotDamping * torque;
+                torque += accel * dt;
 
-                prev.torque = angVel;
+                prev.torque = torque;
 
-                return (currRotInverse * prev.adjustedRot).eulerAngles;
+                return (currCleanRotInverse * prev.adjustedRot).eulerAngles;
             }
 
 
-            // --- Filter corruption ---
+            // --- Filter corruption & Apply acceleration ---
+
             if (!float.IsInfinity(axis.x))
             {
                 var angleExp = FastExp(absAngle * dt);
@@ -691,7 +708,9 @@ namespace AniMorph
                 accel = cfg.rotSpring * targetVel;
             }
 
-            accel -= cfg.rotDamping * Mathf.Exp(-absAngle * dt) * angVel;
+
+
+            accel -= cfg.rotDamping * Mathf.Exp(-absAngle * dt) * torque;
 
             if (cfg.noiseRotAmpl != 0f)
             {
@@ -703,15 +722,15 @@ namespace AniMorph
                     ));
             }
 
-            angVel += Vector3.Scale(accel, cfg.rotApplication) * dt;
+            //torque += Vector3.Scale(accel, cfg.rotApplication) * dt;
 
-            //angVel += accel * dt;
+            torque += accel * dt;
 
-            var angVelDot = Vector3.Dot(angVel, prev.torque);
+            var torqueDot = Vector3.Dot(torque, prev.torque);
 
             if (curr.highTorque)
             {
-                if (angVelDot < 1f)
+                if (torqueDot < 1f)
                 {
                     curr.highTorque = false;
                     var freezeTime = absAngle * (1f / 45f);
@@ -722,22 +741,23 @@ namespace AniMorph
                     //    $"devRotFreeze[{devRotFreeze:F3} absAngle[{absAngle:F3}] angVel{angVel}");
                 }
             }
-            else if (angVelDot > 1000f)
+            else if (torqueDot > 1000f)
             {
-                curr.highTorque = true;
+                // TODO ReEnable, disabled for rot debug.
+                //curr.highTorque = true;
             }
 
             //var rot = angVelocityLen == 0f ?
             //    prev.adjustedRot :
             //    Quaternion.AngleAxis(angVelocityLen * dt * cfg.rotRate, angVel * (1f / angVelocityLen)) * prev.adjustedRot;
-            var newRot = Quaternion.Euler(angVel * (dt * config.rotRate)) * prev.adjustedRot;
+            var adjustedRot = Quaternion.Euler(torque * (dt * config.rotRate)) * prev.adjustedRot;
 
 
             //previous.cleanRot = cleanRot
-            prev.adjustedRot = newRot;
-            prev.torque = angVel;
+            prev.adjustedRot = adjustedRot;
+            prev.torque = torque;
 
-            var result = currRotInverse * newRot;
+            var result = currCleanRotInverse * adjustedRot;
 
             if (absAngle > 45f)
             {
@@ -746,7 +766,7 @@ namespace AniMorph
                 if (resultAngle > 45f)
                 {
                     result = Quaternion.Slerp(Quaternion.identity, result, 45f / resultAngle);
-                    prev.adjustedRot = currRot * result;
+                    prev.adjustedRot = currCleanRot * result;
                     //AniMorphPlugin.Logger.LogWarning($"[{transform.name}] - Angle Clamp absAngle[{absAngle:F3}] resultAngle[{resultAngle:F3}]");
                 }
                 //else
@@ -1603,7 +1623,7 @@ namespace AniMorph
 
         }
 
-        protected struct Current
+        protected class Current
         {
             internal bool highTorque;
             internal float shockTime;
@@ -1611,7 +1631,7 @@ namespace AniMorph
             internal float noiseAmplFactor;
             internal float noiseFreq;
             internal Quaternion cleanLocalRot;
-            internal Quaternion rotInverse;
+            internal Quaternion cleanRotInverse;
 
             internal bool animRot;
 

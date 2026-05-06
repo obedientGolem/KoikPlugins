@@ -8,6 +8,7 @@ using System.Text;
 using UnityEngine;
 using static AniMorph.AniMorphEffector;
 using static AniMorph.MotionModifier;
+using static AniMorph.AniMorphPlugin;
 
 namespace AniMorph
 {
@@ -52,6 +53,7 @@ namespace AniMorph
             ref var curr = ref current;
             ref var prev = ref previous;
 
+            posOffset = Vector3.zero;
 
             // --- Inherit offsets ---
 
@@ -81,7 +83,7 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
             curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
 
 
@@ -95,7 +97,7 @@ namespace AniMorph
                 posOffset += slavePosOffset;
 
             if ((effects & Effect.Rot) != 0)
-                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+                rotOffset += GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
             else
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);

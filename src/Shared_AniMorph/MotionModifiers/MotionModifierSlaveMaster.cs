@@ -37,12 +37,12 @@ namespace AniMorph
 
             if ((cfg.effects & Effect.Rot) == 0)
             {
-                curr.rotInverse = Quaternion.Inverse(transform.rotation);
+                curr.cleanRotInverse = Quaternion.Inverse(transform.rotation);
             }
 
             // --- Update Slaves ---
 
-            posOffsetRot = curr.rotInverse * posOffset;
+            posOffsetRot = curr.cleanRotInverse * posOffset;
             posOffset = transform.TransformDirection(posOffset);
 
             foreach (var slave in _slaves)

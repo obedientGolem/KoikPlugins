@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using static AniMorph.AniMorphEffector;
+using static AniMorph.AniMorphPlugin;
 
 namespace AniMorph
 {
@@ -25,7 +26,7 @@ namespace AniMorph
 
         internal override void UpdateModifier(float dt, float dtInv, float animLenInv)
         {
-            //if (!active) return;
+            if (!active) return;
 
             ref var cfg = ref config;
             ref var curr = ref current;
@@ -37,7 +38,7 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (0.25f + Mathf.Min(0.75f, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
             curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
 
 
@@ -59,7 +60,7 @@ namespace AniMorph
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
                 // Required for correct inheritance of position offset by slaves.
-                curr.rotInverse = Quaternion.Inverse(transform.rotation);
+                curr.cleanRotInverse = Quaternion.Inverse(transform.rotation);
             }
 
             if ((effects & Effect.Scl) != 0)
@@ -135,7 +136,7 @@ namespace AniMorph
 
             // --- Update Slaves ---
             
-            var posOffsetRot = curr.rotInverse * posOffset;
+            var posOffsetRot = curr.cleanRotInverse * posOffset;
             posOffset = transform.TransformDirection(posOffset);
 
             foreach (var slave in _slaves)
@@ -168,16 +169,10 @@ namespace AniMorph
             {
                 if ((baseConfig.allowedEffects & effect) != 0) continue;
 
-                config.effects &= ~effect;
+                cfg.effects &= ~effect;
             }
-        }
 
-        internal override void OnUpdate()
-        {
-            base.OnUpdate();
-
-            foreach (var slave in _slaves)
-                slave.OnUpdate();
+            active = cfg.effects != Effect.None;
         }
 
         internal override void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)

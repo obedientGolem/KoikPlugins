@@ -266,7 +266,7 @@ namespace AniMorph
                         Smoothing.Sine => Mathf.Sin(t * (Mathf.PI * 0.5f)),
                         _ => t
                     };
-                    ChaControl.transform.rotation = Quaternion.Euler(_devRotOnceEuler * amount) * _verbotenRotateOnceStartRot;
+                    ChaControl.transform.rotation = _verbotenRotateOnceStartRot * Quaternion.Euler(_devRotOnceEuler * amount);
                 }
             }
             if (_follow)
