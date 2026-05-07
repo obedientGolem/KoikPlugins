@@ -33,6 +33,7 @@ namespace AniMorph
         public const string Version = "0.9";
         internal new static ManualLogSource Logger;
         private static AniMorphPlugin _instance;
+        public static readonly ClothesKind[] ClothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
 
         public static ConfigEntry<Gender> Enable;
         public static ConfigEntry<bool> MaleEnableDB;
@@ -225,22 +226,166 @@ namespace AniMorph
 
         private void BindConfig()
         {
-            #region Breast
+            #region Head
 
-            ConfigDic.Add(Body.Breast,
+            ConfigDic.Add(Body.Head,
                 new(
-                    body: Body.Breast,
+                    body: Body.Head,
                     config: Config,
                     order: 10000,
-                    effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
-                    disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
+                    effect: Effect.Pos | Effect.Rot,
+
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: 1f,
+
+                    posSpring: 21f,
+                    posDamping: TwoThirds,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.02f,
+                    posBleedStr: 2f,
+                    posBleedLen: 0.1f,
+
+                    rotSpring: 30f,
+                    rotDamping: 5f,
+                    rotRate: 2f
+                    )
+                );
+
+            #endregion
+
+
+            #region Shoulders
+
+            ConfigDic.Add(Body.Shoulders,
+                new(
+                    body: Body.Shoulders,
+                    config: Config,
+                    order: 9000,
+                    effect: Effect.Pos,
+                    disableWhenClothes: ClothesKind.None,
+
+                    noiseAmplitudePos: 0.1f,
+                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeScl: 0.15f,
+
+                    posSpring: 7f,
+                    posDamping: TwoThirds,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
+                    sclPreserveVolume: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxDeg: 30,
+
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 3,
+
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+
+                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
+
+            #endregion
+
+
+            #region Chest
+
+            ConfigDic.Add(Body.Chest,
+                new(
+                    body: Body.Chest,
+                    config: Config,
+                    order: 8000,
+                    effect: Effect.Pos,
+                    disableWhenClothes: ClothesKind.None,
 
                     noiseAmplitudePos: 0.15f,
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
 
                     posSpring: 21f,
-                    posDamping: 0.2f,
+                    posDamping: 0.5f,
+                    posShockStr: 1f,
+                    posShockThreshold: 0.15f,
+                    posFreezeThreshold: 0.25f,
+                    posFreezeLen: 0.05f,
+                    posBleedStr: 5f,
+                    posBleedLen: 0.1f,
+                    //posGravity: 0f,
+
+                    rotSpring: 15f,
+                    rotDamping: 0.2f,
+                    rotRate: 2f,
+                    //AngularApplicationMaster: Axis.Z,
+                    //AngularApplicationSlave: Axis.X | Axis.Y,
+
+                    sclStr: 0.35f,
+                    sclRate: 8f,
+                    sclDistortion: 0.4f,
+                    sclPreserveVolume: true,
+
+                    tetherMultiplier: 2f,
+                    tetherFrequency: 2f,
+                    tetherDamping: 0.3f,
+                    tetherMaxDeg: 30,
+
+                    rotOffsetRollDeg: 20,
+                    rotOffsetRollFaceUpFactor: 3,
+
+                    posOffsetPitchFaceDown: 0.0175f,
+                    posOffsetPitchUpsideDown: 0.05f,
+                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+
+                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
+                    sclOffsetFaceUpPerpAxesFactor: 1f,
+                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
+                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    )
+                );
+
+            #endregion
+
+
+            #region Breast
+
+            ConfigDic.Add(Body.Breast,
+                new(
+                    body: Body.Breast,
+                    config: Config,
+                    order: 7000,
+                    effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                    disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
+
+                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudeRot: TwoThirds,
+                    noiseAmplitudeScl: 0.15f,
+
+                    posSpring: 14f,
+                    posDamping: OneThird,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -248,7 +393,7 @@ namespace AniMorph
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
 
-                    rotSpring: 15f,
+                    rotSpring: 21f,
                     rotDamping: 0.2f,
                     rotRate: 2f,
 
@@ -278,13 +423,70 @@ namespace AniMorph
 
             #endregion
 
+
+            //#region Tummy
+
+            //ConfigDic.Add(Body.Tummy,
+            //    new(
+            //        body: Body.Tummy,
+            //        config: Config,
+            //        order: 6000,
+            //        effect: Effect.Pos | Effect.Rot,
+            //        disableWhenClothes: ClothesKind.None,
+
+            //        noiseAmplitudePos: 0.45f,
+            //        noiseAmplitudeRot: 5f,
+            //        noiseAmplitudeScl: 0.15f,
+
+            //        posSpring: 21f,
+            //        posDamping: 0.5f,
+            //        posShockStr: 1f,
+            //        posShockThreshold: 0.15f,
+            //        posFreezeThreshold: 0.25f,
+            //        posFreezeLen: 0.05f,
+            //        posBleedStr: 5f,
+            //        posBleedLen: 0.1f,
+            //        //posGravity: 0f,
+
+            //        rotSpring: 15f,
+            //        rotDamping: 0.2f,
+            //        rotRate: 2f,
+            //        //AngularApplicationMaster: Axis.Z,
+            //        //AngularApplicationSlave: Axis.X | Axis.Y,
+
+            //        sclStr: 0.35f,
+            //        sclRate: 8f,
+            //        sclDistortion: 0.4f,
+            //        sclPreserveVolume: true,
+
+            //        tetherMultiplier: 2f,
+            //        tetherFrequency: 2f,
+            //        tetherDamping: 0.3f,
+            //        tetherMaxDeg: 30,
+
+            //        rotOffsetRollDeg: 20,
+            //        rotOffsetRollFaceUpFactor: 3,
+
+            //        posOffsetPitchFaceDown: 0.0175f,
+            //        posOffsetPitchUpsideDown: 0.05f,
+            //        posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+
+            //        sclOffsetFaceUp: new Vector3(0f, 0f, 0.15f),
+            //        sclOffsetFaceUpPerpAxesFactor: 1f,
+            //        sclOffsetFaceDown: new Vector3(0f, 0f, 0.2f),
+            //        sclOffsetFaceDownPerpAxesFactor: 1f
+            //        )
+            //    );
+
+            //#endregion
+
             #region Pelvis
 
             ConfigDic.Add(Body.Pelvis,
                 new(
                     body: Body.Pelvis,
                     config: Config,
-                    order: 9000,
+                    order: 5000,
                     effect: Effect.Pos | Effect.Rot | Effect.Scl,
                     disableWhenClothes: ClothesKind.Panty,
 
@@ -342,7 +544,7 @@ namespace AniMorph
                 new(
                     body: Body.Thighs,
                     config: Config,
-                    order: 8000,
+                    order: 4000,
                     effect: Effect.Pos,
                     disableWhenClothes: ClothesKind.None,
 
@@ -389,203 +591,6 @@ namespace AniMorph
 
             #endregion
 
-            #region Chest
-
-            ConfigDic.Add(Body.Chest,
-                new(
-                    body: Body.Chest,
-                    config: Config,
-                    order: 7000,
-                    effect: Effect.Pos,
-                    disableWhenClothes: ClothesKind.None,
-
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 0.67f,
-                    noiseAmplitudeScl: 0.15f,
-
-                    posSpring: 21f,
-                    posDamping: 0.2f,
-                    posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0f,
-
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
-                    //AngularApplicationMaster: Axis.Z,
-                    //AngularApplicationSlave: Axis.X | Axis.Y,
-
-                    sclStr: 0.35f,
-                    sclRate: 8f,
-                    sclDistortion: 0.4f,
-                    sclPreserveVolume: true,
-
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
-
-                    rotOffsetRollDeg: 20,
-                    rotOffsetRollFaceUpFactor: 3,
-
-                    posOffsetPitchFaceDown: 0.0175f,
-                    posOffsetPitchUpsideDown: 0.05f,
-                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
-
-                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
-                    sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
-                    sclOffsetFaceDownPerpAxesFactor: 1f
-                    )
-                );
-
-            #endregion
-
-            #region Shoulders
-
-            ConfigDic.Add(Body.Shoulders,
-                new(
-                    body: Body.Shoulders,
-                    config: Config,
-                    order: 6000,
-                    effect: Effect.Pos,
-                    disableWhenClothes: ClothesKind.None,
-
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 0.67f,
-                    noiseAmplitudeScl: 0.15f,
-
-                    posSpring: 21f,
-                    posDamping: 0.2f,
-                    posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0f,
-
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
-                    //AngularApplicationMaster: Axis.Z,
-                    //AngularApplicationSlave: Axis.X | Axis.Y,
-
-                    sclStr: 0.35f,
-                    sclRate: 8f,
-                    sclDistortion: 0.4f,
-                    sclPreserveVolume: true,
-
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
-
-                    rotOffsetRollDeg: 20,
-                    rotOffsetRollFaceUpFactor: 3,
-
-                    posOffsetPitchFaceDown: 0.0175f,
-                    posOffsetPitchUpsideDown: 0.05f,
-                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
-
-                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
-                    sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
-                    sclOffsetFaceDownPerpAxesFactor: 1f
-                    )
-                );
-
-            #endregion
-
-            #region Tummy
-
-            ConfigDic.Add(Body.Tummy,
-                new(
-                    body: Body.Tummy,
-                    config: Config,
-                    order: 5000,
-                    effect: Effect.Pos | Effect.Rot,
-                    disableWhenClothes: ClothesKind.None,
-
-                    noiseAmplitudePos: 0.45f,
-                    noiseAmplitudeRot: 5f,
-                    noiseAmplitudeScl: 0.15f,
-
-                    posSpring: 21f,
-                    posDamping: 0.5f,
-                    posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0f,
-
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
-                    //AngularApplicationMaster: Axis.Z,
-                    //AngularApplicationSlave: Axis.X | Axis.Y,
-
-                    sclStr: 0.35f,
-                    sclRate: 8f,
-                    sclDistortion: 0.4f,
-                    sclPreserveVolume: true,
-
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
-
-                    rotOffsetRollDeg: 20,
-                    rotOffsetRollFaceUpFactor: 3,
-
-                    posOffsetPitchFaceDown: 0.0175f,
-                    posOffsetPitchUpsideDown: 0.05f,
-                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
-
-                    sclOffsetFaceUp: new Vector3(0f, 0f, 0.15f),
-                    sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: new Vector3(0f, 0f, 0.2f),
-                    sclOffsetFaceDownPerpAxesFactor: 1f
-                    )
-                );
-
-            #endregion
-
-            #region Head
-
-            ConfigDic.Add(Body.Head,
-                new(
-                    body: Body.Head,
-                    config: Config,
-                    order: 3000,
-                    effect: Effect.Pos,
-
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 5f,
-                    noiseAmplitudeScl: 0f,
-
-                    posSpring: 30f,
-                    posDamping: 0.2f,
-                    posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
-                    posFreezeLen: 0.02f,
-                    posBleedStr: 2f,
-                    posBleedLen: 0.1f,
-
-                    rotSpring: 30f,
-                    rotDamping: 5f,
-                    rotRate: 2f
-                    )
-                );
-
-            #endregion
         }
 
 
@@ -652,7 +657,7 @@ namespace AniMorph
             Shoulders,
             Chest,
             Breast,
-            Tummy,
+            //Tummy,
             Pelvis,
             Thighs,
         }
@@ -673,7 +678,7 @@ namespace AniMorph
             Male = 1 << 0,
             Female = 1 << 1,
         }
-        public static readonly ClothesKind[] ClothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
+
 
         [Flags]
         public enum ClothesKind
@@ -704,9 +709,6 @@ namespace AniMorph
                 Effect effect,
                 //bool adjustForSize,
 
-                float noiseAmplitudePos,
-                float noiseAmplitudeRot,
-                float noiseAmplitudeScl,
 
                 //Axis noisePosAxes,
                 //Axis noiseRotAxes,
@@ -720,6 +722,10 @@ namespace AniMorph
                 float posFreezeLen,
                 float posBleedStr,
                 float posBleedLen,
+
+                float? noiseAmplitudePos = null,
+                float? noiseAmplitudeRot = null,
+                float? noiseAmplitudeScl = null,
 
                 ClothesKind? disableWhenClothes = null,
 
@@ -787,14 +793,21 @@ namespace AniMorph
                 var isRotOffset = rotOffsetRollDeg != null && rotOffsetRollFaceUpFactor != null;
                 var isSclOffset = sclOffsetFaceUp != null && sclOffsetFaceUpPerpAxesFactor != null && sclOffsetFaceDown != null && sclOffsetFaceDownPerpAxesFactor != null;
 
-                NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", noiseAmplitudePos,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
-
-                NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", noiseAmplitudeRot,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
-
-                NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", noiseAmplitudeScl,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
+                if (noiseAmplitudePos != null)
+                {
+                    NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", (float)noiseAmplitudePos,
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, 0.5f), new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
+                }
+                if (noiseAmplitudeRot != null)
+                {
+                    NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", (float)noiseAmplitudeRot,
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
+                }
+                if (noiseAmplitudeScl != null)
+                {
+                    NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", (float)noiseAmplitudeScl,
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
+                }
 
 
                 //NoisePosAxes = config.Bind(name, "NoisePosAxes", noisePosAxes,

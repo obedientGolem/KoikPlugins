@@ -53,7 +53,6 @@ namespace AniMorph
             ref var curr = ref current;
             ref var prev = ref previous;
 
-            posOffset = Vector3.zero;
 
             // --- Inherit offsets ---
 
@@ -61,6 +60,8 @@ namespace AniMorph
 
             if ((inheritEffects & Effect.Pos) != 0)
             {
+                posOffset *= cfg.inheritPosF;
+
                 if (devRotatedPosOffset)
                     posOffset = transform.rotation * posOffsetRot;
                 else

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using static AniMorph.AniMorphEffector;
+using static AniMorph.MotionModifier;
 using static AniMorph.AniMorphPlugin;
 
 namespace AniMorph
@@ -32,6 +33,7 @@ namespace AniMorph
             ref var curr = ref current;
             ref var prev = ref previous;
 
+            var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
@@ -46,10 +48,10 @@ namespace AniMorph
 
             var effects = cfg.effects;
 
-            var posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
+            var masterPosOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
 
-            if ((effects & Effect.Pos) == 0)
-                posOffset = Vector3.zero;
+            if ((effects & Effect.Pos) != 0)
+                posOffset += masterPosOffset;
 
             if ((effects & Effect.Rot) != 0)
             {
@@ -57,9 +59,7 @@ namespace AniMorph
             }
             else
             {
-                // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
-                // Required for correct inheritance of position offset by slaves.
                 curr.cleanRotInverse = Quaternion.Inverse(transform.rotation);
             }
 
@@ -83,18 +83,6 @@ namespace AniMorph
                 rotOffset += GetRotDotOffset(ref cfg, ref curr, dotFwd, dotR);
 
 
-            // --- Update Dots ---
-
-            if ((effects & Effect.PosOffset) != 0)
-                posOffset += GetPosDotOffset(ref cfg, ref curr, dotUp, dotR);
-
-            if ((effects & Effect.SclOffset) != 0)
-                sclOffset = Vector3.Scale(sclOffset, GetSclDotOffset(ref cfg, ref curr, dotFwd));
-
-            if ((effects & Effect.RotOffset) != 0)
-                rotOffset += GetRotDotOffset(ref cfg, ref curr, dotFwd, dotR);
-
-
             // --- Prepare Application --- 
 
             var posPositive = cfg.posAppPositive;
@@ -107,9 +95,10 @@ namespace AniMorph
                 );
 
             posOffset = Vector3.Scale(posOffset, posSignScale);
-            rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
+            //rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
 
             var sclApp = cfg.sclApplication;
+
             sclOffset = new Vector3(
                 sclApp.x < 1f ? 1f + ((sclOffset.x - 1f) * sclApp.x) : sclOffset.x * sclApp.x,
                 sclApp.y < 1f ? 1f + ((sclOffset.y - 1f) * sclApp.y) : sclOffset.y * sclApp.y,
@@ -135,8 +124,8 @@ namespace AniMorph
 
 
             // --- Update Slaves ---
-            
-            var posOffsetRot = curr.cleanRotInverse * posOffset;
+
+            var devPosOffsetRot = curr.cleanRotInverse * posOffset;
             posOffset = transform.TransformDirection(posOffset);
 
             foreach (var slave in _slaves)
@@ -150,37 +139,11 @@ namespace AniMorph
                     dtInv:         dtInv, 
                     animLenInv:    animLenInv,
                     posOffset:     posOffset,
-                    posOffsetRot:  posOffsetRot,
+                    posOffsetRot:  devPosOffsetRot,
                     rotOffset:     rotOffset,
                     sclOffset:     sclOffset
                     );
             }
-        }
-
-        internal override void OnSettingChanged(AniMorphPlugin.Body body, ChaControl chara)
-        {
-            base.OnSettingChanged(body, chara);
-
-            ref var cfg = ref config;
-            // --- Clean-up effects ---
-            if (baseConfig.allowedEffects == Effect.DevAnything) return;
-
-            foreach (Effect effect in effects)
-            {
-                if ((baseConfig.allowedEffects & effect) != 0) continue;
-
-                cfg.effects &= ~effect;
-            }
-
-            active = cfg.effects != Effect.None;
-        }
-
-        internal override void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
-        {
-            base.OnAnimationLoopStart(animLoopFrameCountInv, dt);
-
-            foreach (var slave in _slaves)
-                slave.OnAnimationLoopStart(animLoopFrameCountInv, dt);
         }
     }
 }
