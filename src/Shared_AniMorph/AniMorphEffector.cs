@@ -34,21 +34,21 @@ namespace AniMorph
 
         // --- Shoulders ---
         private const string ShldrL = "cf_s_shoulder02_L";
-        private const string Arm1L = "cf_s_arm01_L";
-        private const string Arm2L = "cf_s_arm02_L";
-        private const string Arm3L = "cf_s_arm03_L";
+        private const string Arm1L  = "cf_s_arm01_L";
+        private const string Arm2L  = "cf_s_arm02_L";
+        private const string Arm3L  = "cf_s_arm03_L";
         private const string FArm1L = "cf_s_forearm01_L";
         private const string FArm2L = "cf_s_forearm02_L";
 
         private const string ShldrR = "cf_s_shoulder02_R";
-        private const string Arm1R = "cf_s_arm01_R";
-        private const string Arm2R = "cf_s_arm02_R";
-        private const string Arm3R = "cf_s_arm03_R";
+        private const string Arm1R  = "cf_s_arm01_R";
+        private const string Arm2R  = "cf_s_arm02_R";
+        private const string Arm3R  = "cf_s_arm03_R";
         private const string FArm1R = "cf_s_forearm01_R";
         private const string FArm2R = "cf_s_forearm02_R";
 
         // --- Breast ---
-        private const string Bust = "cf_d_bust00";
+        private const string Bust   = "cf_d_bust00";
         private const string Bust1L = "cf_d_bust01_L";
         private const string Bust1R = "cf_d_bust01_R";
 
@@ -57,10 +57,10 @@ namespace AniMorph
 
         // --- Pelvis ---
         private const string Waist2 = "cf_s_waist02";        // Position reset by the HScene xyz(false, false, true)
-        private const string Kokan = "cf_d_kokan";
-        private const string Ana = "cf_d_ana";
-        private const string ButtL = "cf_s_siri_L";         // Reset by the HScene xyz(true, true, true)
-        private const string ButtR = "cf_s_siri_R";         // Reset by the HScene xyz(true, true, true)
+        private const string Kokan  = "cf_d_kokan";
+        private const string Ana    = "cf_d_ana";
+        private const string ButtL  = "cf_s_siri_L";         // Reset by the HScene xyz(true, true, true)
+        private const string ButtR  = "cf_s_siri_R";         // Reset by the HScene xyz(true, true, true)
 
         // --- Thighs ---
         private const string Thigh1R = "cf_s_thigh01_R";
@@ -103,59 +103,6 @@ namespace AniMorph
         private static readonly BaseConfig[] _soloInitList =
             [
 
-            // --- Thighs ---
-
-            new (
-                name:           Thigh1R,
-                allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
-                posAppPositive: new Vector3(OneThird, 1f, 1f + TwoThirds),
-                posAppNegative: new Vector3(OneThird, 1f, 1f + TwoThirds),
-                sclApplication: new Vector3(1f, 0f, 1f),
-                dotScl_pos: new Vector3(0f, 0f, 0.0825f)
-                ),
-            new (
-                name:           Thigh2R,
-                allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
-                posAppPositive: new Vector3(0.25f, TwoThirds, 1f),
-                posAppNegative: new Vector3(0.25f, TwoThirds, 1f),
-                sclApplication: new Vector3(1f, 0f, 1f),
-                dotScl_pos: new(0f, 0f, 0.0375f)
-                ),
-            new (
-                name:           Thigh3R,
-                allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
-                posAppPositive: new Vector3(0f, OneThird, OneThird),
-                posAppNegative: new Vector3(0f, OneThird, OneThird),
-                sclApplication: new Vector3(OneThird, 0f, OneThird),
-                dotScl_pos: new(0f, 0f, 0.0125f) //0.0625f
-                ),
-            new (
-                name:           Thigh1L,
-                allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
-                posAppPositive: new Vector3(OneThird, 1f, 1f + TwoThirds),
-                posAppNegative: new Vector3(OneThird, 1f, 1f + TwoThirds),
-                sclApplication: new Vector3(1f, 0f, 1f),
-                dotScl_pos: new(0f, 0f, 0.0825f),
-                isLeft: true
-                ),
-            new (
-                name:           Thigh2L,
-                allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
-                posAppPositive: new Vector3(0.25f, TwoThirds, 1f),
-                posAppNegative: new Vector3(0.25f, TwoThirds, 1f),
-                sclApplication: new Vector3(1f, 0f, 1f),
-                dotScl_pos: new(0f, 0f, 0.0375f),
-                isLeft: true
-                ),
-            new (
-                name:           Thigh3L,
-                allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
-                posAppPositive: new Vector3(0f, OneThird, OneThird),
-                posAppNegative: new Vector3(0f, OneThird, OneThird),
-                sclApplication: new Vector3(OneThird, 0f, OneThird),
-                dotScl_pos: new(0f, 0f, 0.0125f), //0.0625f
-                isLeft: true
-                ),
 
 
             // --- Arms ---
@@ -215,7 +162,7 @@ namespace AniMorph
             // Children of 'Bust'   
             new (
                 name:           Bust1L,
-                allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.Tether | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                 inheritEffects: Effect.None,
                 posAppPositive: new Vector3(TwoThirds, 1f, 1f),
                 posAppNegative: new Vector3(1f, 1f, 0f),
@@ -223,7 +170,7 @@ namespace AniMorph
                 ),
             new (
                 name:           Bust1R,
-                allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.Tether | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                 inheritEffects: Effect.None,
                 posAppPositive: Vector3.one,
                 posAppNegative: new Vector3(TwoThirds, 1f, 0f)
@@ -286,7 +233,7 @@ namespace AniMorph
         //                        inheritPosF:    TwoThirds,
         //                        posSpringCfg:         OneThird,
         //                        isLeft: true
-                                
+
         //                        ),
         //                ],
         //                [
@@ -350,7 +297,7 @@ namespace AniMorph
                     name:           Spine2,
                     allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                     noiseRotF: new Vector3(1f, 1f, TwoThirds),
-                    noiseRotCfg: 5f
+                    noiseRotCfg: 1.5f
                     ),
                     [
                         new (
@@ -358,13 +305,12 @@ namespace AniMorph
                             allowedEffects: Effect.None,
                             inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                             posAppPositive: new Vector3(1f, 1f, 1f),
-                            posAppNegative: Vector3.one,
-                            noiseRotF: new Vector3(1f, 1f, OneThird)
+                            posAppNegative: new Vector3(1f, 1f, 1f)
                             ),
                         new (
                             name:           Spine3,
                             allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
+                            inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(TwoThirds, TwoThirds, TwoThirds), // new Vector3(TwoThirds, OneThird, OneThird),
                             posAppNegative: new Vector3(TwoThirds, 1f, OneThird)  // new Vector3(TwoThirds, TwoThirds, OneThird),
                             ),
@@ -375,27 +321,26 @@ namespace AniMorph
                             posAppPositive: new Vector3(TwoThirds, 1f, 1f),
                             posAppNegative: new Vector3(TwoThirds, 1f, 1f),
                             noiseRotF:      new Vector3(1f, 1f, TwoThirds),
-                            noiseRotCfg:    (5f * 1.5f),
-                            inheritPosF:    TwoThirds
+                            noiseRotCfg:    1f,
+                            inheritPosF:    TwoThirds,
+                            initAnimRot:    true
                             ),
                         new(
                             name:           ShldrL,
                             allowedEffects: Effect.Pos,
                             inheritEffects: Effect.Pos | Effect.Rot,
-                            posAppPositive: new Vector3(OneThird, 1f + OneThird, 1f),
+                            posAppPositive: new Vector3(OneThird, 1f, 1f),
                             posAppNegative: new Vector3(OneThird, TwoThirds, 1f),
                             inheritPosF:    TwoThirds,
-                            posSpringCfg:         OneThird,
                             isLeft: true
                             ),
                         new (
                             name:           ShldrR,
                             allowedEffects: Effect.Pos,
                             inheritEffects: Effect.Pos | Effect.Rot,
-                            posAppPositive: new Vector3(OneThird, 1f + OneThird, 1f),
+                            posAppPositive: new Vector3(OneThird, 1f, 1f),
                             posAppNegative: new Vector3(OneThird, TwoThirds, 1f),
-                            inheritPosF:    TwoThirds,
-                            posSpringCfg:   OneThird                            
+                            inheritPosF:    TwoThirds
                             ),
                         new (
                             name:           Arm1L,
@@ -404,7 +349,7 @@ namespace AniMorph
                             posAppPositive: new Vector3(1f + OneThird, OneThird, 1f),
                             posAppNegative: new Vector3(TwoThirds, TwoThirds, OneThird),
                             inheritPosF:    OneThird,
-                            posSpringCfg:   OneThird,
+                            posSpringCfg:   TwoThirds,
                             isLeft: true
                             ),
                         new (
@@ -414,7 +359,7 @@ namespace AniMorph
                             posAppPositive: new Vector3(TwoThirds, OneThird, 1f),
                             posAppNegative: new Vector3(1f + OneThird, TwoThirds, OneThird),
                             inheritPosF:    OneThird,
-                            posSpringCfg:   OneThird
+                            posSpringCfg:   TwoThirds
                             ),
                         new (
                             name:           Bust,
@@ -433,7 +378,7 @@ namespace AniMorph
             {
                 new (
                     name:           Waist2,
-                    allowedEffects: Effect.Pos | Effect.Rot,
+                    allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                     posAppPositive: Vector3.one,
                     posAppNegative: Vector3.one,
                     posSpringCfg:   TwoThirds,
@@ -445,40 +390,112 @@ namespace AniMorph
                         new (
                             name:           Waist1,
                             allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos | Effect.Rot,
+                            inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                             posAppPositive: Vector3.one,
                             posAppNegative: Vector3.one
                             ),
                         new (
                             name:           ButtL,
-                            inheritEffects: Effect.Pos | Effect.Rot,
                             allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.Tether | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                            inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(OneThird, TwoThirds, OneThird),
                             posAppNegative: new Vector3(1f, 1f + OneThird, 1f),
                             dotFlipSign: true
                             ),
                         new (
                             name:           ButtR,
-                            inheritEffects: Effect.Pos | Effect.Rot,
                             allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.Tether | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                            inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(1f, TwoThirds, OneThird),
                             posAppNegative: new Vector3(OneThird, 1f + OneThird, 1f),
                             dotFlipSign: true
                             ),
                         new (
                             name:           Kokan,
-                            allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos,
+                            allowedEffects: Effect.Pos,
+                            inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(1f, 1f, 1f),
-                            posAppNegative: Vector3.one
+                            posAppNegative: Vector3.one,
+                            posSpringCfg:   TwoThirds,
+                            posDampCfg:     1f + TwoThirds
                             ),
                         new (
                             name:           Ana,
                             allowedEffects: Effect.None,
-                            inheritEffects: Effect.Pos,
+                            inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(1f, 1f, 1f),
                             posAppNegative: Vector3.one
                             ),
+
+
+                        // --- Thighs ---
+
+                        new (
+                            name:           Thigh1L,
+                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            inheritEffects: Effect.Pos,
+                            posAppPositive: new Vector3(1f + OneThird, 1f, 1f + OneThird),
+                            posAppNegative: new Vector3(TwoThirds, 1f, 1f + OneThird),
+                            sclApplication: new Vector3(1f, 0f, 1f),
+                            dotScl_pos: new(0f, 0f, 0.0825f),
+                            inheritPosF: TwoThirds,
+                            overrideMasterIsParent: true,
+                            isLeft: true
+                            ),
+                        new (
+                            name:           Thigh2L,
+                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            inheritEffects: Effect.Pos,
+                            posAppPositive: new Vector3(TwoThirds, 1f, TwoThirds),
+                            posAppNegative: new Vector3(TwoThirds, 1f, 1f),
+                            sclApplication: new Vector3(1f, 0f, 1f),
+                            dotScl_pos: new(0f, 0f, 0.0375f),
+                            inheritPosF: TwoThirds,
+                            overrideMasterIsParent: true,
+                            isLeft: true
+                            ),
+                        new (
+                            name:           Thigh3L,
+                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            posAppPositive: new Vector3(1f, 1f, 1f),
+                            posAppNegative: new Vector3(1f, 1f, 1f),
+                            sclApplication: new Vector3(OneThird, 0f, OneThird),
+                            dotScl_pos: new(0f, 0f, 0.0125f), //0.0625f
+                            inheritPosF: OneThird,
+                            overrideMasterIsParent: true,
+                            isLeft: true
+                            ),
+                        new (
+                            name:           Thigh1R,
+                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            inheritEffects: Effect.Pos,
+                            posAppPositive: new Vector3(TwoThirds, 1f, 1f + OneThird),
+                            posAppNegative: new Vector3(1f + OneThird, 1f, 1f + OneThird),
+                            sclApplication: new Vector3(1f, 0f, 1f),
+                            dotScl_pos: new Vector3(0f, 0f, 0.0825f),
+                            inheritPosF: TwoThirds,
+                            overrideMasterIsParent: true
+                            ),
+                        new (
+                            name:           Thigh2R,
+                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            inheritEffects: Effect.Pos,
+                            posAppPositive: new Vector3(0.25f, TwoThirds, 1f),
+                            posAppNegative: new Vector3(0.25f, TwoThirds, 1f),
+                            sclApplication: new Vector3(1f, 0f, 1f),
+                            dotScl_pos: new(0f, 0f, 0.0375f),
+                            inheritPosF: TwoThirds,
+                            overrideMasterIsParent: true
+                            ),
+                        new (
+                            name:           Thigh3R,
+                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            posAppPositive: new Vector3(0f, OneThird, OneThird),
+                            posAppNegative: new Vector3(0f, OneThird, OneThird),
+                            sclApplication: new Vector3(OneThird, 0f, OneThird),
+                            dotScl_pos: new(0f, 0f, 0.0125f), //0.0625f
+                            overrideMasterIsParent: true
+                ),
                     ]
             },
             {
@@ -652,40 +669,64 @@ namespace AniMorph
 
             foreach (var baseCfg in _soloInitList)
             {
-                if (boneLookup.TryGetValue(baseCfg.name, out var boneTransform))
-                {
-                    _effectsToReturn.Add(baseCfg.name);
+                if (!boneLookup.TryGetValue(baseCfg.name, out var boneTransform))
+                    throw new Exception($"[{_chara.name}] Failed to find [{baseCfg.name}] bone, abort init.");
 
-                    AddToDic(baseCfg, boneTransform, null);
-                }
+                var centeredBone = GetCenteredBone(baseCfg.name);
+
+                Transform centeredBoneTransform = null;
+
+                if (centeredBone != string.Empty && !boneLookup.TryGetValue(centeredBone, out centeredBoneTransform))
+                    throw new Exception($"[{_chara.name}] Failed to find [{baseCfg.name}] bone, abort init.");
+
+                var modifier = new MotionModifier(baseCfg, boneTransform, centeredBoneTransform);
+
+                _effectsToReturn.Add(baseCfg.name);
+                _effectsToUpdate.Add(modifier);
+                _mainDic.Add(baseCfg.name, modifier);
             }
 
             foreach (var kv in _masterSlaveInitDic)
             {
-                var slaveLen = kv.Value.Length;
+                var masterBaseCfg = kv.Key;
 
-                var slaveTransforms = new Transform[slaveLen];
+                if (!boneLookup.TryGetValue(masterBaseCfg.name, out var masterTransform)) 
+                    throw new Exception($"[{_chara.name}] Failed to find [{masterBaseCfg.name}] bone, abort init.");
+                
+                var slaveLen = kv.Value.Length;
+                var slaveModifiers = new MotionModifierSlave[slaveLen];
+
 
                 for (var i = 0; i < slaveLen; i++)
                 {
-                    var baseCfg = kv.Value[i];
+                    var slaveBaseCfg = kv.Value[i];
 
-                    if (boneLookup.TryGetValue(baseCfg.name, out var slaveTransform))
-                    {
-                        _effectsToReturn.Add(baseCfg.name);
+                    if (!boneLookup.TryGetValue(slaveBaseCfg.name, out var slaveTransform))
+                        throw new Exception($"[{_chara.name}]: Failed to find [{slaveBaseCfg.name}] bone, abort init.");
 
-                        slaveTransforms[i] = slaveTransform;
-                    }
+                    var slaveModifier = new MotionModifierSlave(slaveBaseCfg, slaveTransform, masterTransform);
+
+                    slaveModifiers[i] = slaveModifier;
+                    
+                    _effectsToReturn.Add(slaveBaseCfg.name);
+                    _mainDic.Add(slaveBaseCfg.name, slaveModifier);
                 }
 
-                var master = kv.Key.name;
+                var masterModifier = new MotionModifierMaster(masterBaseCfg, masterTransform, slaveModifiers);
 
-                if (boneLookup.TryGetValue(master, out var masterTransform))
+                _effectsToReturn.Add(masterBaseCfg.name);
+                _effectsToUpdate.Add(masterModifier);
+                _mainDic.Add(masterBaseCfg.name, masterModifier);
+            }
+
+            static string GetCenteredBone(string  boneName)
+            {
+                return boneName switch
                 {
-                    _effectsToReturn.Add(master);
-
-                    AddToDicTandem(kv.Key, kv.Value, masterTransform, slaveTransforms);
-                }
+                    Bust1L or Bust1R => Bust,
+                    ButtL or ButtR   => Waist2,
+                    _                => string.Empty
+                };
             }
 
             //foreach (var kv in _advMasterSlaveInitDic)
@@ -748,45 +789,6 @@ namespace AniMorph
             //    _effectsToReturn.Add(masterTransform.name);
             //    _mainDic.Add(masterTransform.name, masterModifier);
             //}
-
-            void AddToDic(BaseConfig cfg, Transform bone, Transform centerBone) //,  Mesh bakedMesh, SkinnedMeshRenderer skinnedMesh)
-            {
-                if (bone == null || _mainDic.ContainsKey(cfg.name)) return;
-
-                var motionModifier = new MotionModifier(cfg, bone, centerBone);
-
-                _effectsToUpdate.Add(motionModifier);
-                _mainDic.Add(cfg.name, motionModifier);
-            }
-
-            void AddToDicTandem(BaseConfig cfgMaster, BaseConfig[] cfgSlaves, Transform tformMaster, Transform[] tformSlaves)
-            {
-                // Perform null checks
-                if (_mainDic.ContainsKey(cfgMaster.name) || tformMaster == null) return;
-
-                for (var i = 0;  i < cfgSlaves.Length; i++)
-                {
-                    if (_mainDic.ContainsKey(cfgSlaves[i].name) || tformSlaves[i] == null) return;
-                }
-
-                // Add and organize slaves
-                var slaveModifiers = new MotionModifierSlave[cfgSlaves.Length];
-
-                for (var i = 0; i < cfgSlaves.Length; i++)
-                {
-                    //var isAnimRot = _bonesWithAnimRot.Contains(cfgSlaves[i].name);
-
-                    slaveModifiers[i] = new MotionModifierSlave(cfgSlaves[i], tformSlaves[i], tformMaster);
-
-                    _mainDic.Add(cfgSlaves[i].name, slaveModifiers[i]);
-                }
-
-                var masterModifier = new MotionModifierMaster(cfgMaster, tformMaster, slaveModifiers);
-
-                _effectsToUpdate.Add(masterModifier);
-                _mainDic.Add(cfgMaster.name, masterModifier);
-                _devMasterList.Add(masterModifier);
-            }
         }
 
 
@@ -867,7 +869,7 @@ namespace AniMorph
             {
                 var value = IsFade || (IsLagSpike && _animChangeTimestamp > Time.time);
 
-                if (!value && field)
+                if (!value && field && AniMorphPlugin.DevResetOnLag.Value)
                     ResetModifiers();
 
                 field = value;
@@ -1013,7 +1015,7 @@ namespace AniMorph
                 bool dotFlipSign = false,
                 Vector3 dotScl_pos = new(),
                 bool isLeft = false,
-                
+
                 float noisePosCfg = 1f,
                 float noiseRotCfg = 1f,
                 float noiseSclCfg = 1f,
@@ -1022,8 +1024,11 @@ namespace AniMorph
                 Vector3 noiseRotF = new(),
                 Vector3 noiseSclF = new(),
 
-                float inheritPosF = 1f
+                float inheritPosF = 1f,
 
+                bool? overrideMasterIsParent = null,
+
+                bool initAnimRot = false
                 )
             {
                 this.name = name;
@@ -1058,6 +1063,10 @@ namespace AniMorph
                 this.noiseSclF = (noiseSclF == Vector3.zero) ? Vector3.one : noiseSclF;
 
                 this.inheritPosF = inheritPosF;
+
+                this.overrideMasterIsParent = overrideMasterIsParent;
+
+                this.initAnimRot = initAnimRot;
             }
 
             internal readonly string name;
@@ -1090,6 +1099,10 @@ namespace AniMorph
             internal  Vector3 noiseSclF;
 
             internal float inheritPosF;
+
+            internal bool? overrideMasterIsParent;
+
+            internal bool initAnimRot;
         }
 
 

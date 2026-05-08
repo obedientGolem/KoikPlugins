@@ -51,18 +51,11 @@ namespace KK_Things
             DirLightColor = Config.Bind("", "DirLightColor", new Color(1f, 0.913f, 0.745f),
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 98 }));
 
-
             ReverseDirLightColor = Config.Bind("", "ReverseDirLightColor", new Color(0.25f, 0f, 0.5f),
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 97 }));
 
-
-
             AmbientMode = Config.Bind("", "AmbientMode", UnityEngine.Rendering.AmbientMode.Trilight,
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 60 }));
-
-            
-
-
 
             AmbientLight = Config.Bind("", "AmbientLight", new Vector3(0.5f, 0.5f, 0.5f),
                     new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 50 }));

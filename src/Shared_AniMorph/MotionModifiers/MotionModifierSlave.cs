@@ -19,21 +19,26 @@ namespace AniMorph
         protected readonly Transform _master;
         protected bool devRotatedPosOffset;
 
-        internal MotionModifierSlave(BaseConfig baseCfg, Transform bone, Transform master) : base(baseCfg, bone, master)
+        internal MotionModifierSlave(BaseConfig baseCfg, Transform slave, Transform master) : base(baseCfg, slave, master)
         {
             _master = master;
-            var masterIsParent = false;
-            var parent = bone.transform.parent;
-            while (parent != null)
+
+
+            if (baseCfg.overrideMasterIsParent == null)
             {
-                if (master == parent)
+                var parent = slave.transform.parent;
+                while (parent != null)
                 {
-                    masterIsParent = true;
-                    break;
+                    if (master == parent)
+                    {
+                        _masterIsParent = true;
+                        break;
+                    }
+                    parent = parent.parent;
                 }
-                parent = parent.parent;
             }
-            _masterIsParent = masterIsParent;
+            else
+                _masterIsParent = (bool)baseCfg.overrideMasterIsParent;
         }
 
         internal virtual void UpdateSlave(

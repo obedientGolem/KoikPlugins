@@ -27,7 +27,7 @@ namespace KK_SpeakSoftly
 
     public class SpeakSoftlyPlugin : BaseUnityPlugin
     {
-        public const string GUID = "Koik.SpeakSoftly" ;
+        public const string GUID = "koik.speaksoftly" ;
         public const string Name = "Speak Softly"
 
 #if DEBUG

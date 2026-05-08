@@ -25,7 +25,6 @@ namespace AniMorph
         protected readonly Vector3 vecZero = Vector3.zero;
         protected readonly Vector3 vecOne = Vector3.one;
 
-
         internal BoneModifierData GetBoneModifierData => abmxModifierData;
 
         protected bool active;
@@ -92,6 +91,7 @@ namespace AniMorph
             _baseScaleVolume = bone.localScale.x * bone.localScale.y * bone.localScale.z;
             _baseScaleMagnitude = bone.localScale.magnitude;
 
+            UpdateAnimRot(baseCfg.initAnimRot);
 
             if (centeredBone != null)
             {
@@ -539,6 +539,16 @@ namespace AniMorph
                 return currLocalRot;
         }
 
+        private void UpdateAnimRot(bool state)
+        {
+            ref var curr = ref current;
+
+            if (state != curr.animRot)
+            {
+                curr.animRot = state;
+                UpdateRotCollectBaseline(state);
+            }
+        }
 
         protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv)
         {
@@ -549,20 +559,14 @@ namespace AniMorph
             if (isDynamic)
             {
                 if (!curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
-                {
-                    UpdateDynamicRot(true);
-                    curr.animRot = true;
-                }
+                    UpdateAnimRot(true);
 
                 curr.cleanLocalRot = currLocalRot;
             }
             else
             {
                 if (curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
-                {
-                    UpdateDynamicRot(false);
-                    curr.animRot = false;
-                }
+                    UpdateAnimRot(false);
 
                 var inverseOffset = Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
 
@@ -987,8 +991,15 @@ namespace AniMorph
         {
             var bone = transform;
 
+            ref var curr = ref current;
+
+            UpdateAnimRot(false);
+
+            curr.Clear();
+
             abmxModifierData?.Clear();
-            current.Clear();
+            
+
             previous.Clear(bone);
             tether?.Clear();
 
@@ -1009,7 +1020,7 @@ namespace AniMorph
             //}
         }
 
-        private void UpdateDynamicRot(bool dynamic)
+        private void UpdateRotCollectBaseline(bool dynamic)
         {
             ConsecutiveFrameCounter = 0;
 #if DEBUG
@@ -1083,11 +1094,8 @@ namespace AniMorph
             var isRotOffset = ((cfg.effects & Effect.RotOffset) != 0);
             var isSclOffset = ((cfg.effects & Effect.SclOffset) != 0);
 
-            // The backward way algos are setup forces us to have weird coefficient ranges,
-            // and I'd rather have ugly values(tiny decimals) hidden and instead expose usual common values,
-            // that will be converted here.
-            cfg.posSpring = (float)Math.Round(baseCfg.posSpringCfg * pluginConfig.PosSpring.Value * (1f / 60f), 3);
-            cfg.posDamping = (baseCfg.posSpringCfg * pluginConfig.PosSpring.Value) * (baseCfg.posDampCfg * pluginConfig.PosDamping.Value);
+            cfg.posSpring = baseCfg.posSpringCfg * pluginConfig.PosSpring.Value;
+            cfg.posDamping = cfg.posSpring * (baseCfg.posDampCfg * pluginConfig.PosDamping.Value * 60f);
             cfg.posShockThreshold = pluginConfig.PosShockThreshold.Value;
             cfg.posShockStr = pluginConfig.PosShockStr.Value;
             cfg.posFreezeThreshold = pluginConfig.PosFreezeThreshold.Value;
@@ -1097,8 +1105,11 @@ namespace AniMorph
 
             if (isRot)
             {
-                cfg.rotSpring = (float)Math.Round(baseCfg.rotSpringCfg * pluginConfig.RotSpring.Value * (1f / 60f), 3);
-                cfg.rotDamping = (baseCfg.rotSpringCfg * pluginConfig.RotSpring.Value) * (baseCfg.rotDampCfg * pluginConfig.RotDamping.Value);
+                // I'd wish to leave a note about backwardly setup algos,
+                // but the easiest way to grasp it is to read algos themselves, so there's that.
+
+                cfg.rotSpring = baseCfg.rotSpringCfg * pluginConfig.RotSpring.Value;
+                cfg.rotDamping = cfg.rotSpring * (baseCfg.rotDampCfg * pluginConfig.RotDamping.Value * 60f);
                 cfg.rotRate = pluginConfig.RotRate.Value;
             }
 
@@ -1184,7 +1195,7 @@ namespace AniMorph
             }
 
             cfg.noisePosAmpl = (isPos && pluginConfig.NoiseAmplitudePos != null) ? baseCfg.noisePosCfg * pluginConfig.NoiseAmplitudePos.Value : 0f;
-            cfg.noiseRotAmpl = (isRot && pluginConfig.NoiseAmplitudeRot != null) ? baseCfg.noiseRotCfg * (pluginConfig.NoiseAmplitudeRot.Value * 100f) : 0f;
+            cfg.noiseRotAmpl = (isRot && pluginConfig.NoiseAmplitudeRot != null) ? baseCfg.noiseRotCfg * (pluginConfig.NoiseAmplitudeRot.Value * 1000f) : 0f;
             cfg.noiseSclAmpl = (isScl && pluginConfig.NoiseAmplitudeScl != null) ? baseCfg.noiseSclCfg * (pluginConfig.NoiseAmplitudeScl.Value * 10f) : 0f;
 
             cfg.noisePosFactor = baseCfg.noisePosF;

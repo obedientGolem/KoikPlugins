@@ -35,8 +35,12 @@ namespace AniMorph
         private static AniMorphPlugin _instance;
         public static readonly ClothesKind[] ClothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
 
-        public static ConfigEntry<Gender> Enable;
+        public static ConfigEntry<Sex> EnableSex;
+        public static ConfigEntry<Scn> EnableScene;
         public static ConfigEntry<bool> MaleEnableDB;
+
+        public static ConfigEntry<bool> DevResetOnLag;
+
 
         internal static bool IsLagSpike {
             get => field;
@@ -123,7 +127,11 @@ namespace AniMorph
 
             Logger = base.Logger;
 
-            Enable = Config.Bind("", "Enable", Gender.Male | Gender.Female, new ConfigDescription("Choose none to disable", null, new ConfigurationManagerAttributes { Order = 100 }));
+            DevResetOnLag = Config.Bind("", "DevResetOnLag", false, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 200 }));
+
+            EnableSex = Config.Bind("", "EnableSex", Sex.Male | Sex.Female, new ConfigDescription("Choose none to disable", null, new ConfigurationManagerAttributes { Order = 100 }));
+
+            EnableScene = Config.Bind("", "EnableScene", Scn.Adv | Scn.Talk | Scn.HScene, new ConfigDescription("Choose none to disable", null, new ConfigurationManagerAttributes { Order = 99 }));
 
             CharacterApi.RegisterExtraBehaviour<AniMorphCharaController>(GUID);
 
@@ -151,7 +159,7 @@ namespace AniMorph
 
         private void Update()
         {
-            if (_settingChangedTimestamp != 0f && (Time.time - _settingChangedTimestamp) > 0.2f)
+            if (_settingChangedTimestamp != 0f && (Time.time > _settingChangedTimestamp))
             {
                 _settingChangedTimestamp = 0f;
                 AniMorphCharaController.OnSettingChanged();
@@ -235,11 +243,11 @@ namespace AniMorph
                     order: 10000,
                     effect: Effect.Pos | Effect.Rot,
 
-                    noiseAmplitudePos: 0.15f,
+                    noiseAmplitudePos: 0.165f,
                     noiseAmplitudeRot: 1f,
 
-                    posSpring: 21f,
-                    posDamping: TwoThirds,
+                    posSpring: 0.25f,
+                    posDamping: 1f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -247,9 +255,9 @@ namespace AniMorph
                     posBleedStr: 2f,
                     posBleedLen: 0.1f,
 
-                    rotSpring: 30f,
-                    rotDamping: 5f,
-                    rotRate: 2f
+                    rotSpring: 1f,
+                    rotDamping: 0.67f,
+                    rotRate: 0.33f
                     )
                 );
 
@@ -266,12 +274,12 @@ namespace AniMorph
                     effect: Effect.Pos,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseAmplitudePos: 0.1f,
-                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudePos: 0.5f,
+                    noiseAmplitudeRot: null,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 7f,
-                    posDamping: TwoThirds,
+                    posSpring: 1f,
+                    posDamping: 0.67f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -280,9 +288,9 @@ namespace AniMorph
                     posBleedLen: 0.1f,
                     //posGravity: 0f,
 
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
+                    rotSpring: null,
+                    rotDamping: null,
+                    rotRate: null,
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
@@ -291,22 +299,22 @@ namespace AniMorph
                     sclDistortion: 0.4f,
                     sclPreserveVolume: true,
 
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
+                    tetherMultiplier: null,
+                    tetherFrequency: null,
+                    tetherDamping: null,
+                    tetherMaxDeg: null,
 
-                    rotOffsetRollDeg: 20,
-                    rotOffsetRollFaceUpFactor: 3,
+                    rotOffsetRollDeg: null,
+                    rotOffsetRollFaceUpFactor: null,
 
-                    posOffsetPitchFaceDown: 0.0175f,
-                    posOffsetPitchUpsideDown: 0.05f,
-                    posOffsetRoll: new Vector3(0.0175f, -0.02f, 0f),
+                    posOffsetPitchFaceDown: null,
+                    posOffsetPitchUpsideDown: null,
+                    posOffsetRoll: null,
 
-                    sclOffsetFaceUp: new Vector3(0.2f, 0f, 0f),
-                    sclOffsetFaceUpPerpAxesFactor: 1f,
-                    sclOffsetFaceDown: new Vector3(0.2f, 0f, 0f),
-                    sclOffsetFaceDownPerpAxesFactor: 1f
+                    sclOffsetFaceUp: null,
+                    sclOffsetFaceUpPerpAxesFactor: null,
+                    sclOffsetFaceDown: null,
+                    sclOffsetFaceDownPerpAxesFactor: null
                     )
                 );
 
@@ -320,15 +328,15 @@ namespace AniMorph
                     body: Body.Chest,
                     config: Config,
                     order: 8000,
-                    effect: Effect.Pos,
+                    effect: Effect.Pos | Effect.Rot | Effect.Scl,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudePos: 0.5f,
+                    noiseAmplitudeRot: 1f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 21f,
-                    posDamping: 0.5f,
+                    posSpring: 1f,
+                    posDamping: 0.33f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -337,9 +345,9 @@ namespace AniMorph
                     posBleedLen: 0.1f,
                     //posGravity: 0f,
 
-                    rotSpring: 15f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
+                    rotSpring: 1f,
+                    rotDamping: 0.25f,
+                    rotRate: 0.5f,
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
@@ -348,10 +356,10 @@ namespace AniMorph
                     sclDistortion: 0.4f,
                     sclPreserveVolume: true,
 
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
+                    tetherMultiplier: null,
+                    tetherFrequency: null,
+                    tetherDamping: null,
+                    tetherMaxDeg: null,
 
                     rotOffsetRollDeg: 20,
                     rotOffsetRollFaceUpFactor: 3,
@@ -380,12 +388,12 @@ namespace AniMorph
                     effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
 
-                    noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: TwoThirds,
+                    noiseAmplitudePos: 0.165f,
+                    noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 14f,
-                    posDamping: OneThird,
+                    posSpring: 0.33f,
+                    posDamping: 0.33f,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -393,17 +401,17 @@ namespace AniMorph
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
 
-                    rotSpring: 21f,
-                    rotDamping: 0.2f,
-                    rotRate: 2f,
+                    rotSpring: 1f,
+                    rotDamping: 0.33f,
+                    rotRate: 1f,
 
-                    sclStr: 0.35f,
-                    sclRate: 8f,
-                    sclDistortion: 0.4f,
+                    sclStr: 14f,
+                    sclDistortion: 0.33f,
+                    sclRate: 2f,
                     sclPreserveVolume: true,
 
-                    tetherMultiplier: 2f,
-                    tetherFrequency: 2f,
+                    tetherMultiplier: 0.67f,
+                    tetherFrequency: 1f,
                     tetherDamping: 0.3f,
                     tetherMaxDeg: 30,
 
@@ -625,7 +633,7 @@ namespace AniMorph
 
         private void OnSettingChanged(object sender, EventArgs e)
         {
-            _settingChangedTimestamp = Time.time;
+            _settingChangedTimestamp = Time.time + OneThird;
 
             AdjustAllowedEffects();
         }
@@ -672,13 +680,21 @@ namespace AniMorph
         }
 
         [Flags]
-        public enum Gender
+        public enum Sex
         {
             None = 0,
             Male = 1 << 0,
             Female = 1 << 1,
         }
 
+        [Flags]
+        public enum Scn
+        {
+            None = 0,
+            Adv = 1 << 0,
+            Talk = 1 << 1,
+            HScene = 1 << 2,
+        }
 
         [Flags]
         public enum ClothesKind
@@ -701,6 +717,13 @@ namespace AniMorph
 
         public class ConfigType
         {
+            private const float _ceil =
+#if DEBUG
+                2f
+#else
+                1f
+#endif
+                ;
             public ConfigType(
                 Body body,
                 ConfigFile config,
@@ -796,17 +819,17 @@ namespace AniMorph
                 if (noiseAmplitudePos != null)
                 {
                     NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", (float)noiseAmplitudePos,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, 0.5f), new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
                 }
                 if (noiseAmplitudeRot != null)
                 {
                     NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", (float)noiseAmplitudeRot,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
                 }
                 if (noiseAmplitudeScl != null)
                 {
                     NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", (float)noiseAmplitudeScl,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
                 }
 
 
@@ -823,10 +846,10 @@ namespace AniMorph
 
                 PosSpring = config.Bind(name, "PosSpring", posSpring,
                     new ConfigDescription("Strength of the positional lag.",
-                    new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
+                    new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
 
                 PosDamping = config.Bind(name, "PosDamping", posDamping,
-                    new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
+                    new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
                 PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
                     new ConfigDescription("Shock introduces huge velocity impacts that quickly bleed out.\n" +
@@ -854,11 +877,11 @@ namespace AniMorph
                 {
                     RotSpring = config.Bind(name, "Rotation Spring", (float)rotSpring,
                         new ConfigDescription("Strength of the rotational lag.",
-                        new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
+                        new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
 
                     RotDamping = config.Bind(name, "Rotation Damping", (float)rotDamping,
                         new ConfigDescription("Strength of negation of the rotational lag.",
-                        new AcceptableValueRange<float>(0f, 1f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
+                        new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
 
                     RotRate = config.Bind(name, "Rotation Interpolation Speed", (float)rotRate,
                         new ConfigDescription("How fast the rotation offset changes.",

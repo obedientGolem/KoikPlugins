@@ -18,8 +18,8 @@ namespace AniMorph
     {
         private readonly MotionModifierSlave[] _slaves;
 
-        internal MotionModifierMaster(BaseConfig cfg, Transform transform, MotionModifierSlave[] slaveModifiers) 
-            : base(cfg, transform, null)
+        internal MotionModifierMaster(BaseConfig baseCfg, Transform master, MotionModifierSlave[] slaveModifiers) 
+            : base(baseCfg, master, null)
         {
             _slaves = slaveModifiers;
         }

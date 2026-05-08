@@ -13,6 +13,7 @@ using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
+using static AniMorph.AniMorphPlugin;
 
 namespace AniMorph
 {
@@ -20,7 +21,6 @@ namespace AniMorph
     {
         public AniMorphEffector BoneEffector => boneEffector;
         private static readonly List<AniMorphCharaController> _instances = [];
-
 
         private AniMorphEffector boneEffector;
 
@@ -106,25 +106,49 @@ namespace AniMorph
             boneEffector?.OnDisable();
         }
 
-        private bool IsProperScene
+
+        private bool IsProperScene(out Scn scene)
         {
-            get
+            var setting = EnableScene.Value;
+
+            var actScene =
+#if KK
+                Manager.Game.Instance.actScene;
+#else
+                ActionScene.instance;
+#endif
+            if ((setting & Scn.Adv) != 0 && actScene != null && actScene.AdvScene != null && actScene.AdvScene.isActiveAndEnabled)
             {
-                return StudioAPI.InsideStudio || AniMorphPlugin.IsSceneLoaded("HProc") || AniMorphPlugin.IsSceneLoaded("Talk");
+                scene = Scn.Adv;
+                return true;
             }
+
+            if ((setting & Scn.Talk) != 0 && IsSceneLoaded("Talk"))
+            {
+                scene = Scn.Talk;
+                return true;
+            }
+
+            if ((setting & Scn.HScene) != 0 && IsSceneLoaded("HProc"))
+            {
+                scene = Scn.HScene;
+                return true;
+            }
+            scene = Scn.None;
+            return false;
         }
 
         internal void HandleEnable(bool forceStart = false)
         {
-            var setting = AniMorphPlugin.Enable.Value;
+            var setting = AniMorphPlugin.EnableSex.Value;
 
             var wasEnabled = enabled;
 
             // Enable if chara is male and male setting is selected, same for female.
             enabled = 
-                (ChaControl.sex == 0 && (setting & AniMorphPlugin.Gender.Male) != 0) 
+                (ChaControl.sex == 0 && (setting & AniMorphPlugin.Sex.Male) != 0) 
                 || 
-                (ChaControl.sex == 1 && (setting & AniMorphPlugin.Gender.Female) != 0);
+                (ChaControl.sex == 1 && (setting & AniMorphPlugin.Sex.Female) != 0);
 
             var boneController = ChaControl.GetComponent<BoneController>();
             if (boneController == null)
@@ -319,7 +343,7 @@ namespace AniMorph
 #if DEBUG
             AniMorphPlugin.Logger.LogWarning($"[{ChaControl.name}] OnReload");
 #endif
-            if (ChaControl != null && IsProperScene)
+            if (ChaControl != null && IsProperScene(out var _))
             {
                 HandleEnable(forceStart: true);
             }
