@@ -107,6 +107,12 @@ namespace IKNoise
                     result.y > 0f ? e.appPositive.y : e.appNegative.y,
                     result.z > 0f ? e.appPositive.z : e.appNegative.z
                     );
+//#if DEBUG
+//                IKNoisePlugin.Logger.LogDebug($"" +
+//                    $"noiseVec({noiseVec.x:F3},{noiseVec.y:F3},{noiseVec.z:F3}) " +
+//                    $"result({result.x:F3},{result.y:F3},{result.z:F3}) " +
+//                    $"");
+//#endif
 
                 result = Vector3.Scale(result, posSignScale);
                 effector.positionOffset = result;

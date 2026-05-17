@@ -92,6 +92,12 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KK_AvgDT\KK.AvgDt.csproj">
+      <Project>{50a38299-11fb-4acc-bfbc-4557aaefa0e5}</Project>
+      <Name>KK.AvgDt</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="..\Shared_IKNoise\Shared_IKNoise.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\..\packages\IllusionLibs.BepInEx.Harmony.2.9.0\build\IllusionLibs.BepInEx.Harmony.targets" Condition="Exists('..\..\packages\IllusionLibs.BepInEx.Harmony.2.9.0\build\IllusionLibs.BepInEx.Harmony.targets')" />

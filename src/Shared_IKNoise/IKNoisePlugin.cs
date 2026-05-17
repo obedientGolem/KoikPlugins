@@ -22,11 +22,14 @@ namespace IKNoise
 #if KK
     [BepInProcess(KoikatuAPI.GameProcessNameSteam)]
 #endif
+
     [BepInDependency(KoikatuAPI.GUID, KoikatuAPI.VersionConst)]
+    [BepInDependency(AvgDt.AvgDtPlugin.GUID, AvgDt.AvgDtPlugin.Version)]
 #if VR
     [BepInDependency(VRPlugin.GUID, VRPlugin.Version)]
 #endif
-    internal class IKNoisePlugin : BaseUnityPlugin
+
+    public class IKNoisePlugin : BaseUnityPlugin
     {
         public const string GUID = "koik.iknoise" +
 #if VR
@@ -46,6 +49,7 @@ namespace IKNoise
         internal const float OneThird = (1f / 3f);
         internal const float TwoThirds = (2f / 3f);
 
+        private static IKNoisePlugin _instance;
         internal static new ManualLogSource Logger;
 
         public static ConfigEntry<Sex> EnableSex;
@@ -56,14 +60,20 @@ namespace IKNoise
         public static ConfigEntry<float> GlobalFreq;
         public static ConfigEntry<float> GlobalAmpl;
 
+        private float _settingChangedTimestamp;
 
         public static readonly Dictionary<Body, ConfigType> ConfigDic = [];
-
-        internal static Body[] enumBodyValues = Enum.GetValues(typeof(Body)) as Body[];
+        internal static readonly Body[] enumBodyValues = Enum.GetValues(typeof(Body)) as Body[];
         private static readonly List<string> _currLoadedScenes = [];
+
+
+        #region Unity Methods
+
 
         private void Awake()
         {
+            _instance = this;
+            Logger = base.Logger;
 #if VR
             if (VRPlugin.PluginEnabled)
                 HandleEnable();
@@ -71,6 +81,20 @@ namespace IKNoise
 #endif
             SceneManager.sceneLoaded += TryEnable;
         }
+
+
+        private void Update()
+        {
+            if (_settingChangedTimestamp != 0f && (Time.time > _settingChangedTimestamp))
+            {
+                _settingChangedTimestamp = 0f;
+                IKNoiseCharaController.OnSettingChanged();
+            }
+        }
+
+
+        #endregion
+
 
         private void TryEnable(UnityEngine.SceneManagement.Scene scene, LoadSceneMode mode)
         {
@@ -115,7 +139,7 @@ namespace IKNoise
 
             BindConfig();
 
-            Config.SettingChanged += (_, _1) => IKNoiseCharaController.OnSettingChanged();
+            Config.SettingChanged += (_, _1) => _settingChangedTimestamp = Time.time + (1f / 3f);
 
             IKNoiseHooks.TryEnable();
 
@@ -134,6 +158,10 @@ namespace IKNoise
         private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, LoadSceneMode mode) => _currLoadedScenes.Add(scene.name);
         private void OnSceneUnloaded(UnityEngine.SceneManagement.Scene scene) => _currLoadedScenes.Remove(scene.name);
 
+        
+        #region Config Bindings
+
+
         private void BindConfig()
         {
             EnableSex = Config.Bind("", "Enable", Sex.Female,
@@ -143,11 +171,11 @@ namespace IKNoise
                 new ConfigDescription("Scenes to run the effect.", null, new ConfigurationManagerAttributes { Order = 10900 }));
 
 
-            AdvSceneFactor = Config.Bind("", "AdvSceneFactor", TwoThirds,
+            AdvSceneFactor = Config.Bind("", "AdvSceneFactor", 0.67f,
                 new ConfigDescription(
                     "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10800, ShowRangeAsPercent = false }));
 
-            TalkSceneFactor = Config.Bind("", "TalkSceneFactor", TwoThirds,
+            TalkSceneFactor = Config.Bind("", "TalkSceneFactor", 0.67f,
                 new ConfigDescription(
                     "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10700, ShowRangeAsPercent = false }));
 
@@ -242,6 +270,13 @@ namespace IKNoise
         }
     }
 
+    
+    #endregion
+
+    
+    #region Types
+
+
     [Flags]
     public enum Scene
     {
@@ -332,4 +367,7 @@ namespace IKNoise
         public ConfigEntry<float> Ampl;
         public ConfigEntry<float> AmplSclRatio;
     }
+
+
+    #endregion
 }

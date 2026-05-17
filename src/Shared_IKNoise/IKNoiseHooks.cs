@@ -15,13 +15,23 @@ namespace IKNoise
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ChaControl), nameof(ChaControl.setPlay))]
-        public static void ChaControl_setPlayPostfix(string _strAnmName, int _nLayer, ChaControl __instance)
+        public static void ChaControl_setPlayPostfix(ChaControl __instance)
         {
             var component = __instance.GetComponent<IKNoiseCharaController>();
 
-            if (component == null) return;
+            if (component != null) 
+                component.effector?.OnSetPlay();
+        }
 
-            component.effector?.OnSetPlay();
+        [HarmonyPostfix]
+        [HarmonyPatch(typeof(ChaControl), nameof(ChaControl.LoadAnimation))]
+        public static void ChaControl_LoadAnimationPostfix(ChaControl __instance)
+        {
+
+            var component = __instance.GetComponent<IKNoiseCharaController>();
+
+            if (component != null) 
+                component.effector?.OnLoadAnimation();
         }
     }
 }

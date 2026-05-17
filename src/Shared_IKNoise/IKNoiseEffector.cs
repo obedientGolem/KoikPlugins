@@ -9,7 +9,8 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
-using Random = UnityEngine.Random;  
+using Random = UnityEngine.Random;
+using static AvgDt.AvgDtPlugin;
 
 namespace IKNoise
 {
@@ -45,6 +46,8 @@ namespace IKNoise
         private float devAmplFactor;
         private float devFreqFactor;
 #endif
+
+        private float _animChangeTimestamp;
 
 
         #region DicInit
@@ -189,21 +192,23 @@ namespace IKNoise
             _modifiers[(int)Body.Legs] = new IKNoiseModifierLimb(
                 [fbbik.solver.effectors[7], fbbik.solver.effectors[8]], _modifiers[(int)Body.Thighs], _cfgDic[Body.Legs], _baseCfgDic[Body.Legs]);
 #endif
-            OnSetPlay();            
+            OnSetPlay();
         }
+        private bool IsSeriousLagSpike => IsFade || (IsLagSpike && _animChangeTimestamp > Time.time);
+        
 
         internal void OnLateUpdate()
         {
-            var dt = Time.deltaTime;
+            if (IsSeriousLagSpike || IsPause) return;
 
-            if (dt == 0f) return;
+            var dt = IsLagSpike ? DtAvg : Time.deltaTime;
 
             if (_samplePosition)
             {
                 _samplePosition = false;
                 SamplePosition();
             }
-            var dtInv = 1f / dt;
+            var dtInv = DtInv;
 
             var animState = _anim.GetCurrentAnimatorStateInfo(0);
 
@@ -232,7 +237,7 @@ namespace IKNoise
                 modifier.UpdateModifier(dt, dtInv, animLenInv, freqFactor, amplFactor);
             }
 
-            var dtFreqAdj = dt * freqFactor;
+            var dtFreqAdj = dt * freqFactor * OneThird;
 
             _noiseVec = new Vector2(noiseVec.x + dtFreqAdj, noiseVec.y + dtFreqAdj);
         }
@@ -294,7 +299,7 @@ namespace IKNoise
         }
 
         internal void OnSetPlay() => _samplePosition = true;
-
+        internal void OnLoadAnimation() => _animChangeTimestamp = Time.time + 3f;
 
         #endregion
 
