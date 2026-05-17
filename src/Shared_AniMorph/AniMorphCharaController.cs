@@ -14,6 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 using static AniMorph.AniMorphPlugin;
+using static AvgDt.AvgDtPlugin;
 
 namespace AniMorph
 {
@@ -123,7 +124,12 @@ namespace AniMorph
                 return true;
             }
 
-            if ((setting & Scn.Talk) != 0 && IsSceneLoaded("Talk"))
+            if ((setting & Scn.Talk) != 0
+#if KK
+                && IsSceneLoaded("Talk"))
+#elif KKS
+                && TalkScene.isPaly)
+#endif
             {
                 scene = Scn.Talk;
                 return true;
@@ -228,7 +234,7 @@ namespace AniMorph
             var count = 3;
             var endOfFrame = CoroutineUtils.WaitForEndOfFrame;
 
-            while (count-- > 0 || AniMorphPlugin.IsLagSpike)
+            while (count-- > 0 || IsLagSpike)
             {
 #if DEBUG
                 AniMorphPlugin.Logger.LogDebug($"StartCo:deltaTime[{Time.deltaTime:F3}]");

@@ -10,6 +10,7 @@ using UniRx.Operators;
 using UnityEngine;
 using static AniMorph.AniMorphPlugin;
 using static AniMorph.MotionModifier;
+using static AvgDt.AvgDtPlugin;
 
 namespace AniMorph
 {
@@ -814,7 +815,7 @@ namespace AniMorph
 
             if (IsSeriousLagSpike || IsPause) return;
 
-            var dt = IsLagSpike ? dtAvg : Time.deltaTime;
+            var dt = IsLagSpike ? DtAvg : Time.deltaTime;
 
             var animState = _animator.GetCurrentAnimatorStateInfo(0);
 
@@ -839,7 +840,7 @@ namespace AniMorph
                 _animLoopFrameCount = 0;
             }
 
-            var dtInv = AniMorphPlugin.dtInv;
+            var dtInv = DtInv;
 
             foreach (var effect in _effectsToUpdate)
                 effect.UpdateModifier(dt, dtInv, animLenInv);

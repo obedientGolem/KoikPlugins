@@ -19,10 +19,11 @@ namespace AniMorph
     [BepInProcess(KoikatuAPI.GameProcessName)]
     [BepInProcess(KoikatuAPI.StudioProcessName)]
     [BepInDependency(KKABMX_Core.GUID, KKABMX_Core.Version)]
+    [BepInDependency(AvgDt.AvgDtPlugin.GUID, AvgDt.AvgDtPlugin.Version)]
 #if KK
     [BepInProcess(KoikatuAPI.GameProcessNameSteam)]
 #endif
-    internal class AniMorphPlugin : BaseUnityPlugin
+    public class AniMorphPlugin : BaseUnityPlugin
     {
         public const string GUID = "koik.anisotropicmorph";
         public const string Name = "Anisotropic Morph"
@@ -32,7 +33,6 @@ namespace AniMorph
             ;
         public const string Version = "0.9";
         internal new static ManualLogSource Logger;
-        private static AniMorphPlugin _instance;
         public static readonly ClothesKind[] ClothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
 
         public static ConfigEntry<Sex> EnableSex;
@@ -40,40 +40,6 @@ namespace AniMorph
         public static ConfigEntry<bool> MaleEnableDB;
 
         public static ConfigEntry<bool> DevResetOnLag;
-
-
-        internal static bool IsLagSpike {
-            get => field;
-            set
-            {
-#if DEBUG
-                if (value)
-                    Logger.LogWarning($"[IsLagSpike] = [true] dt[{Time.deltaTime:F3}] avgDt[{dtAvg:F3}] dtCeil[{_instance._dtCeiling:F3}]");
-#endif
-                field = value;
-            }
-        }
-
-        internal static bool IsPause
-        {
-            get => field;
-            set
-            {
-                if (!value && field)
-                {
-                    var inst = _instance;
-
-                    //inst.ConsecutiveFrameCounter = 0;
-                    inst._startT = Time.time;
-                    inst._startFrame = Time.frameCount;
-                }
-                field = value;
-            }
-        }
-
-        internal static bool IsFade { get; private set; }
-
-        internal static float dtInv;
 
 
         internal const float OneThird = (1f / 3f);
@@ -86,13 +52,6 @@ namespace AniMorph
 
         private float _settingChangedTimestamp;
 
-
-        internal static float dtAvg;
-
-        private float _dtCeiling = 1f;
-        private int _startFrame;
-        private float _startT;
-        private float _prevNT;
 
         //private int _prevFrameCount;
         //private int ConsecutiveFrameCounter
@@ -123,8 +82,6 @@ namespace AniMorph
 
         private void Awake()
         {
-            _instance = this;
-
             Logger = base.Logger;
 
             DevResetOnLag = Config.Bind("", "DevResetOnLag", false, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 200 }));
@@ -164,57 +121,6 @@ namespace AniMorph
                 _settingChangedTimestamp = 0f;
                 AniMorphCharaController.OnSettingChanged();
             }
-
-            UpdateDeltaTimeVariables();
-        }
-
-
-        #endregion
-
-
-        #region DeltaTimeCheck
-
-
-        private void UpdateDeltaTimeVariables()
-        {
-            var dt = Time.deltaTime;
-
-            if (dt == 0f)
-            {
-                IsPause = true;
-                return;
-            }
-            else
-            {
-                IsPause = false;
-            }
-            
-            dtInv = 1f / dt;
-
-            IsLagSpike = (dt > _dtCeiling); // && ConsecutiveFrameCounter++ > (int)(dtInv * (3f / 60f)));
-
-            IsFade = SceneApi.GetIsFadeNow();
-
-            var t = Time.time;
-
-            var nt = t - (int)t;
-
-            if (nt < _prevNT)
-            {
-                var currFrame = Time.frameCount;
-
-                var frames = currFrame - _startFrame;
-
-                var newDtAvg = frames == 0 ? dt : (t - _startT) / frames;
-
-                newDtAvg = Mathf.Min(_dtCeiling, newDtAvg);
-                dtAvg = newDtAvg;
-                _dtCeiling = newDtAvg * (1f + OneThird);
-
-                _startT = t;
-                _startFrame = currFrame;
-            }
-            _prevNT = nt;
         }
 
 
@@ -657,6 +563,20 @@ namespace AniMorph
 
         #region Types
 
+
+        [Flags]
+        public enum Effect
+        {
+            None = 0,
+            Pos = 1 << 0,
+            Rot = 1 << 1,
+            Scl = 1 << 2,
+            Tether = 1 << 3,
+            PosOffset = 1 << 4,
+            RotOffset = 1 << 5,
+            SclOffset = 1 << 6,
+            //DevAnything = 1 << 7,
+        }
 
         public enum Body
         {

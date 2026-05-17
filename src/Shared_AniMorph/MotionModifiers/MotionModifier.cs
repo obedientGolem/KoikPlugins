@@ -543,7 +543,7 @@ namespace AniMorph
         {
             ref var curr = ref current;
 
-            if (state != curr.animRot)
+            if (curr.animRot != state)
             {
                 curr.animRot = state;
                 UpdateRotCollectBaseline(state);
@@ -991,11 +991,9 @@ namespace AniMorph
         {
             var bone = transform;
 
-            ref var curr = ref current;
-
             UpdateAnimRot(false);
 
-            curr.Clear();
+            current.Clear();
 
             abmxModifierData?.Clear();
             
@@ -1465,20 +1463,6 @@ namespace AniMorph
         #region Types
 
 
-        [Flags]
-        internal enum Effect
-        {
-            None = 0,
-            Pos = 1 << 0,
-            Rot = 1 << 1,
-            Scl = 1 << 2,
-            Tether = 1 << 3,
-            PosOffset = 1 << 4,
-            RotOffset = 1 << 5,
-            SclOffset = 1 << 6,
-            //DevAnything = 1 << 7,
-        }
-
         internal enum SquashMode
         {
             Accel,
@@ -1651,8 +1635,6 @@ namespace AniMorph
 
                 shockTime = 0f;
                 bleedTime = 0f;
-
-                animRot = false;
             }
         }
         

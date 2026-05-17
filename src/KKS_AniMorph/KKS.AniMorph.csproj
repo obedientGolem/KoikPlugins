@@ -135,6 +135,12 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KKS_AvgDT\KKS.AvgDt.csproj">
+      <Project>{f594b801-fd0b-4cf5-a7da-5351347a7223}</Project>
+      <Name>KKS.AvgDt</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="..\Shared_AniMorph\Shared_AniMorph.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\..\packages\IllusionLibs.BepInEx.Harmony.2.5.4\build\IllusionLibs.BepInEx.Harmony.targets" Condition="Exists('..\..\packages\IllusionLibs.BepInEx.Harmony.2.5.4\build\IllusionLibs.BepInEx.Harmony.targets')" />
