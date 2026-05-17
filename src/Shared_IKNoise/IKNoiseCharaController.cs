@@ -14,6 +14,7 @@ using System.Collections;
 using UnityEngine.SceneManagement;
 using KKAPI.Studio;
 using System;
+using KKAPI.Utilities;
 
 
 namespace IKNoise
@@ -39,7 +40,12 @@ namespace IKNoise
                 return true;
             }
 
-            if ((setting & Scene.Talk) != 0 && IKNoisePlugin.IsSceneLoaded("Talk"))
+            if ((setting & Scene.Talk) != 0 &&
+#if KK
+                IKNoisePlugin.IsSceneLoaded("Talk"))
+#elif KKS
+                TalkScene.isPaly)
+#endif
             {
                 scene = Scene.Talk;
                 return true;
@@ -94,7 +100,7 @@ namespace IKNoise
                 var anim = ChaControl.animBody;
                 var fbbik = anim != null ? anim.GetComponent<FullBodyBipedIK>() : null;
 
-                if (anim != null && fbbik != null)
+                if (anim != null && anim.runtimeAnimatorController != null && fbbik != null)
                 {
                     effector = new(anim, fbbik);
                 }
@@ -125,7 +131,10 @@ namespace IKNoise
 
             var wait = new WaitForSeconds(1f);
 
-            while (ChaControl.animBody == null || ChaControl.animBody.GetComponent<FullBodyBipedIK>() == null)
+            while (
+                ChaControl.animBody == null ||  
+                ChaControl.animBody.runtimeAnimatorController == null || 
+                ChaControl.animBody.GetComponent<FullBodyBipedIK>() == null)
             {
                 if (i++ > 30) yield break;
 
