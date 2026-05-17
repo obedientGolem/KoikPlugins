@@ -92,12 +92,6 @@
   <ItemGroup>
     <Folder Include="Properties\" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\KK_LateSwordAiming\KK_LateSwordAiming.csproj">
-      <Project>{73012e53-d93b-4ab7-b9c8-07b60f489850}</Project>
-      <Name>KK_LateSwordAiming</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="..\Shared_IKNoise\Shared_IKNoise.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\..\packages\IllusionLibs.BepInEx.Harmony.2.9.0\build\IllusionLibs.BepInEx.Harmony.targets" Condition="Exists('..\..\packages\IllusionLibs.BepInEx.Harmony.2.9.0\build\IllusionLibs.BepInEx.Harmony.targets')" />

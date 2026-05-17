@@ -9,7 +9,6 @@ using HarmonyLib;
 using KKAPI;
 using KKAPI.Chara;
 using KKAPI.Utilities;
-using Koik_LateSwordAiming;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -70,7 +69,7 @@ namespace IKNoise
         }
 
         private void TryEnable(UnityEngine.SceneManagement.Scene scene, LoadSceneMode mode)
-{
+        {
             if (!scene.name.Equals("Title", StringComparison.Ordinal)) return;
 
             SceneManager.sceneLoaded -= TryEnable;
@@ -116,10 +115,14 @@ namespace IKNoise
 
             IKNoiseHooks.TryEnable();
 
-            LateSwordAiming.Enable();
-
             SceneManager.sceneLoaded += OnSceneLoaded;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
+
+            var lateSwordAiming = AccessTools.TypeByName("Koik_LateSwordAiming.LateSwordAiming");
+            if (lateSwordAiming == null) return;
+
+            var methodInfo = AccessTools.Method(lateSwordAiming, "Enable");
+            methodInfo?.Invoke(null, null);
         }
 
         internal static bool IsSceneLoaded(string name) => _currLoadedScenes.Contains(name);

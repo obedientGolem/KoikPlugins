@@ -61,6 +61,9 @@
       <HintPath>..\..\packages\ExtensibleSaveFormat.KoikatsuSunshine.19.4.0\lib\net46\KKS_ExtensibleSaveFormat.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="KKS_MainGameVR">
+      <HintPath>..\..\..\KKS_VR_PR\bin\KKS\KKS_MainGameVR.dll</HintPath>
+    </Reference>
     <Reference Include="KK_FinalIK">
       <HintPath>..\..\packages\KK_FinalIK.dll</HintPath>
     </Reference>
@@ -147,12 +150,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\LateSwordAiming\KKS_LateSwordAiming.csproj">
-      <Project>{681cebb0-dc6a-409a-a296-6ebded8bbb0b}</Project>
-      <Name>KKS_LateSwordAiming</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="..\Shared_IKNoise\Shared_IKNoise.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
