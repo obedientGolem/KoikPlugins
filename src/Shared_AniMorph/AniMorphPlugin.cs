@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using LBUtils;
 using static AniMorph.MotionModifier;
 
 namespace AniMorph
@@ -19,7 +20,7 @@ namespace AniMorph
     [BepInProcess(KoikatuAPI.GameProcessName)]
     [BepInProcess(KoikatuAPI.StudioProcessName)]
     [BepInDependency(KKABMX_Core.GUID, KKABMX_Core.Version)]
-    [BepInDependency(AvgDt.AvgDtPlugin.GUID, AvgDt.AvgDtPlugin.Version)]
+    [BepInDependency(LBUtilsPlugin.GUID, LBUtilsPlugin.Version)]
 #if KK
     [BepInProcess(KoikatuAPI.GameProcessNameSteam)]
 #endif

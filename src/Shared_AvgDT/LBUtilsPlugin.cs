@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 
-namespace AvgDt
+namespace LBUtils
 {
     [BepInPlugin(GUID, Name, Version)]
     [BepInProcess(KoikatuAPI.GameProcessName)]
@@ -14,14 +14,13 @@ namespace AvgDt
 #endif
     [BepInDependency(KoikatuAPI.GUID, KoikatuAPI.VersionConst)]
     [DefaultExecutionOrder(0)]
-    public class AvgDtPlugin : BaseUnityPlugin
+    public class LBUtilsPlugin : BaseUnityPlugin
     {
-        public const string GUID = "koik.avgdt";
-        public const string Name = "AvgDt";
+        public const string GUID = "koik.lb.utils";
+        public const string Name = "lotsofbears' Utils";
         public const string Version = "1.0.0";
 
 
-        public static bool IsFade { get; private set; }
         public static bool IsPause { get; private set; }
         public static bool IsLagSpike { get; private set; }
 
@@ -29,12 +28,33 @@ namespace AvgDt
         public static float DtAvgInv { get; private set; }
         public static float DtInv { get; private set; }
 
+        private static LBUtilsPlugin _instance;
 
         private float _dtCeiling = 1f;
         private int _startFrame;
         private float _startTime;
         private float _prevNormTime;
 
+        private static LBUtilsLateSword _lateSword;
+
+        public static void SetLateSwordAiming(bool state)
+        {
+            if (_instance == null) return;
+
+            if (state && _lateSword == null)
+            {
+                _lateSword = _instance.gameObject.AddComponent<LBUtilsLateSword>();
+            }
+            else if (!state && _lateSword != null)
+            {
+                Destroy(_lateSword);
+            }
+        }
+
+        private void Awake()
+        {
+            _instance = this;
+        }
 
         private void Update()
         {
@@ -56,8 +76,6 @@ namespace AvgDt
             DtInv = 1f / dt;
 
             IsLagSpike = (dt > _dtCeiling); // && ConsecutiveFrameCounter++ > (int)(dtInv * (3f / 60f)));
-
-            IsFade = SceneApi.GetIsFadeNow();
 
             var time = Time.time;
 

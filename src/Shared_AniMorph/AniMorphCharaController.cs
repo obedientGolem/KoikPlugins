@@ -14,7 +14,7 @@ using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 using static AniMorph.AniMorphPlugin;
-using static AvgDt.AvgDtPlugin;
+using static LBUtils.LBUtilsPlugin; 
 
 namespace AniMorph
 {

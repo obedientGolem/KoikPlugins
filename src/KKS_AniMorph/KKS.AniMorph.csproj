@@ -136,9 +136,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\KKS_AvgDT\KKS.AvgDt.csproj">
+    <ProjectReference Include="..\KKS_AvgDT\KKS.LBUtils.csproj">
       <Project>{f594b801-fd0b-4cf5-a7da-5351347a7223}</Project>
-      <Name>KKS.AvgDt</Name>
+      <Name>KKS.LBUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="..\Shared_AniMorph\Shared_AniMorph.projitems" Label="Shared" />

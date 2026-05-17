@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
-VisualStudioVersion = 18.6.11806.211 stable
+VisualStudioVersion = 18.6.11806.211
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Breath", "Breath", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
@@ -87,27 +87,19 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared.IKNoise", "src\Share
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.IKNoise", "src\KKS_IKNoise\KKS.IKNoise.csproj", "{86374143-D83F-4A7C-B23B-07512C8972FC}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LateSwordAiming", "LateSwordAiming", "{D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS_LateSwordAiming", "src\LateSwordAiming\KKS_LateSwordAiming.csproj", "{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK.IKNoise", "src\KK_IKNoise\KK.IKNoise.csproj", "{1DC4ECBD-3832-4430-96D2-D5A8E4795697}"
-EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared_LateSwordAiming", "src\Shared_LateSwordAiming\Shared_LateSwordAiming.shproj", "{D3E2BB7A-D0D6-4C7E-99AE-3C23902EEF25}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK_LateSwordAiming", "src\KK_LateSwordAiming\KK_LateSwordAiming.csproj", "{73012E53-D93B-4AB7-B9C8-07B60F489850}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK.IKNoise.VR", "src\KK_VR_IKNoise\KK.IKNoise.VR.csproj", "{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.IKNoise.VR", "src\KKS_VR_IKNoise\KKS.IKNoise.VR.csproj", "{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AvgDT", "AvgDT", "{96ECD50D-A539-4D33-80AC-D0FEFAD7F246}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LBUtils", "LBUtils", "{96ECD50D-A539-4D33-80AC-D0FEFAD7F246}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK.AvgDt", "src\KK_AvgDT\KK.AvgDt.csproj", "{50A38299-11FB-4ACC-BFBC-4557AAEFA0E5}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KK.LBUtils", "src\KK_AvgDT\KK.LBUtils.csproj", "{50A38299-11FB-4ACC-BFBC-4557AAEFA0E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.AvgDt", "src\KKS_AvgDT\KKS.AvgDt.csproj", "{F594B801-FD0B-4CF5-A7DA-5351347A7223}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KKS.LBUtils", "src\KKS_AvgDT\KKS.LBUtils.csproj", "{F594B801-FD0B-4CF5-A7DA-5351347A7223}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared_AvgDt", "src\Shared_AvgDT\Shared_AvgDt.shproj", "{996CE1CE-371A-48F8-807F-4E9BA8A79DF2}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Shared.lbMisc", "src\Shared_AvgDT\Shared.lbMisc.shproj", "{996CE1CE-371A-48F8-807F-4E9BA8A79DF2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -199,18 +191,10 @@ Global
 		{86374143-D83F-4A7C-B23B-07512C8972FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{86374143-D83F-4A7C-B23B-07512C8972FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{86374143-D83F-4A7C-B23B-07512C8972FC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DC4ECBD-3832-4430-96D2-D5A8E4795697}.Release|Any CPU.Build.0 = Release|Any CPU
-		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{73012E53-D93B-4AB7-B9C8-07B60F489850}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -263,10 +247,7 @@ Global
 		{0AC84096-BF99-4568-BA82-04B545A7AF8D} = {280DEB6F-DC14-47F4-80C6-2EB08C26E53F}
 		{5D0F1DF0-6E1F-4DF5-9BED-2AB09E9B978F} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
 		{86374143-D83F-4A7C-B23B-07512C8972FC} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
-		{681CEBB0-DC6A-409A-A296-6EBDED8BBB0B} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
 		{1DC4ECBD-3832-4430-96D2-D5A8E4795697} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
-		{D3E2BB7A-D0D6-4C7E-99AE-3C23902EEF25} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
-		{73012E53-D93B-4AB7-B9C8-07B60F489850} = {D0D1BB2C-5117-4477-A57F-1BC4E17AB47E}
 		{7AFE562C-0EB7-4DD8-B6B4-20E3B1F71B5C} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
 		{8F0B4E69-3DA6-4EE4-9F17-3D14FBE8D76E} = {204A8AE6-E02A-4C32-8D0E-2AD8697B0AF7}
 		{50A38299-11FB-4ACC-BFBC-4557AAEFA0E5} = {96ECD50D-A539-4D33-80AC-D0FEFAD7F246}
@@ -288,8 +269,6 @@ Global
 		src\Shared_AniMorph\Shared_AniMorph.projitems*{5f77bfa3-418c-4b13-9e77-31a6a3531b4b}*SharedItemsImports = 13
 		src\Shared_AnimFilter\Shared_AnimFilter.projitems*{626c49a9-90e2-4cb8-9bd1-a3c32820ea48}*SharedItemsImports = 4
 		src\Shared_SpeakSoftly\Shared_SpeakSoftly.projitems*{666a982d-41b8-4f6f-bd6e-92dfa4d1172f}*SharedItemsImports = 13
-		src\Shared_LateSwordAiming\Shared_LateSwordAiming.projitems*{681cebb0-dc6a-409a-a296-6ebded8bbb0b}*SharedItemsImports = 4
-		src\Shared_LateSwordAiming\Shared_LateSwordAiming.projitems*{73012e53-d93b-4ab7-b9c8-07b60f489850}*SharedItemsImports = 4
 		src\Shared_Blink\Shared_Blink.projitems*{7514a7bb-f7e8-4fe2-a4a5-2a1404449901}*SharedItemsImports = 13
 		src\Shared_AnimFilter\Shared_AnimFilter.projitems*{75585f98-75a2-4f09-948c-9b552ee5fbf9}*SharedItemsImports = 13
 		src\Shared_Kokyu\Shared_Kokyu.projitems*{779a2a16-025d-4c2c-8135-46298fbb9933}*SharedItemsImports = 4
@@ -305,7 +284,6 @@ Global
 		src\Shared_BirbExGauge\Shared_BirbExGauge.projitems*{aecdc6f7-66ec-4cab-b0bc-4e6408b7b007}*SharedItemsImports = 4
 		src\Shared_AniMorph\Shared_AniMorph.projitems*{c2b17a95-bf32-46e4-9e20-6921f10b09c3}*SharedItemsImports = 4
 		src\Shared_BirbExGauge\Shared_BirbExGauge.projitems*{d37bbd42-2c84-4c21-9707-448830c31aa5}*SharedItemsImports = 13
-		src\Shared_LateSwordAiming\Shared_LateSwordAiming.projitems*{d3e2bb7a-d0d6-4c7e-99ae-3c23902eef25}*SharedItemsImports = 13
 		src\Shared_AniMorph\Shared_AniMorph.projitems*{d5734469-7a1c-4f35-92bd-cb226f6651ea}*SharedItemsImports = 4
 		src\Shared_IK_Plugin\Shared_IK_Plugin.projitems*{d93da3dc-1ca0-4630-948d-c2d957b29aa5}*SharedItemsImports = 13
 		src\Shared_AvgDT\Shared_AvgDT.projitems*{f594b801-fd0b-4cf5-a7da-5351347a7223}*SharedItemsImports = 4

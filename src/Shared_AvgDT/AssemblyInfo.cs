@@ -1,15 +1,16 @@
-﻿using System.Reflection;
+﻿using LBUtils;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("KKS_AvgDT")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("KK_LBUtils")]
+[assembly: AssemblyDescription("lotsofbears' utils for other plugins")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("KKS_AvgDT")]
+[assembly: AssemblyProduct("")]
 [assembly: AssemblyCopyright("Copyright ©  2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +21,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("f594b801-fd0b-4cf5-a7da-5351347a7223")]
+[assembly: Guid("50a38299-11fb-4acc-bfbc-4557aaefa0e5")]
 
 // Version information for an assembly consists of the following four values:
 //
@@ -29,5 +30,5 @@ using System.Runtime.InteropServices;
 //      Build Number
 //      Revision
 //
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion(LBUtilsPlugin.Version)]
+[assembly: AssemblyFileVersion(LBUtilsPlugin.Version)]

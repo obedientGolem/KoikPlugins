@@ -9,6 +9,8 @@
     <Import_RootNamespace>Shared_AvgDT</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)AvgDtPlugin.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)LBUtilsLateSword.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)LBUtilsPlugin.cs" />
   </ItemGroup>
 </Project>

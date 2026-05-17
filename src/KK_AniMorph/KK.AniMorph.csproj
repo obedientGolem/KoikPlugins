@@ -89,9 +89,9 @@
     <Analyzer Include="..\..\packages\KoikatuCompatibilityAnalyzer.1.1.0\analyzers\dotnet\cs\KoikatuCompatibilityAnalyzer.dll" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\KK_AvgDT\KK.AvgDt.csproj">
+    <ProjectReference Include="..\KK_AvgDT\KK.LBUtils.csproj">
       <Project>{50a38299-11fb-4acc-bfbc-4557aaefa0e5}</Project>
-      <Name>KK.AvgDt</Name>
+      <Name>KK.LBUtils</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="..\Shared_AniMorph\Shared_AniMorph.projitems" Label="Shared" />

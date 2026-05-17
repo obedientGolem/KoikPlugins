@@ -9,6 +9,7 @@ using HarmonyLib;
 using KKAPI;
 using KKAPI.Chara;
 using KKAPI.Utilities;
+using LBUtils;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -24,7 +25,7 @@ namespace IKNoise
 #endif
 
     [BepInDependency(KoikatuAPI.GUID, KoikatuAPI.VersionConst)]
-    [BepInDependency(AvgDt.AvgDtPlugin.GUID, AvgDt.AvgDtPlugin.Version)]
+    [BepInDependency(LBUtilsPlugin.GUID, LBUtilsPlugin.Version)]
 #if VR
     [BepInDependency(VRPlugin.GUID, VRPlugin.Version)]
 #endif
@@ -146,12 +147,7 @@ namespace IKNoise
             SceneManager.sceneLoaded += OnSceneLoaded;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
 
-            var lateSwordAiming = AccessTools.TypeByName("Koik_LateSwordAiming.LateSwordAiming");
-            if (lateSwordAiming != null)
-            {
-                var methodInfo = AccessTools.Method(lateSwordAiming, "Enable");
-                methodInfo?.Invoke(null, null);
-            }
+            LBUtilsPlugin.SetLateSwordAiming(true);
         }
 
         internal static bool IsSceneLoaded(string name) => _currLoadedScenes.Contains(name);

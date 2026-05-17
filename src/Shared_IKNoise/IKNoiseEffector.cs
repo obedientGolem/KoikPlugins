@@ -10,7 +10,7 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using Random = UnityEngine.Random;
-using static AvgDt.AvgDtPlugin;
+using static LBUtils.LBUtilsPlugin;
 
 namespace IKNoise
 {

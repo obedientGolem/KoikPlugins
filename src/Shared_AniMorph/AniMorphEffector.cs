@@ -11,7 +11,7 @@ using UnityEngine;
 using static ADV.Program;
 using static AniMorph.AniMorphPlugin;
 using static AniMorph.MotionModifier;
-using static AvgDt.AvgDtPlugin;
+using static LBUtils.LBUtilsPlugin;
 
 namespace AniMorph
 {
