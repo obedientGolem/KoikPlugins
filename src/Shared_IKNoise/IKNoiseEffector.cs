@@ -193,22 +193,33 @@ namespace IKNoise
                 [fbbik.solver.effectors[7], fbbik.solver.effectors[8]], _modifiers[(int)Body.Thighs], _cfgDic[Body.Legs], _baseCfgDic[Body.Legs]);
 #endif
             OnSetPlay();
-        }
-        private bool IsSeriousLagSpike => IsFade || (IsLagSpike && _animChangeTimestamp > Time.time);
-        
+        }        
 
         internal void OnLateUpdate()
         {
-            if (IsSeriousLagSpike || IsPause) return;
+            var lagSpike = IsLagSpike;
 
-            var dt = IsLagSpike ? DtAvg : Time.deltaTime;
+            if (IsPause || (lagSpike && _animChangeTimestamp > Time.time)) return;
+
+            float dt;
+            float dtInv;
+
+            if (lagSpike)
+            {
+                dt = DtAvg;
+                dtInv = DtAvgInv;
+            }
+            else
+            {
+                dt = Time.deltaTime;
+                dtInv = 1f / dt;
+            }
 
             if (_samplePosition)
             {
                 _samplePosition = false;
                 SamplePosition();
             }
-            var dtInv = DtInv;
 
             var animState = _anim.GetCurrentAnimatorStateInfo(0);
 

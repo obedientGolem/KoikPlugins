@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using UniRx.Operators;
 using UnityEngine;
+using static ADV.Program;
 using static AniMorph.AniMorphPlugin;
 using static AniMorph.MotionModifier;
 using static AvgDt.AvgDtPlugin;
@@ -94,6 +95,25 @@ namespace AniMorph
         private readonly Animator _animator;
 
         private readonly List<MotionModifierMaster> _devMasterList = [];
+
+        private bool HasTeleported
+        {
+            get
+            {
+                var currPos = _chara.transform.position;
+
+                var sqrLen = Vector3.SqrMagnitude(currPos - _prevPos);
+
+                _prevPos = currPos;
+
+#if DEBUG
+                if (sqrLen > 1f)
+                    AniMorphPlugin.Logger.LogInfo($"[{_chara.name}] HasTeleported!");
+#endif
+                return sqrLen > 1f;
+            }
+        }
+        private Vector3 _prevPos;
 
         #endregion
 
@@ -624,6 +644,8 @@ namespace AniMorph
             //skinnedMesh.BakeMesh(bakedMesh);
 
 
+            _prevPos = _chara.transform.position;
+
 
             var boneLookup = new Dictionary<string, Transform>(StringComparer.Ordinal);
 
@@ -811,11 +833,30 @@ namespace AniMorph
         private void UpdateModifiers()
         {
             // Called on LateUpdate by ABMX at 12199 order,
-            // if earlier then we miss out on the IK evaluation and the game starts to eff with us.
+            // if earlier then we miss out on the IK evaluation and in addition the game starts to eff with us.
 
-            if (IsSeriousLagSpike || IsPause) return;
+            var lagSpike = IsLagSpike;
+            if (IsPause || (lagSpike && _animChangeTimestamp > Time.time)) return;
 
-            var dt = IsLagSpike ? DtAvg : Time.deltaTime;
+            if (HasTeleported)
+            {
+                ResetModifiers();
+                return;
+            }
+
+            float dt;
+            float dtInv;
+
+            if (lagSpike)
+            {
+                dt = DtAvg;
+                dtInv = DtAvgInv;
+            }
+            else
+            {
+                dt = Time.deltaTime;
+                dtInv = 1f / dt;
+            }
 
             var animState = _animator.GetCurrentAnimatorStateInfo(0);
 
@@ -840,8 +881,6 @@ namespace AniMorph
                 _animLoopFrameCount = 0;
             }
 
-            var dtInv = DtInv;
-
             foreach (var effect in _effectsToUpdate)
                 effect.UpdateModifier(dt, dtInv, animLenInv);
       
@@ -856,26 +895,13 @@ namespace AniMorph
 
         private void ResetModifiers()
         {
+#if DEBUG
+            AniMorphPlugin.Logger.LogWarning($"[{_chara.name}] ResetModifiers");
+#endif
             // Reset everything and start from ground zero.
-
             foreach (var value in _mainDic.Values)
             {
                 value.Reset();
-            }
-        }
-
-        private bool IsSeriousLagSpike
-        {
-            get
-            {
-                var value = IsFade || (IsLagSpike && _animChangeTimestamp > Time.time);
-
-                if (!value && field && AniMorphPlugin.DevResetOnLag.Value)
-                    ResetModifiers();
-
-                field = value;
-
-                return field;
             }
         }
 
@@ -897,6 +923,9 @@ namespace AniMorph
                 if (_animChange)
                 {
                     _animChange = false;
+
+                    // To avoid possible redundant reset from teleport detection.
+                    _prevPos = _chara.transform.position;
 
                     ResetModifiers();
                 }

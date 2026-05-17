@@ -31,6 +31,7 @@ namespace AniMorph
         private Vector3 _devRotOnceEuler = new Vector3(0f, 360f, 0f);
         private float _devRotOnceRate = 0.5f;
 
+
         //public bool DevRotate
         //{
         //    get => _verbotenRotate;
@@ -181,6 +182,9 @@ namespace AniMorph
                     RemoveBoneEffector();
                 }
             }
+
+
+
             void RemoveBoneEffector()
             {
                 if (boneEffector == null) return;

@@ -991,7 +991,7 @@ namespace AniMorph
         {
             var bone = transform;
 
-            UpdateAnimRot(false);
+            UpdateAnimRot(baseConfig.initAnimRot);
 
             current.Clear();
 
@@ -1635,6 +1635,7 @@ namespace AniMorph
 
                 shockTime = 0f;
                 bleedTime = 0f;
+
             }
         }
         

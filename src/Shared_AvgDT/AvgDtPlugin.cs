@@ -26,13 +26,14 @@ namespace AvgDt
         public static bool IsLagSpike { get; private set; }
 
         public static float DtAvg { get; private set; }
+        public static float DtAvgInv { get; private set; }
         public static float DtInv { get; private set; }
 
 
         private float _dtCeiling = 1f;
         private int _startFrame;
-        private float _startT;
-        private float _prevNT;
+        private float _startTime;
+        private float _prevNormTime;
 
 
         private void Update()
@@ -48,7 +49,7 @@ namespace AvgDt
             {
                 IsPause = false;
 
-                _startT = Time.time;
+                _startTime = Time.time;
                 _startFrame = Time.frameCount;
             }
 
@@ -58,26 +59,27 @@ namespace AvgDt
 
             IsFade = SceneApi.GetIsFadeNow();
 
-            var t = Time.time;
+            var time = Time.time;
 
-            var nt = t - (int)t;
+            var normTime = time - (int)time;
 
-            if (nt < _prevNT)
+            if (normTime < _prevNormTime)
             {
                 var currFrame = Time.frameCount;
 
                 var frames = currFrame - _startFrame;
 
-                var newDtAvg = frames == 0 ? dt : (t - _startT) / frames;
+                var newDtAvg = frames == 0 ? dt : (time - _startTime) / frames;
 
                 newDtAvg = Mathf.Min(_dtCeiling, newDtAvg);
                 DtAvg = newDtAvg;
+                DtAvgInv = 1f / newDtAvg;
                 _dtCeiling = newDtAvg * (1f + (1f / 3f));
 
-                _startT = t;
+                _startTime = time;
                 _startFrame = currFrame;
             }
-            _prevNT = nt;
+            _prevNormTime = normTime;
         }
 
     }

@@ -73,7 +73,7 @@ namespace IKNoise
             var velLen = GetVelocityLen(dt, dtInv);
             //UpdateTorque(dt, dtInv);
 
-            var velLenFactor = velLen * (100f / 3f);
+            var velLenFactor = Mathf.Clamp01(velLen * (100f / 3f));
 
             var freq = freqFactor * (_baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor));
             var ampl = amplFactor * (_baseAmpl + (velLenFactor * _amplVelFactor) + (animLenInv * _amplAnimFactor));
@@ -111,7 +111,7 @@ namespace IKNoise
 //                IKNoisePlugin.Logger.LogDebug($"" +
 //                    $"noiseVec({noiseVec.x:F3},{noiseVec.y:F3},{noiseVec.z:F3}) " +
 //                    $"result({result.x:F3},{result.y:F3},{result.z:F3}) " +
-//                    $"");
+//                    $"dt[{dt:F3}] dtInv[{dtInv:F3}] animLenInv[{animLenInv:F3}] freqFactor[{freqFactor:F3}] amplFactor[{amplFactor:F3}]");
 //#endif
 
                 result = Vector3.Scale(result, posSignScale);
