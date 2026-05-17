@@ -53,6 +53,10 @@ namespace IKNoise
         public static ConfigEntry<float> TalkSceneFactor;
         public static ConfigEntry<float> HSceneFactor;
         public static ConfigEntry<float> AdvSceneFactor;
+        public static ConfigEntry<float> GlobalFreq;
+        public static ConfigEntry<float> GlobalAmpl;
+
+
         public static readonly Dictionary<Body, ConfigType> ConfigDic = [];
 
         internal static Body[] enumBodyValues = Enum.GetValues(typeof(Body)) as Body[];
@@ -119,10 +123,11 @@ namespace IKNoise
             SceneManager.sceneUnloaded += OnSceneUnloaded;
 
             var lateSwordAiming = AccessTools.TypeByName("Koik_LateSwordAiming.LateSwordAiming");
-            if (lateSwordAiming == null) return;
-
-            var methodInfo = AccessTools.Method(lateSwordAiming, "Enable");
-            methodInfo?.Invoke(null, null);
+            if (lateSwordAiming != null)
+            {
+                var methodInfo = AccessTools.Method(lateSwordAiming, "Enable");
+                methodInfo?.Invoke(null, null);
+            }
         }
 
         internal static bool IsSceneLoaded(string name) => _currLoadedScenes.Contains(name);
@@ -134,18 +139,29 @@ namespace IKNoise
             EnableSex = Config.Bind("", "Enable", Sex.Female,
                 new ConfigDescription("Master state of the plugin.", null, new ConfigurationManagerAttributes { Order = 11000 }));
 
-            EnableScene = Config.Bind("", "Enable Scene", Scene.Talk | Scene.HScene,
+            EnableScene = Config.Bind("", "Enable Scene", Scene.Adv | Scene.Talk,
                 new ConfigDescription("Scenes to run the effect.", null, new ConfigurationManagerAttributes { Order = 10900 }));
 
 
             AdvSceneFactor = Config.Bind("", "AdvSceneFactor", TwoThirds,
-                new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 10800 }));
+                new ConfigDescription(
+                    "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10800, ShowRangeAsPercent = false }));
 
             TalkSceneFactor = Config.Bind("", "TalkSceneFactor", TwoThirds,
-                new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 10700 }));
+                new ConfigDescription(
+                    "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10700, ShowRangeAsPercent = false }));
 
             HSceneFactor = Config.Bind("", "HSceneFactor", 1f,
-                new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 10600 }));
+                new ConfigDescription(
+                    "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10600, ShowRangeAsPercent = false }));
+
+            GlobalFreq = Config.Bind("", "GlobalFreq", 1f,
+                new ConfigDescription(
+                    "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10500, ShowRangeAsPercent = false }));
+
+            GlobalAmpl = Config.Bind("", "GlobalAmpl", 1f,
+                new ConfigDescription(
+                    "", new AcceptableValueRange<float>(0f, 3f), new ConfigurationManagerAttributes { Order = 10490, ShowRangeAsPercent = false }));
 
 
             ConfigDic.Add(Body.Spine,

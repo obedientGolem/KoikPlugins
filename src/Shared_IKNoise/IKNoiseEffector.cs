@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine;
+using Random = UnityEngine.Random;  
 
 namespace IKNoise
 {
@@ -24,6 +25,26 @@ namespace IKNoise
         private readonly float[] _heightCalcArray;
 
         private bool _samplePosition;
+        private Vector2 _noiseVec;
+
+        private float SmoothStartFactor
+        {
+            get => field;
+            set
+            {
+                value = Mathf.Clamp01(_smoothStartFactor + value);
+
+                _smoothStartFactor = value;
+                field = value * value;
+            }
+        }
+        private float _smoothStartFactor;
+        private float _globalFreq;
+        private float _globalAmpl;
+#if DEBUG
+        private float devAmplFactor;
+        private float devFreqFactor;
+#endif
 
 
         #region DicInit
@@ -151,6 +172,7 @@ namespace IKNoise
             _modifiers = new IKNoiseModifier[len];
             _heightCalcArray = new float[len];
             _len = len;
+            _noiseVec = new Vector2(Random.Range(0f, 1000f), Random.Range(0f, 1000f));
 
             _modifiers[(int)Body.Spine] = new IKNoiseModifier(
                 [fbbik.solver.effectors[0]], _cfgDic[Body.Spine], _baseCfgDic[Body.Spine]);
@@ -188,10 +210,31 @@ namespace IKNoise
             var animLen = animState.length;
             var animLenInv = animLen == 0f ? 1f : (1f / animLen) * (1f / 2.25f);
 
+            var noiseVec = _noiseVec;
+            var startFactor = SmoothStartFactor;
+
+            var amplFactor = _globalAmpl * (0.5f + Mathf.PerlinNoise(noiseVec.x, 0f));
+            var freqFactor = _globalFreq * ((2f / 3f) + Mathf.PerlinNoise(0f, noiseVec.y));
+
+            if (startFactor != 1f)
+            {
+                amplFactor *= startFactor;
+                SmoothStartFactor += dt;
+            }
+
+#if DEBUG
+            devAmplFactor = amplFactor;
+            devFreqFactor = freqFactor;
+#endif
+
             foreach (var modifier in _modifiers)
             {
-                modifier.UpdateModifier(dt, dtInv, animLenInv);
+                modifier.UpdateModifier(dt, dtInv, animLenInv, freqFactor, amplFactor);
             }
+
+            var dtFreqAdj = dt * freqFactor;
+
+            _noiseVec = new Vector2(noiseVec.x + dtFreqAdj, noiseVec.y + dtFreqAdj);
         }
 
         private void SamplePosition()
@@ -236,6 +279,11 @@ namespace IKNoise
 
         internal void OnSettingChanged(int sex, float sceneFactor)
         {
+            SmoothStartFactor = 0f;
+
+            _globalFreq = IKNoisePlugin.GlobalFreq.Value;
+            _globalAmpl = IKNoisePlugin.GlobalAmpl.Value;
+
             for (var i = 0;  i < _len; i++)
             {
 #if DEBUG

@@ -29,9 +29,18 @@ namespace IKNoise
             this.cfg = cfg;
             this.baseCfg = baseCfg;
 
+            _isSpine = baseCfg.body == Body.Spine;
+#if VR
+            _isLimb = baseCfg.body == Body.Arms || baseCfg.body == Body.Legs;
+#endif
+
             LimitMovements(90);
         }
 
+        private readonly bool _isSpine;
+#if VR
+        private readonly bool  _isLimb;
+#endif
 
         protected Cfg cfg;
         protected BaseCfg baseCfg;
@@ -59,15 +68,15 @@ namespace IKNoise
         protected float devCurrAnimFactor;
 #endif
 
-        internal virtual void UpdateModifier(float dt, float dtInv, float animLenInv)
+        internal virtual void UpdateModifier(float dt, float dtInv, float animLenInv, float freqFactor, float amplFactor)
         {
             var velLen = GetVelocityLen(dt, dtInv);
             //UpdateTorque(dt, dtInv);
 
             var velLenFactor = velLen * (100f / 3f);
 
-            var freq = _baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor);
-            var ampl = _baseAmpl + (velLenFactor * _amplVelFactor) + (animLenInv * _amplAnimFactor);
+            var freq = freqFactor * (_baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor));
+            var ampl = amplFactor * (_baseAmpl + (velLenFactor * _amplVelFactor) + (animLenInv * _amplAnimFactor));
 #if DEBUG
             devCurrVelFactor = velLenFactor;
             devCurrAnimFactor = animLenInv;
@@ -100,7 +109,6 @@ namespace IKNoise
                     );
 
                 result = Vector3.Scale(result, posSignScale);
-
                 effector.positionOffset = result;
                 currNoiseVec[i] = noiseVec;
             }
@@ -164,9 +172,10 @@ namespace IKNoise
         {
             var totalDeg = 0f;
 #if VR
-            var isLimb = baseCfg.body == Body.Arms || baseCfg.body == Body.Legs;
+            var isLimb = _isLimb;
 #endif
-            var isSpine = baseCfg.body == Body.Spine;
+            var isSpine = _isSpine;
+
             foreach (var e in _elements)
             {
 #if VR

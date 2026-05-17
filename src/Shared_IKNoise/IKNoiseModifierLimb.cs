@@ -16,14 +16,15 @@ namespace IKNoise
         private readonly IKNoiseModifier _parent = parent;
 
 
-        internal override void UpdateModifier(float dt, float dtInv, float animLenInv)
+        internal override void UpdateModifier(float dt, float dtInv, float animLenInv, float freqFactor, float amplFactor)
         {
             var velLen = GetVelocityLen(dt, dtInv);
             //UpdateTorque(dt, dtInv);
 
             var velLenFactor = velLen * (1f / 0.03f);
-            var freq = _baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor);
-            var ampl = _baseAmpl + (velLenFactor * _amplAnimFactor) + (animLenInv * _amplAnimFactor);
+
+            var freq = freqFactor * (_baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor));
+            var ampl = amplFactor * (_baseAmpl + (velLenFactor * _amplAnimFactor) + (animLenInv * _amplAnimFactor));
 #if DEBUG
             devCurrVelFactor = velLenFactor;
             devCurrAnimFactor = animLenInv;
