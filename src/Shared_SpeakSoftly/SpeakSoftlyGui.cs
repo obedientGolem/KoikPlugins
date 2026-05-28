@@ -19,10 +19,10 @@ namespace KK_VariableVoiceVolume
         private static void RegisterVolumeSlider(object sender, RegisterSubCategoriesEvent e)
         {
             var makerSex = MakerAPI.GetMakerSex();
-            var pluginState = SpeakSoftlyPlugin.PluginState.Value;
+            var pluginEnabledSex = SpeakSoftlyPlugin.PluginEnabled.Value;
 
-            if ((makerSex == 0 && (pluginState & SpeakSoftlyPlugin.SettingState.Male) == 0) ||
-                (makerSex == 1 && (pluginState & SpeakSoftlyPlugin.SettingState.Female) == 0))
+            if ((makerSex == 0 && (pluginEnabledSex & SpeakSoftlyPlugin.Sex.Male) == 0) ||
+                (makerSex == 1 && (pluginEnabledSex & SpeakSoftlyPlugin.Sex.Female) == 0))
                 return;
 
             //var category = MakerConstants.Parameter.Character;

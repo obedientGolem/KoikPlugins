@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace KK_SpeakSoftly
 {
-    internal class Hooks
+    internal class SpeakSoftlyHooks
     { 
         #region Harmony
 
@@ -21,15 +21,7 @@ namespace KK_SpeakSoftly
 #endif
         public static void SetVoiceTransformPostfix(ChaControl __instance)
         {
-            foreach (var instance in SpeakSoftlyCharaController.Instances)
-            {
-                if (instance.ChaControl == __instance)
-                {
-                    instance.OnAudioStart();
-                    break;
-                }
-            }
-
+            SpeakSoftlyCharaController.OnAudioStart(__instance);
         }
 
         [HarmonyPostfix]
@@ -39,6 +31,12 @@ namespace KK_SpeakSoftly
             SpeakSoftlyCharaController.OnSetPlay(__instance.flags, _nextAnimation);
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(FaceBlendShape), nameof(FaceBlendShape.SetVoiceVaule))]
+        public static void FaceBlendShape_SetVoiceVaulePrefix(ref float value, FaceBlendShape __instance)
+        {
+            value *= SpeakSoftlyCharaController.OnSetVoiceValue(__instance);
+        }
 
         #endregion
     }

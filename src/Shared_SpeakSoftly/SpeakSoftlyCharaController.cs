@@ -16,8 +16,6 @@ namespace KK_SpeakSoftly
 {
     internal class SpeakSoftlyCharaController : CharaCustomFunctionController
     {
-        
-        internal static List<SpeakSoftlyCharaController> Instances => _instances;
         internal float VolumeFloor { get; set; }
         internal float VolumeCeiling { get; set; }
 
@@ -35,23 +33,58 @@ namespace KK_SpeakSoftly
         private State _state;
 
         private float _volumeStepMultiplier;
-        private float _volumeTarget;
-        private float _volumeCurrent;
+        private float _volTarget;
+        private float VolCurr
+        {
+            get;
+            set
+            {
+                field = value;
+
+                var invValue = value == 0f ? 0 : 1f / value;
+
+                _mouthVoice = invValue * _mouthVoiceCfg;
+                _mouthBreath = invValue * _mouthBreathCfg;
+
+            }
+        }
+
+        private float _mouthVoice;
+        private float _mouthBreath;
+
+        private float _mouthVoiceCfg;
+        private float _mouthBreathCfg;
+
         private float _volumeSmoothDampVelocity;
         private float _volumeSmoothDampTime;
         // Default volume affected by the in-game settings used as a ceiling.
         private float _volumeDefault = 1f;
         //// Cached settings to avoid accessing static property on every single frame.
         //private float _volumeBaseValue;
-        private float _volumeSceneVoiceMultiplier;
-        private float _volumeFloor;
-        private float _volumeRange;
+        private float _volSceneVoiceFactor;
+        private float _volFloor;
+        private float _volRange;
 
         // Timestamp to start fade out.
         private float _fadeOutTimestamp;
         // Character stats' influence value.
         private float _statsWeight;
 
+        private static Dictionary<FaceBlendShape, SpeakSoftlyCharaController> _fbsDic = [];
+
+        private float GetMouthFactor
+        {
+            get
+            {
+                if (IsState(State.Voice)) 
+                    return _mouthVoice;
+
+                if (IsState(State.Breath)) 
+                    return _mouthBreath;
+
+                return 1f;
+            }
+        }
 
         private bool IsState(State state) => (_state & state) != 0;
         private void AddState(State state) => _state |= state;
@@ -73,7 +106,7 @@ namespace KK_SpeakSoftly
         protected override void OnReload(GameMode currentGameMode, bool maintainState)
         {
             base.OnReload(currentGameMode, maintainState);
-
+            
             // Defaults
             VolumeFloor = 0.2f;
             VolumeCeiling = 1.0f;
@@ -102,7 +135,28 @@ namespace KK_SpeakSoftly
             OnSettingChangedIntern();
             UpdateStats();
             UpdateTargetVolume();
-            _volumeCurrent = _volumeTarget;
+
+            VolCurr = _volTarget;
+
+            UpdateDicGlobal();
+        }
+
+        private static void UpdateDicGlobal()
+        {
+            _fbsDic.Clear();
+
+            foreach (var inst in _instances)
+            {
+                inst.UpdateDicIntern();
+            }
+        }
+        private void UpdateDicIntern()
+        {
+            var fbs = ChaControl.fbsCtrl;
+
+            if (fbs == null) return;
+
+            _fbsDic.Add(fbs, this);
         }
 
 
@@ -111,11 +165,17 @@ namespace KK_SpeakSoftly
             base.Awake();
 
             _instances.Add(this);
-        } 
 
-        private void Destroy()
+            enabled = (SpeakSoftlyPlugin.PluginEnabled.Value & (SpeakSoftlyPlugin.Sex)(ChaControl.sex + 1)) != 0;
+        }
+
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
+
             _instances.Remove(this);
+
+            UpdateDicGlobal();
         }
 
         protected override void Update()
@@ -131,22 +191,19 @@ namespace KK_SpeakSoftly
                     return;
                 }
 
-                // Continuously update volume in H.
-                if (_hFlag != null)
-                    UpdateTargetVolume();
+                UpdateTargetVolumeInH();
 
                 if (IsState(State.Breath))
                 {
-                    // Continuously adjust volume
-                    _volumeCurrent = Mathf.SmoothDamp(_volumeCurrent, _volumeTarget, ref _volumeSmoothDampVelocity, _volumeSmoothDampTime);
+                    UpdateVolume();
 
                     if (IsState(State.FadeIn))
                     {
                         aSource.volume += Time.deltaTime * _volumeStepMultiplier;
 
-                        if (aSource.volume >= _volumeCurrent)
+                        if (aSource.volume >= VolCurr)
                         {
-                            aSource.volume = _volumeCurrent;
+                            aSource.volume = VolCurr;
                             RemoveState(State.FadeIn);
                         }
                     }
@@ -161,13 +218,14 @@ namespace KK_SpeakSoftly
                     }
                     else
                     {
-                        aSource.volume = _volumeCurrent;
+                        aSource.volume = VolCurr;
                     }
                 }
                 else if (IsState(State.Voice))
                 {
-                    _volumeCurrent = Mathf.SmoothDamp(_volumeCurrent, _volumeTarget, ref _volumeSmoothDampVelocity, _volumeSmoothDampTime);
-                    aSource.volume = Mathf.Clamp01(_volumeCurrent * _volumeSceneVoiceMultiplier);
+                    UpdateVolume();
+
+                    aSource.volume = VolCurr;
                 }
 #if DEBUG
                 if (SpeakSoftlyPlugin.Debug.Value) SpeakSoftlyPlugin.Logger.LogDebug($"[{ChaControl.name}]: volume[{aSource.volume}]");
@@ -177,24 +235,48 @@ namespace KK_SpeakSoftly
             {
                 if (_audioSource.clip != null)
                 {
-                    OnAudioStart();
+                    OnAudioStartIntern();
                 }
+            }
+
+        }
+
+        private void UpdateVolume()
+        {
+            // Continuously adjust volume
+            var prevVol = VolCurr;
+            var currVol = Mathf.SmoothDamp(prevVol, _volTarget, ref _volumeSmoothDampVelocity, _volumeSmoothDampTime);
+
+
+            if (prevVol != currVol)
+            {
+                VolCurr = currVol;
             }
         }
 
-        internal void OnAudioStart()
+        internal static void OnAudioStart(ChaControl chara)
+        {
+            foreach (var inst in _instances)
+            {
+                if (inst.ChaControl != chara) continue;
+
+                inst.OnAudioStartIntern();
+                return;
+            }
+        }
+
+        private void OnAudioStartIntern()
         {
             var audioSource = ChaControl.asVoice;
-            var pluginState = SpeakSoftlyPlugin.PluginState.Value;
 
             // Bad state, wait for next call from the hook.
-            if (audioSource == null || 
-                (ChaControl.sex == 0 && (pluginState & SpeakSoftlyPlugin.SettingState.Male) == 0) ||
-                (ChaControl.sex == 1 && (pluginState & SpeakSoftlyPlugin.SettingState.Female) == 0))
+            if (audioSource == null || !enabled)
             {
                 _state = State.None;
                 return;
             }
+
+            var pluginState = SpeakSoftlyPlugin.PluginOptions.Value;
 
             _audioSource = audioSource;
             // Wait until audioClip is loaded in async (few frames).
@@ -217,7 +299,7 @@ namespace KK_SpeakSoftly
                     return;
                 }
                 _state = State.Active | State.Voice;
-                audioSource.volume = Mathf.Clamp01(_volumeCurrent * _volumeSceneVoiceMultiplier);
+                audioSource.volume = VolCurr;
                 return;
             }
             // Disabled by the setting.
@@ -244,7 +326,7 @@ namespace KK_SpeakSoftly
 
             // Custom start for fade during intense animation loops.
             var floor = _noFade ? 0.2f : 0f;
-            _volumeStepMultiplier = _volumeTarget * (1f / breathFadeLength);
+            _volumeStepMultiplier = _volTarget * (1f / breathFadeLength);
             // Set floor
             audioSource.volume = floor;
             _fadeOutTimestamp = audioSource.clip.length - breathFadeLength;
@@ -289,26 +371,33 @@ namespace KK_SpeakSoftly
 
         private void UpdateTargetVolume()
         {
+            // Called OnReload().
+
+            _volTarget = _volSceneVoiceFactor * (_volFloor + (_volRange * _statsWeight)) * _volumeDefault;
+        }
+
+        private void UpdateTargetVolumeInH()
+        {
             // Called continuously from Update() if audioClip is loaded.
 
-            var hInfluence = _hFlag != null ?
+            var hFlag = _hFlag;
 
-                // Range (-0.3 .. 0.0)
-                (Mathf.Clamp(_hFlag.GetOrgCount(), 0, 4) * -0.075f) +
+            if (_hFlag == null) return;
 
-                // Range (0.0 .. 0.3)
-                (_hFlag.gaugeFemale * 0.003f) +
+            var hInfluence =
+                // -0.3..0.0
+                (Mathf.Clamp(hFlag.GetOrgCount(), 0, 4) * -0.075f) +
 
-                // Range (0.? .. 0.7)
-                ((_hVariableSpeed ? 
-                _volumeAnimFloor + (_volumeAnimRange * (_hFlag.mode == HFlag.EMode.aibu ? _hFlag.motion : _hFlag.speedCalc)) :
-                _volumeAnimCeiling) * 0.7f) :     
+                // 0.0..0.3
+                (hFlag.gaugeFemale * 0.003f) +
 
-                // No hFlag – not an H scene
-                0f;
+                // 0.?..0.7
+                ((_hVariableSpeed ?
+                _volumeAnimFloor + (_volumeAnimRange * (hFlag.mode == HFlag.EMode.aibu ? hFlag.motion : hFlag.speedCalc)) :
+                _volumeAnimCeiling) * 0.7f);
 
             // Apply default volume provided by the game as a final modifier. It can be changed by the in-game settings for personalities' volume.
-            _volumeTarget = (_volumeFloor + (_volumeRange * _statsWeight * hInfluence)) * _volumeDefault;
+            _volTarget = _volSceneVoiceFactor * (_volFloor + (_volRange * _statsWeight * hInfluence)) * _volumeDefault;
         }
 
         internal static void OnSetPlay(HFlag hFlag, string animName)
@@ -321,6 +410,7 @@ namespace KK_SpeakSoftly
             if (_hFlag == null && hFlag != null)
             {
                 _hFlag = hFlag;
+
                 OnSettingChanged();
             }
             
@@ -411,18 +501,36 @@ namespace KK_SpeakSoftly
 
         private void OnSettingChangedIntern()
         {
-            // Stores value from static properties in instanced field, because quicker?
-            // Atleast it becomes easier to read.
+            enabled = (SpeakSoftlyPlugin.PluginEnabled.Value & (SpeakSoftlyPlugin.Sex)(ChaControl.sex + 1)) != 0;
+
+            if (!enabled) return;
 
             _volumeSmoothDampTime = SpeakSoftlyPlugin.VolumeCatchUp.Value;
+
+            // TODO. Why we need this?
             // Double the voice multiplier for TalkScene.
-            _volumeSceneVoiceMultiplier = _hFlag != null ? 1f : 2f;
-            _volumeFloor = VolumeFloor;
-            _volumeRange = Mathf.Clamp(VolumeCeiling - _volumeFloor, _volumeFloor, 1f);
+            _volSceneVoiceFactor = _hFlag != null ? 1f : 2f;
+
+            _volFloor = VolumeFloor;
+            _volRange = Mathf.Clamp(VolumeCeiling - _volFloor, _volFloor, 1f);
+
+            _mouthVoiceCfg = SpeakSoftlyPlugin.MouthOpenVoice.Value;
+            _mouthBreathCfg = SpeakSoftlyPlugin.MouthOpenBreath.Value;
+
+            VolCurr = VolCurr;
+        }
+
+        internal static float OnSetVoiceValue(FaceBlendShape fsb)
+        {
+            if (_fbsDic.TryGetValue(fsb, out var inst))
+            {
+                return inst.GetMouthFactor;
+            }
+            return 1f;
         }
 
         [Flags]
-        enum State
+        private enum State
         {
             /// <summary>
             /// Bad state, wait for next call from a hook.
@@ -473,5 +581,11 @@ namespace KK_SpeakSoftly
             NoFade = 1 << 6,
 
         }
+
+        //private struct Config
+        //{
+        //    internal float mouthOpenVoice;
+        //    internal float mouthOpenBreath;
+        //}
     }
 }

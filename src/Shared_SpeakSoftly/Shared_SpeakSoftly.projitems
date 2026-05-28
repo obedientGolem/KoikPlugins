@@ -10,7 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Hooks.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SpeakSoftlyHooks.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SpeakSoftlyCharaController.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SpeakSoftlyGui.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SpeakSoftlyPlugin.cs" />
