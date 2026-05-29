@@ -36,7 +36,7 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgPosLen * 15f));
             curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
 
 

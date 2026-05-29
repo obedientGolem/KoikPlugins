@@ -371,7 +371,8 @@ namespace AniMorph
                             posAppNegative: new Vector3(TwoThirds, TwoThirds, OneThird),
                             inheritPosF:    OneThird,
                             posSpringCfg:   TwoThirds,
-                            isLeft: true
+                            isLeft: true,
+                            overrideMasterIsParent: true
                             ),
                         new (
                             name:           Arm1R,
@@ -380,7 +381,8 @@ namespace AniMorph
                             posAppPositive: new Vector3(TwoThirds, OneThird, 1f),
                             posAppNegative: new Vector3(1f + OneThird, TwoThirds, OneThird),
                             inheritPosF:    OneThird,
-                            posSpringCfg:   TwoThirds
+                            posSpringCfg:   TwoThirds,
+                            overrideMasterIsParent: true
                             ),
                         new (
                             name:           Bust,
@@ -389,8 +391,8 @@ namespace AniMorph
                             posAppPositive: Vector3.one,
                             posAppNegative: new Vector3(1f, 1f, 0f),
                             rotApplication: new Vector3(1f, 1f, 1f),
-                            posSpringCfg: OneThird,
-                            rotSpringCfg: OneThird,
+                            posSpringCfg:   (1f / 6f),
+                            rotSpringCfg: 2f,
                             noisePosCfg: 0.5f,
                             noiseRotCfg: 0.5f
                             ),
@@ -402,18 +404,21 @@ namespace AniMorph
                     allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                     posAppPositive: Vector3.one,
                     posAppNegative: Vector3.one,
-                    posSpringCfg:   TwoThirds,
-                    rotSpringCfg:   TwoThirds,
-                    posDampCfg:     1f + TwoThirds,
-                    rotDampCfg:     1f + TwoThirds
+                    posSpringCfg:   1f,
+                    posDampCfg:     1f // 1f + TwoThirds,
                     ),
                     [
                         new (
+                            // This is pretty much the iliac crest/spines, (+ obliques and abs from navel and down to the iliac crest)
+                            // so it rotates in place only, as is's the lumbar vertebrae region and they don't really bend.
                             name:           Waist1,
-                            allowedEffects: Effect.None,
+                            allowedEffects: Effect.Pos,
                             inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                             posAppPositive: Vector3.one,
-                            posAppNegative: Vector3.one
+                            posAppNegative: Vector3.one,
+                            posSpringCfg:   TwoThirds,
+                            // Don't inherit positional change from master's rotation.
+                            overrideMasterIsParent: true
                             ),
                         new (
                             name:           ButtL,
@@ -437,8 +442,8 @@ namespace AniMorph
                             inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(1f, 1f, 1f),
                             posAppNegative: Vector3.one,
-                            posSpringCfg:   TwoThirds,
-                            posDampCfg:     1f + TwoThirds
+                            posSpringCfg:   1f, // TwoThirds,
+                            posDampCfg:     1f //1f + TwoThirds
                             ),
                         new (
                             name:           Ana,
@@ -973,12 +978,12 @@ namespace AniMorph
 
             Neck_S or Head => Body.Head,
 
-            Spine1 or Spine2 or Spine3 or Neck_J => Body.Chest,
+            Bust or Spine1 or Spine2 or Spine3 or Neck_J => Body.Chest,
 
             ShldrL or Arm1L or Arm2L or Arm3L or FArm1L or FArm2L => Body.Shoulders,
             ShldrR or Arm1R or Arm2R or Arm3R or FArm1R or FArm2R => Body.Shoulders,
 
-            Bust or Bust1L or Bust1R => Body.Breast,
+            Bust1L or Bust1R => Body.Breast,
 
             Waist1 or Waist2 or Kokan or Ana or ButtL or ButtR => Body.Pelvis,
 
@@ -993,7 +998,7 @@ namespace AniMorph
         internal void OnLoadAnimation()
         {
             _animChange = true;
-            _animChangeTimestamp = Time.time + 3f;
+            _animChangeTimestamp = Time.time + 5f;
         }
 
         internal void OnSetPlay(string animName)
@@ -1055,7 +1060,7 @@ namespace AniMorph
                 Vector3 noiseSclF = new(),
 
                 float inheritPosF = 1f,
-
+                
                 bool? overrideMasterIsParent = null,
 
                 bool initAnimRot = false

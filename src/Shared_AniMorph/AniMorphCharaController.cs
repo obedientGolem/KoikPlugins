@@ -26,7 +26,6 @@ namespace AniMorph
         private AniMorphEffector boneEffector;
 
 #if DEBUG
-
         private Vector3 _devRotEuler = new Vector3(0f, 180f, 0f);
         private Vector3 _devRotOnceEuler = new Vector3(0f, 360f, 0f);
         private float _devRotOnceRate = 0.5f;

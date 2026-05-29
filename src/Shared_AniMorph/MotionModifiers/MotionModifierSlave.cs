@@ -14,7 +14,7 @@ namespace AniMorph
 {
     internal class MotionModifierSlave : MotionModifier
     {
-        protected readonly bool _masterIsParent;
+        protected /*readonly*/ bool _masterIsParent;
         protected Vector3 _localVecToMaster;
         protected readonly Transform _master;
         protected bool devRotatedPosOffset;
@@ -72,6 +72,8 @@ namespace AniMorph
                 else
                     posOffset = transform.InverseTransformDirection(posOffset);
 
+                // A simple trick, works only with bones that constitute one skeletal mass, 
+                // e.g. between the bones of ribcage.
                 if ((masterEffects & Effect.Rot) != 0 && !_masterIsParent)
                     posOffset += _localVecToMaster - (Quaternion.Euler(rotOffset) * _localVecToMaster);
 
@@ -89,7 +91,7 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgPosLen * 15f));
             curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
 
 

@@ -41,6 +41,7 @@ namespace AniMorph
         public static ConfigEntry<bool> MaleEnableDB;
 
         public static ConfigEntry<bool> DevResetOnLag;
+        public static ConfigEntry<float> DevPosFastCoef;
 
 
         internal const float OneThird = (1f / 3f);
@@ -86,6 +87,7 @@ namespace AniMorph
             Logger = base.Logger;
 
             DevResetOnLag = Config.Bind("", "DevResetOnLag", false, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 200 }));
+            DevPosFastCoef = Config.Bind("", "DevPosFastCoef", 20f, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 200 }));
 
             EnableSex = Config.Bind("", "EnableSex", Sex.Male | Sex.Female, new ConfigDescription("Choose none to disable", null, new ConfigurationManagerAttributes { Order = 100 }));
 
@@ -95,13 +97,15 @@ namespace AniMorph
 
             BindConfig();
 
-            var handler = new EventHandler(OnSettingChanged);
+            var handler = new EventHandler(AdjustAllowedEffects);
 
             foreach (Body eVal in Enum.GetValues(typeof(Body)))
             {
                 if (ConfigDic.TryGetValue(eVal, out var value))
                     AddSettingChangedParam(value, handler);
             }
+
+            Config.SettingChanged += OnSettingChanged;
 
             MaleEnableDB = Config.Bind("", "MaleEnableDB", true, new ConfigDescription("Force enable Dynamic Bones on males in Main Game as they are usually turned off", null, new ConfigurationManagerAttributes { Order = 99 }));
 
@@ -238,8 +242,8 @@ namespace AniMorph
                     effect: Effect.Pos | Effect.Rot | Effect.Scl,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseAmplitudePos: 0.5f,
-                    noiseAmplitudeRot: 1f,
+                    noiseAmplitudePos: 0.167f,
+                    noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
                     posSpring: 1f,
@@ -252,9 +256,15 @@ namespace AniMorph
                     posBleedLen: 0.1f,
                     //posGravity: 0f,
 
-                    rotSpring: 1f,
-                    rotDamping: 0.25f,
-                    rotRate: 0.5f,
+                    rotSpring: 0.67f,
+#if DEBUG
+                    // On certain animations at max speed it can get quite violent,
+                    // so for users there's more mellow default setting.
+                    rotDamping: 0.33f,
+#else
+                    rotDamping: 0.5f,
+#endif
+                    rotRate: 3f,
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
@@ -282,7 +292,7 @@ namespace AniMorph
                     )
                 );
 
-            #endregion
+#endregion
 
 
             #region Breast
@@ -406,7 +416,7 @@ namespace AniMorph
                     disableWhenClothes: ClothesKind.Panty,
 
                     noiseAmplitudePos: 0.15f,
-                    noiseAmplitudeRot: 0.67f,
+                    noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
                     posSpring: 21f,
@@ -421,8 +431,8 @@ namespace AniMorph
                     //LinearLimitPositive: new Vector3(1f, 1.33f, 1f),
                     //LinearLimitNegative: new Vector3(1f, 0.67f, 1f),
 
-                    rotSpring: 20f,
-                    rotDamping: 0.5f,
+                    rotSpring: 1.33f,
+                    rotDamping: 0.67f,
                     rotRate: 3f,
                     //AngularApplicationMaster: (Axis)0,
                     //AngularApplicationSlave: Axis.X | Axis.Y | Axis.Z,
@@ -514,7 +524,7 @@ namespace AniMorph
             var fields = obj.GetType()
                 .GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
 
-            var configEntryType = typeof(ConfigEntry<>);
+            var configEntryType = typeof(ConfigEntry<Effect>);
 
             foreach (var field in fields)
             {
@@ -538,14 +548,9 @@ namespace AniMorph
             }
         }
 
-        private void OnSettingChanged(object sender, EventArgs e)
-        {
-            _settingChangedTimestamp = Time.time + OneThird;
+        private void OnSettingChanged(object sender, EventArgs e) => _settingChangedTimestamp = Time.time + OneThird;
 
-            AdjustAllowedEffects();
-        }
-
-        private void AdjustAllowedEffects()
+        private void AdjustAllowedEffects(object sender, EventArgs e)
         {
             foreach (var kv in ConfigDic)
             {
@@ -767,10 +772,10 @@ namespace AniMorph
 
                 PosSpring = config.Bind(name, "PosSpring", posSpring,
                     new ConfigDescription("Strength of the positional lag.",
-                    new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
+                    new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
 
                 PosDamping = config.Bind(name, "PosDamping", posDamping,
-                    new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
+                    new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0.1f, _ceil), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
                 PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
                     new ConfigDescription("Shock introduces huge velocity impacts that quickly bleed out.\n" +
@@ -797,16 +802,16 @@ namespace AniMorph
                 if (isRotation)
                 {
                     RotSpring = config.Bind(name, "Rotation Spring", (float)rotSpring,
-                        new ConfigDescription("Strength of the rotational lag.",
-                        new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
+                        new ConfigDescription("The smaller the value, the greater the rotational lag.",
+                        new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
 
                     RotDamping = config.Bind(name, "Rotation Damping", (float)rotDamping,
-                        new ConfigDescription("Strength of negation of the rotational lag.",
-                        new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
+                        new ConfigDescription("The smaller the value, the lesser the negation of rotational lag.",
+                        new AcceptableValueRange<float>(0.1f, 2f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
 
-                    RotRate = config.Bind(name, "Rotation Interpolation Speed", (float)rotRate,
-                        new ConfigDescription("How fast the rotation offset changes.",
-                        new AcceptableValueRange<float>(0f, 10f), new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
+                    RotRate = config.Bind(name, "Rotation Rate", (float)rotRate,
+                        new ConfigDescription("The rate of change of the rotational lag, measured in degrees per second.", // Probably
+                        new AcceptableValueRange<float>(0.1f, 10f), new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
                 }
 
 
@@ -822,7 +827,7 @@ namespace AniMorph
 
                     SclRate = config.Bind(name, "Scale Interpolation Speed", (float)sclRate,
                         new ConfigDescription("How fast the scale offset changes.",
-                        new AcceptableValueRange<float>(0f, 5f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
+                        new AcceptableValueRange<float>(0f, 10f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
 
                     SclPreserveVol = config.Bind(name, "Scale Preserve Volume", (bool)sclPreserveVolume,
                         new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));

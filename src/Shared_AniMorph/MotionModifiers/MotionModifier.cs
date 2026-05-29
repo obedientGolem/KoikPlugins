@@ -37,6 +37,9 @@ namespace AniMorph
         protected Previous previous;
         // Big struct, only ref access.
         protected Current current;
+#if DEBUG
+        private readonly DebugValues _dev = new();
+#endif
 
         private BoneController _boneController;
 
@@ -218,7 +221,7 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgCleanAdjDeltaPosLen * 15f));
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgPosLen * 15f));
             curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
 
 
@@ -439,12 +442,13 @@ namespace AniMorph
             return false;
         }
 
-        protected Vector3 GetPosOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv,            
-            out Vector3 velocity)
+        protected Vector3 GetPosOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv, out Vector3 velocity)
         {
             var cleanDeltaPos = GetCleanDeltaPos(ref prev);
 
-            prev.cleanAdjDeltaPosLen = cleanDeltaPos.magnitude * dtInv;
+            var cleanDeltaPosLen = cleanDeltaPos.magnitude * dtInv;
+
+            prev.totalPosLen += cleanDeltaPosLen;
 
             // --- Shock state ---
             if (curr.shockTime > 0f)
@@ -476,9 +480,28 @@ namespace AniMorph
                 velocity *= FastExp(-cfg.posBleedStr * dt);
             }
 
-            var springF = Mathf.Exp(-(prev.velocityLen * 20f)) * (-cfg.posSpring * dtInv) * cleanDeltaPos;
-            var dampingF = /*FastExp(prev.velocityLen * 10f) * */-cfg.posDamping * velocity;
+            // The higher the velocity the lesser all the consequent accumulation.
+            var springVelCoef = 1f + (prev.velocityLen * cfg.devPosFastCoef);
+            springVelCoef = 1f / (springVelCoef * springVelCoef);
+            springVelCoef = Mathf.MoveTowards(prev.posSpringVelCoef, springVelCoef, dt * OneThird);
 
+
+            //var springPosCoef = cleanDeltaPosLen * prev.avgPosLenInv;
+            //if (springPosCoef > 1f)
+            //{
+            //    var a = 1f + (springPosCoef - 1f);
+            //    springPosCoef = -(1f / (a * a)) + 1f;
+            //}
+
+            var springF = springVelCoef * (-cfg.posSpring * dtInv) * cleanDeltaPos;
+            var dampingF = -cfg.posDamping * velocity;
+
+#if DEBUG
+            _dev.posSpringVelCoef = springVelCoef;
+            //_dev.posSpringPosCoef = springPosCoef;
+            _dev.posSpring = springF;
+            _dev.posDamping = dampingF;
+#endif
             var accel = springF + dampingF;
 
             if (cfg.noisePosAmpl != 0f)
@@ -496,6 +519,7 @@ namespace AniMorph
             velocity += accel;
 
             prev.velocityLen = velocity.magnitude;
+            prev.posSpringVelCoef = springVelCoef;
 
             //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
             //    $"velocity({velocity.x:F3},{velocity.y:F3},{velocity.z:F3}) " +
@@ -720,7 +744,7 @@ namespace AniMorph
         {
             var accel = prev.cleanDeltaPos;
 
-            var driver = Vector3.Lerp(accel, vel, 0.5f); // cfg.sclBlend);
+            var driver = Vector3.Lerp(accel, vel, _dev.devCoef_3); // cfg.sclBlend);
 
             var driverLen = driver.magnitude;
 
@@ -740,12 +764,13 @@ namespace AniMorph
                         ));
                 }
 
-                var staticResult = Vector3.SmoothDamp(
-                    prev.scale,
-                    basicTargetScl,
-                    ref cfg.sclVelocity,
-                    cfg.sclRate
-                    );
+                var staticResult = Vector3.Lerp(prev.scale, basicTargetScl, dt * cfg.sclRate);
+                //var staticResult = Vector3.SmoothDamp(
+                //    prev.scale,
+                //    basicTargetScl,
+                //    ref cfg.sclVelocity,
+                //    cfg.sclRate
+                //    );
 
 
                 prev.scale = staticResult;
@@ -776,7 +801,7 @@ namespace AniMorph
              * : recoverySpeed;
              */
 
-            var dir = Vector3.Lerp(prev.sclDir, driver, dt * cfg.sclRate);
+            var dir = Vector3.Lerp(prev.sclDir, driver, dt * _dev.devCoef_2);
 
             prev.sclDir = dir;
 
@@ -799,25 +824,36 @@ namespace AniMorph
                     cfg.noiseSclAmpl * curr.noiseAmplFactor,
                     curr.noiseFreq,
                     out cfg.noiseSclVec
-                    ));
+                    )); 
             }
-            
-            var result = Vector3.SmoothDamp(
-                prev.scale,
-                targetScale,
-                ref cfg.sclVelocity,
-                cfg.sclRate
-                );
+
+
+            var result = Vector3.Lerp(prev.scale, targetScale, dt * cfg.sclRate);
+
+            //var result = Vector3.SmoothDamp(
+            //    prev.scale,
+            //    targetScale,
+            //    ref cfg.sclVelocity,
+            //    cfg.sclRate
+            //    );
 
             if (cfg.sclPreserveVolume)
             {
-                // Preserve original volume
                 var stretchVolume = result.x * result.y * result.z;
                 var volumeCorrection = Mathf.Pow(1f / stretchVolume, OneThird);
                 result *= volumeCorrection;
             }
 
             prev.scale = result;
+
+            var dev = _dev;
+
+            dev.sclVel = vel;
+            dev.sclAccel = accel;
+            dev.sclDriverLen = driverLen;
+            dev.sclFactor = factor;
+            dev.sclStretch = stretch;
+            dev.sclSquash = squash;
 
             return result;
         }
@@ -1115,6 +1151,7 @@ namespace AniMorph
             {
                 cfg.sclStr = baseCfg.sclSpringCfg * pluginConfig.SclStr.Value;
                 cfg.sclRate = pluginConfig.SclRate.Value;
+                cfg.sclRateInv = cfg.sclRate == 0f ? 1f : 1f / cfg.sclRate;
                 cfg.sclDistort = pluginConfig.SclDistort.Value;
                 cfg.sclPreserveVolume = pluginConfig.SclPreserveVol.Value;
             }
@@ -1206,6 +1243,8 @@ namespace AniMorph
             cfg.noiseSclVec = new(Random.Range(0f, 1000f), Random.Range(0f, 1000f), Random.Range(0f, 1000f));
 
             cfg.noiseFreq = (float)Math.Round(0.75f * Random.Range(0.85f, 1.15f), 2);
+
+            cfg.devPosFastCoef = AniMorphPlugin.DevPosFastCoef.Value;
 
             Reset();
             OnSetClothesState(body, chara);
@@ -1581,6 +1620,7 @@ namespace AniMorph
 
             internal float sclStr; 
             internal float sclRate;
+            internal float sclRateInv;
             internal float sclDistort;
 
             internal bool sclPreserveVolume;
@@ -1615,6 +1655,8 @@ namespace AniMorph
 
             internal float inheritPosF;
 
+            internal float devPosFastCoef;
+
         }
 
         protected class Current
@@ -1644,18 +1686,10 @@ namespace AniMorph
         {
             internal Vector3 velocity;
             internal float velocityLen;
-            internal float cleanAdjDeltaPosLen
-            {
-                get => field;
-                set
-                {
-                    field = value;
-                    _animLoopVelLen += value;
-                }
-            }
 
-            private float _animLoopVelLen;
-            internal float avgCleanAdjDeltaPosLen;
+            internal float totalPosLen;
+            internal float avgPosLen;
+            internal float avgPosLenInv;
 
             internal Vector3 torque;
 
@@ -1670,6 +1704,8 @@ namespace AniMorph
             internal Vector3 posOffset;
             internal Vector3 rotOffset;
             internal Vector3 sclOffset;
+
+            internal float posSpringVelCoef;
 
             // Clean rotation from that frame
             //internal Quaternion cleanRot;
@@ -1691,7 +1727,7 @@ namespace AniMorph
 
                 velocity = Vector3.zero;
                 velocityLen = 0f;
-                _animLoopVelLen = 0f;
+                totalPosLen = 0f;
                 torque = Vector3.zero;
                 position = pos;
                 cleanPos = pos;
@@ -1707,10 +1743,34 @@ namespace AniMorph
 
             internal void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
             {
-                avgCleanAdjDeltaPosLen = Mathf.Lerp(avgCleanAdjDeltaPosLen, cleanAdjDeltaPosLen * animLoopFrameCountInv, dt * 10f);
+                avgPosLen = Mathf.Lerp(avgPosLen, totalPosLen * animLoopFrameCountInv, dt * 10f);
 
-                _animLoopVelLen = 0f;
+                if (avgPosLen != 0f)
+                    avgPosLenInv = 1f / avgPosLen;
+
+                totalPosLen = 0f;
             }
+        }
+
+        private class DebugValues
+        {
+            internal float posSpringVelCoef;
+            internal float posSpringPosCoef;
+            internal Vector3 posSpring;
+            internal Vector3 posDamping;
+
+            internal float devCoef_1 = 20f;
+            internal float devCoef_2 = 1f;
+            internal float devCoef_3 = 1f;
+
+            internal Vector3 devRotApp = Vector3.one;
+
+            internal Vector3 sclAccel;
+            internal Vector3 sclVel;
+            internal float sclDriverLen;
+            internal float sclFactor;
+            internal float sclStretch;
+            internal float sclSquash;
         }
 
 
