@@ -50,9 +50,6 @@ namespace KK_SpeakSoftly
 
         public static ConfigEntry<float> MouthOpenVoice;
         public static ConfigEntry<float> MouthOpenBreath;
-#if DEBUG
-        public static ConfigEntry<bool> Debug;
-#endif
 
 #endregion
 
@@ -113,23 +110,23 @@ namespace KK_SpeakSoftly
                 section: "",
                 key: "VolumeCatchUp",
                 defaultValue: 3f,
-                new ConfigDescription("Volume changes over specified period of time (in seconds) after the effects that prompted the change have happened.",
+                new ConfigDescription("Volume changes over specified period of time (in seconds) after an effect that prompted the change has happened.",
                 new AcceptableValueRange<float>(0f, 10f),
                 new ConfigurationManagerAttributes { Order = -20, ShowRangeAsPercent = false })
                 );
 
             MouthOpenVoice = Config.Bind(
                 section: "",
-                key: "MouthOpenFactorVoice",
-                defaultValue: TwoThirds,
+                key: "MouthOpenVoice",
+                defaultValue: 0.5f,
                 new ConfigDescription("",
                 new AcceptableValueRange<float>(0f, 1f),
                 new ConfigurationManagerAttributes { Order = -30, ShowRangeAsPercent = false })
                 );
             MouthOpenBreath = Config.Bind(
                 section: "",
-                key: "MouthOpenFactorBreath",
-                defaultValue: TwoThirds,
+                key: "MouthOpenBreath",
+                defaultValue: 0.25f,
                 new ConfigDescription("",
                 new AcceptableValueRange<float>(0f, 1f),
                 new ConfigurationManagerAttributes { Order = -31, ShowRangeAsPercent = false })
@@ -164,16 +161,6 @@ namespace KK_SpeakSoftly
             //    new AcceptableValueRange<float>(0f, 1f),
             //    new ConfigurationManagerAttributes { Order = -50, ShowRangeAsPercent = false })
             //    );
-#if DEBUG
-            Debug = Config.Bind(
-                section: "",
-                key: "Debug",
-                defaultValue: true,
-                new ConfigDescription("Volume changes over specified period of time (in seconds) after the effects that prompted the change have happened.",
-                null,
-                new ConfigurationManagerAttributes { Order = -20, ShowRangeAsPercent = false })
-                );
-#endif
 
 #endregion
 

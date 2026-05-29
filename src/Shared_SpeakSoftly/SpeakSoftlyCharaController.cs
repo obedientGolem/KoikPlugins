@@ -227,9 +227,6 @@ namespace KK_SpeakSoftly
 
                     aSource.volume = VolCurr;
                 }
-#if DEBUG
-                if (SpeakSoftlyPlugin.Debug.Value) SpeakSoftlyPlugin.Logger.LogDebug($"[{ChaControl.name}]: volume[{aSource.volume}]");
-#endif
             }
             else if (IsState(State.Loading))
             {
@@ -268,6 +265,7 @@ namespace KK_SpeakSoftly
         private void OnAudioStartIntern()
         {
             var audioSource = ChaControl.asVoice;
+            var pluginState = SpeakSoftlyPlugin.PluginOptions.Value;
 
             // Bad state, wait for next call from the hook.
             if (audioSource == null || !enabled)
@@ -275,24 +273,30 @@ namespace KK_SpeakSoftly
                 _state = State.None;
                 return;
             }
-
-            var pluginState = SpeakSoftlyPlugin.PluginOptions.Value;
-
             _audioSource = audioSource;
+
+
+            // --- Loading ---
+
             // Wait until audioClip is loaded in async (few frames).
             if (audioSource.clip == null)
             {
                 _state = State.Loading;
                 return;
             }
+
+
+            // --- Voice ---
+            // Fade feels much too quaint on the voice, we use them for the breath only.
+
             // Store volume provided by the game as default volume.
             _volumeDefault = audioSource.volume;
             var clipName = audioSource.clip.name;
 
-            // If Voice or ShortGasp.
+            // Check clip names to find out if it's the voice.
             if (!clipName.StartsWith("h_ko", StringComparison.Ordinal) || clipName.Contains("_005_") || clipName.Contains("_006_"))
             {
-                // Disabled by the setting.
+                // But disabled by the setting.
                 if ((pluginState & SpeakSoftlyPlugin.SettingState.Voice) == 0)
                 {
                     _state = State.None;
@@ -302,17 +306,19 @@ namespace KK_SpeakSoftly
                 audioSource.volume = VolCurr;
                 return;
             }
-            // Disabled by the setting.
+
+
+            // --- Breath ---
+
+            // If Breath is disabled
             if ((pluginState & SpeakSoftlyPlugin.SettingState.Breath) == 0)
             {
                 _state = State.None;
                 return;
             }
 
-            // Setup breath.
             _state = State.Active | State.Breath;
 
-            // Add FadeIn if enabled by the setting.
             if ((pluginState & SpeakSoftlyPlugin.SettingState.FadeIn) != 0)
             {
                 _state |= State.FadeIn;
@@ -331,8 +337,8 @@ namespace KK_SpeakSoftly
             audioSource.volume = floor;
             _fadeOutTimestamp = audioSource.clip.length - breathFadeLength;
 
-            // Disable fade out during intense animation loops and
-            // if an audioClip is somehow too short.
+            // Disable fade out during intense animation loops
+            // or if an audioClip is somehow too short.
             if (_noFade || (pluginState & SpeakSoftlyPlugin.SettingState.FadeOut) == 0 || _fadeOutTimestamp < breathFadeLength) 
                 _fadeOutTimestamp = audioSource.clip.length;
         }
@@ -340,9 +346,9 @@ namespace KK_SpeakSoftly
         private void UpdateStats()
         {
             if (ChaControl == null) return;
-            // Range (0.0 .. 1.0)
 
             _statsWeight = 0f;
+
             // Attributes net (-0.35 .. 0.4)
             var attribute = ChaControl.chaFile.parameter.attribute;
             // In all honesty I'd put +50 here for authenticity.
@@ -582,10 +588,5 @@ namespace KK_SpeakSoftly
 
         }
 
-        //private struct Config
-        //{
-        //    internal float mouthOpenVoice;
-        //    internal float mouthOpenBreath;
-        //}
     }
 }
