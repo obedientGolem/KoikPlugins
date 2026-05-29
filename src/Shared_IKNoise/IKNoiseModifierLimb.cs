@@ -49,7 +49,7 @@ namespace IKNoise
 
                 result = Vector3.Scale(result, posSignScale);
 
-                effector.positionOffset = result;
+                effector.positionOffset += result;
             }
         }
     }
