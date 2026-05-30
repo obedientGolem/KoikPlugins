@@ -70,10 +70,11 @@ namespace IKNoise
 
         internal virtual void UpdateModifier(float dt, float dtInv, float animLenInv, float freqFactor, float amplFactor)
         {
-            var velLen = GetVelocityLen(dt, dtInv);
+            var velLen = GetVelocityLen(dt);
             //UpdateTorque(dt, dtInv);
 
-            var velLenFactor = Mathf.Clamp01(velLen * (100f / 3f));
+            //var velLenFactor = Mathf.Clamp01(velLen * (100f / 3f));
+            var velLenFactor = velLen * (100f / 3f);
 
             var freq = freqFactor * (_baseFreq + (velLenFactor * _freqVelFactor) + (animLenInv * _freqAnimFactor));
             var ampl = amplFactor * (_baseAmpl + (velLenFactor * _amplVelFactor) + (animLenInv * _amplAnimFactor));
@@ -120,7 +121,7 @@ namespace IKNoise
             }
         }
 
-        protected float GetVelocityLen(float dt, float dtInv)
+        protected float GetVelocityLen(float dt)
         {
             var totalVelocity = Vector3.zero;
 
@@ -130,9 +131,9 @@ namespace IKNoise
 
                 var delta = element.GetPosDelta();
 
-                var accel = ((28f * (1f / 60f)) * dtInv * delta) + (-14f * element.velocity);
+                var accel = delta + (-10f * dt * element.velocity);
 
-                element.velocity += accel * dt;
+                element.velocity += accel;
 
                 totalVelocity += element.velocity;
             }
