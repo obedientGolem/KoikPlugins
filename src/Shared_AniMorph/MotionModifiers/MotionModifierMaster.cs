@@ -25,13 +25,15 @@ namespace AniMorph
         }
 
 
-        internal override void UpdateModifier(float dt, float dtInv, float animLenInv)
+        internal override void UpdateModifier(float dt, float dtInv, float animLen, float animLenInv)
         {
             if (!active) return;
 
             ref var cfg = ref config;
             ref var curr = ref current;
             ref var prev = ref previous;
+
+            var effects = cfg.effects;
 
             var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
@@ -40,22 +42,21 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgPosLen * 15f));
-            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * curr.avgPosLen * 15f));
+            curr.noiseFreqStep = cfg.noiseFreq * animLenInv * dt;
 
 
             // --- Update Offsets ---
 
-            var effects = cfg.effects;
-
-            var masterPosOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
+            UpdatePosTracking(ref prev, ref curr);
+            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv, animLen);
 
             if ((effects & Effect.Pos) != 0)
-                posOffset += masterPosOffset;
+                posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
 
             if ((effects & Effect.Rot) != 0)
             {
-                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLen, animLenInv);
             }
             else
             {
@@ -64,7 +65,7 @@ namespace AniMorph
             }
 
             if ((effects & Effect.Scl) != 0)
-                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, dt);
+                sclOffset = GetSquashOffsetEx(ref cfg, ref curr, ref prev, dt, dtInv);
 
 
             // --- Update Dots ---
@@ -117,7 +118,6 @@ namespace AniMorph
 
             // --- Prepare For Next Frame ---
 
-            prev.velocity = velocity;
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
@@ -137,6 +137,7 @@ namespace AniMorph
                     dotFwd:        dotFwd, 
                     dt:            dt, 
                     dtInv:         dtInv, 
+                    animLen:       animLen,
                     animLenInv:    animLenInv,
                     posOffset:     posOffset,
                     posOffsetRot:  devPosOffsetRot,
@@ -144,6 +145,8 @@ namespace AniMorph
                     sclOffset:     sclOffset
                     );
             }
+
+            OnPostUpdateModifier(ref prev, ref curr, dt);
         }
     }
 }

@@ -52,8 +52,9 @@ namespace AniMorph
         private float devVelInf = 0.05f;
 
         private int _prevFrameCount;
-
-
+#if DEBUG
+        private Effect showDebug;
+#endif
         #endregion
 
 
@@ -205,7 +206,7 @@ namespace AniMorph
             prev.localRot = transform.localRotation;
         }
 
-        internal virtual void UpdateModifier(float dt, float dtInv, float animLenInv)
+        internal virtual void UpdateModifier(float dt, float dtInv, float animLen, float animLenInv)
         {
             if (!active) return;
 
@@ -215,33 +216,35 @@ namespace AniMorph
 
             var effects = cfg.effects;
 
+            var posOffset = Vector3.zero;
             var rotOffset = Vector3.zero;
             var sclOffset = Vector3.one;
 
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgPosLen * 15f));
-            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * curr.avgPosLen * 15f));
+            curr.noiseFreqStep = cfg.noiseFreq * animLenInv * dt;
 
 
             // --- Update Offsets ---
 
-            var posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
+            UpdatePosTracking(ref prev, ref curr);
+            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv, animLen);
 
             if ((effects & Effect.Pos) == 0)
-                posOffset = Vector3.zero;
+                posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
 
             if ((effects & Effect.Rot) != 0)
-                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLen, animLenInv);
             else
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
             if ((effects & Effect.Scl) != 0)
-                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, dt);
+                sclOffset = GetSquashOffsetEx(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Tether) != 0)
-                rotOffset += tether.GetTetheringOffset(velocity, dt);
+                rotOffset += tether.GetTetheringOffset(prev.velocity, dt);
 
 
             var dotUp = Vector3.Dot(transform.up, Vector3.up);
@@ -297,20 +300,40 @@ namespace AniMorph
 
             // --- Prepare For Next Frame ---
 
-            prev.velocity = velocity;
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
+
+            OnPostUpdateModifier(ref prev, ref curr, dt);
         }
 
+        protected void OnPostUpdateModifier(ref Previous prev, ref Current curr, float dt)
+        {
+            prev.cleanDeltaPos = curr.cleanDeltaPos;
+            prev.cleanVelDelta = curr.cleanVelDelta;
 
-        #endregion
+            if (curr.shock)
+            {
+                curr.shockTime -= dt;
 
+                if (curr.shockTime < 0f)
+                    curr.shock = false;
 
-        #region Position
+                return;
+            }
+            
+            if (curr.bleed)
+            {
+                curr.bleedTime -= dt;
 
+                if (curr.bleedTime < 0f)
+                    curr.bleed = false;
 
-        protected Vector3 GetCleanDeltaPos(ref Previous prev)
+                return;
+            }
+        }
+
+        protected void UpdatePosTracking(ref Previous prev, ref Current curr)
         {
             // Orientations can be contaminated if the bone isn't reset by animator on each frame,
             // here we figure out what kind of a bone we are dealing with
@@ -386,50 +409,56 @@ namespace AniMorph
             //    //$"currPos({currPos.x:F3},{currPos.y:F3},{currPos.z:F3}) " +
             //    $"");
 
+            curr.cleanDeltaPos = cleanDeltaPos;
+
             prev.cleanPos = cleanPos;
             prev.position = currPos;
-
-            return cleanDeltaPos;
         }
 
-        private bool IsPosShock(ref Config cfg, ref Current curr, ref Previous prev, Vector3 cleanDeltaPos, float dtInv, float animLenInv)
+        protected void UpdateVelocityShock(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLen)
         {
             // A simple velocity, based on movements of a transform without our interference.
-            var cleanVelDelta = cleanDeltaPos - prev.cleanDeltaPos;
-            
-            var projectDot = Vector3.Dot(cleanVelDelta, prev.cleanVelDelta);
+            var cleanVelDelta = curr.cleanDeltaPos - prev.cleanDeltaPos;
 
-            prev.cleanVelDelta = cleanVelDelta;
+            curr.cleanVelDelta = cleanVelDelta;
 
-            prev.cleanDeltaPos = cleanDeltaPos;
+            if (curr.shock || curr.bleed)
+                return;
 
-            if (curr.bleedTime > 0f) return false;
 
             // --- Shock detection --- 
-            var len = cleanVelDelta.magnitude * dtInv;
+
+            var projectDot = Vector3.Dot(cleanVelDelta, prev.cleanVelDelta);
+
+            var cleanVelDeltaLen = cleanVelDelta.magnitude * dtInv;
 
             var isDot = projectDot < 0f;
 
-            if (len > cfg.posShockThreshold || (isDot && (len > cfg.posShockThreshold * OneThird)))
+            if (cleanVelDeltaLen > cfg.posShockThreshold || (isDot && (cleanVelDeltaLen > cfg.posShockThreshold * OneThird)))
             {
                 //var shockPower = Mathf.Pow(Mathf.Sqrt(cleanVelDeltaSqrLen), 1.2f);
                 //velocity += cleanVelDelta.normalized * shockPower * shockFactor;
 
-                prev.velocity += cleanVelDelta * cfg.posShockStr;
+                //prev.velocity += cleanVelDelta * cfg.posShockStr;
+                // Inverse target scale.
+                // TODO. Add pseudo vec2 option for thighs and such.
+                prev.sclTarget = vecOne - (prev.sclTarget - vecOne);
 
-                var fpsFactor = Mathf.Min(1f, dtInv * (1f / 60f));
-                var scaleFactor = Mathf.Min(1f, animLenInv * (1f / 2.25f)) * (fpsFactor * fpsFactor);
+                //var fpsFactor = dtInv * (1f / 60f);
+                var animFactor = animLen; // * (1f / 2.25f); // * (fpsFactor * fpsFactor);
                 // TODO Add slowdown instead of freeze?
-                curr.bleedTime = cfg.posBleedLen * scaleFactor;
+                curr.bleedTime = cfg.bleedLen * animFactor;
+                curr.bleed = true;
 
-                if (len > cfg.posFreezeThreshold || isDot)
-                {
-                    curr.shockTime = cfg.posFreezeLen * scaleFactor;
+                //if (cleanVelDeltaLen > cfg.posFreezeThreshold || isDot)
+                //{
+                    curr.shockTime = cfg.freezeLen * animFactor;
+                curr.shock = true;
 
                     //AniMorphPlugin.Logger.LogWarning($"[{transform.name}] " +
                     //    $"Freeze[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
                     //    $"");
-                }
+                //}
                 //else
                 //{
 
@@ -437,65 +466,57 @@ namespace AniMorph
                 //        $"Shock[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
                 //        $"");
                 //}
-                    return true;
             }
-            return false;
         }
 
-        protected Vector3 GetPosOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv, out Vector3 velocity)
+
+        #endregion
+
+
+        #region Position
+
+
+        protected Vector3 GetPosOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv)
         {
-            var cleanDeltaPos = GetCleanDeltaPos(ref prev);
+            var cleanDeltaPos = curr.cleanDeltaPos;
 
-            var cleanDeltaPosLen = cleanDeltaPos.magnitude * dtInv;
+            var velocity = prev.velocity;
 
-            prev.totalPosLen += cleanDeltaPosLen;
 
             // --- Shock state ---
-            if (curr.shockTime > 0f)
-            {
-                curr.shockTime -= dt;
-                // Continue position tracking between frames even if we froze for a bit.
-                prev.cleanDeltaPos = cleanDeltaPos;
 
-                velocity = prev.velocity;
-                //accel = Vector3.zero;
-
+            if (curr.shock)
                 return cleanDeltaPos - velocity;
-            }
 
-            // --- Normal state ---
-            else if (IsPosShock(ref cfg, ref curr, ref prev, cleanDeltaPos, dtInv, animLenInv))
-            {
-                velocity = prev.velocity;
-                //accel = Vector3.zero;
 
-                return cleanDeltaPos - velocity;
-            }
-            velocity = prev.velocity;
             // --- Bleed velocity ---
-            if (curr.bleedTime > 0f)
-            {
-                curr.bleedTime -= dt;
 
-                velocity *= FastExp(-cfg.posBleedStr * dt);
-            }
+            if (curr.bleed)
+                velocity *= 1f - (cfg.posBleedStr * dt);
+
 
             // The higher the velocity the lesser all the consequent accumulation.
             var springVelCoef = 1f + (prev.velocityLen * cfg.devPosFastCoef);
             springVelCoef = 1f / (springVelCoef * springVelCoef);
-            springVelCoef = Mathf.MoveTowards(prev.posSpringVelCoef, springVelCoef, dt * OneThird);
+            springVelCoef = Mathf.MoveTowards(prev.posSpringVelCoef, springVelCoef, dt);
 
 
             //var springPosCoef = cleanDeltaPosLen * prev.avgPosLenInv;
             //if (springPosCoef > 1f)
             //{
-            //    var a = 1f + (springPosCoef - 1f);
+            //    var a = 1f + (springPosCoef - 1f); 
             //    springPosCoef = -(1f / (a * a)) + 1f;
             //}
 
-            var springF = springVelCoef * (-cfg.posSpring * dtInv) * cleanDeltaPos;
-            var dampingF = -cfg.posDamping * velocity;
+            var springF = springVelCoef * (-cfg.posSpring) * cleanDeltaPos;
+            var dampingF = -cfg.posDamping * dt * velocity;
 
+            if ((showDebug & Effect.Pos) != 0) 
+                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
+                    $"velocity({velocity.x:F3},{velocity.y:F3},{velocity.z:F3}) " +
+                    $"springF({springF.x:F3},{springF.y:F3},{springF.z:F3}), " +
+                    $"dampingF({dampingF.x:F3},{dampingF.y:F3},{dampingF.z:F3}) " +
+                    $"velCoef[{springVelCoef:F3}]");
 #if DEBUG
             _dev.posSpringVelCoef = springVelCoef;
             //_dev.posSpringPosCoef = springPosCoef;
@@ -509,15 +530,16 @@ namespace AniMorph
                 accel += Vector3.Scale(cfg.noisePosFactor, GetNoiseVec(
                     cfg.noisePosVec,
                     cfg.noisePosAmpl * curr.noiseAmplFactor,
-                    curr.noiseFreq,
+                    curr.noiseFreqStep,
                     out cfg.noisePosVec
                     ));
             }
 
-            accel *= (cfg.massInv * dt);
+            //accel *= (cfg.massInv * dt);
 
             velocity += accel;
 
+            prev.velocity = velocity;
             prev.velocityLen = velocity.magnitude;
             prev.posSpringVelCoef = springVelCoef;
 
@@ -539,8 +561,6 @@ namespace AniMorph
 
 
         private Vector3 devPrevRotDelta;
-        private float devRotFreeze;
-        private float devRotFreezeTime = 0.1f;
 
         protected Quaternion GetCleanLocalRot(ref Previous prev)
         {
@@ -574,7 +594,7 @@ namespace AniMorph
             }
         }
 
-        protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLenInv)
+        protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLen, float animLenInv)
         {
             var currCleanRot = transform.rotation;
             var currLocalRot = transform.localRotation;
@@ -617,17 +637,19 @@ namespace AniMorph
             var accel = Vector3.zero;
             var torque = prev.torque;
 
-            if (devRotFreeze > 0f)
+            if (curr.rotFreezeTime > 0f)
             {
-                devRotFreeze -= dt;
+                curr.rotFreezeTime -= dt;
 
-                accel -= cfg.rotDamping * torque;
-                torque += accel * dt;
+                torque += torque * (-cfg.rotDamping * dt);
 
                 prev.torque = torque;
 
                 return (currCleanRotInverse * prev.adjustedRot).eulerAngles;
             }
+
+            var angleFactor = 1f + (absAngle * dt);
+            angleFactor = 1f / (angleFactor * angleFactor);
 
 
             // --- Filter corruption & Apply acceleration ---
@@ -636,7 +658,7 @@ namespace AniMorph
             {
                 var angleExp = FastExp(absAngle * dt);
 
-                var deltaAngVel = axis * (angle * angleExp * dtInv);
+                var deltaAngVel = axis * (angle * angleExp);
 
                 //var slowLerp = 1f - FastExp(-cfg.rotSlowSmooth * dt);
                 //var fastLerp = 1f - FastExp(-cfg.rotFastSmooth * dt);
@@ -658,21 +680,19 @@ namespace AniMorph
                 accel = cfg.rotSpring * targetVel;
             }
 
-
-
-            accel -= cfg.rotDamping * Mathf.Exp(-absAngle * dt) * torque;
+            accel += torque * (-cfg.rotDamping * dt * (-angleFactor + 2f));
 
             if (cfg.noiseRotAmpl != 0f)
             {
                 accel += Vector3.Scale(cfg.noiseRotFactor, GetNoiseVec(
                     cfg.noiseRotVec,
                     cfg.noiseRotAmpl * curr.noiseAmplFactor,
-                    curr.noiseFreq,
+                    curr.noiseFreqStep,
                     out cfg.noiseRotVec
                     ));
             }
 
-            torque += Vector3.Scale(accel, cfg.rotApplication) * dt;
+            torque += accel;
 
             //torque += accel * dt;
 
@@ -683,13 +703,15 @@ namespace AniMorph
                 if (torqueDot < 1f)
                 {
                     curr.highTorque = false;
-                    var freezeTime = absAngle * (1f / 45f);
-                    devRotFreeze = devRotFreezeTime * (freezeTime * freezeTime);
+                    var freezeAngFactor = absAngle * (1f / 45f);
+                    curr.rotFreezeTime = cfg.rotFreezeTime * animLen * freezeAngFactor;
                     //Time.timeScale = 0f;
 
-                    //AniMorphPlugin.Logger.LogWarning($"[{transform.name}]: GetRotOffset: " +
-                    //    $"devRotFreeze[{devRotFreeze:F3} absAngle[{absAngle:F3}] angVel{angVel}");
-                }
+                    if ((showDebug & Effect.Rot) != 0)
+                        AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetRotOffset: " +
+                            $"RotFreeze! " +
+                            $"freezeTime[{curr.rotFreezeTime:F3} absAngle[{absAngle:F3}]");
+                    }
             }
             else if (torqueDot > 1000f)
             {
@@ -723,8 +745,9 @@ namespace AniMorph
             }
             var resultEuler = result.eulerAngles;
 
-            //AniMorphPlugin.Logger.LogDebug($"[{transform.name}] GetRotOffset: " +
-            //    $"result{resultEuler} angVel{angVel} rotDot[{angVelDot:F3}]"); 
+            if ((showDebug & Effect.Rot) != 0)
+                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
+                    $"torqueDot[{torqueDot:F3}] absAngle[{absAngle:F3}]");
 
             //if (rotDot < 0f) Time.timeScale = 0f;
 
@@ -735,138 +758,231 @@ namespace AniMorph
         #endregion
 
 
-        #region Scale
+                #region Scale
 
 
-        private float devSclDeadZone = 0f; //0.005f;
+                //private float devSclDeadZone = 0f; //0.005f;
 
-        protected Vector3 GetSquashOffset(ref Config cfg, ref Current curr, ref Previous prev, Vector3 vel, float dt)
+                //protected Vector3 GetSquashOffset(ref Config cfg, ref Current curr, ref Previous prev, Vector3 vel, float dt)
+                //{
+                //    var accel = prev.cleanDeltaPos;
+
+                //    var driver = Vector3.Lerp(accel, vel, _dev.devCoef_3); // cfg.sclBlend);
+
+                //    var driverLen = driver.magnitude;
+
+                //    driverLen = Mathf.Max(0f, driverLen - devSclDeadZone);
+
+                //    if (driverLen == 0f)
+                //    {
+                //        var basicTargetScl = Vector3.one;
+
+                //        if (cfg.noiseSclAmpl != 0f)
+                //        {
+                //            basicTargetScl += Vector3.Scale(cfg.noiseSclFactor, GetNoiseVec(
+                //                cfg.noiseSclVec,
+                //                cfg.noiseSclAmpl * curr.noiseAmplFactor,
+                //                curr.noiseFreq,
+                //                out cfg.noiseSclVec
+                //                ));
+                //        }
+
+                //        var staticResult = Vector3.Lerp(prev.scale, basicTargetScl, dt * cfg.sclRate);
+                //        //var staticResult = Vector3.SmoothDamp(
+                //        //    prev.scale,
+                //        //    basicTargetScl,
+                //        //    ref cfg.sclVelocity,
+                //        //    cfg.sclRate
+                //        //    );
+
+
+                //        prev.scale = staticResult;
+
+                //        return staticResult;
+                //    }
+
+
+                //    //var velN = vel.normalized;
+                //    //var velDelta = (vel - prev.velocity);
+
+                //    //// dot > 0 means acceleration,
+                //    //// dot < 0 means deceleration.
+                //    //var projDotVel = Vector3.Dot(velN, velDelta);
+
+                //    //if (projDotVel > 0f)
+                //    //    projDotVel += dt * 0.1f;
+
+                //    //prev.sclTotalDecel = Mathf.Clamp01(prev.sclTotalDecel - projDotVel);
+
+                //    /* Separate stretch & recovery speeds
+                //     * 
+                //     * float stretchSpeed = 12f;
+                //     * float recoverySpeed = 6f;
+                //     * 
+                //     * float speed = (targetScale.magnitude > currentScale.magnitude)
+                //     * ? stretchSpeed
+                //     * : recoverySpeed;
+                //     */
+
+                //    var dir = Vector3.Lerp(prev.sclDir, driver, dt * _dev.devCoef_2);
+
+                //    prev.sclDir = dir;
+
+                //    var dirN = dir.normalized;
+                //    //var velAccelFactor = Mathf.Pow(driverLen * squashStrength, 1.3f);
+                //    var factor = driverLen * cfg.sclStr;
+                //    factor *= FastExp(factor * OneThird);
+                //    var stretch = 1f + Mathf.Clamp(factor, 0f, cfg.sclDistort);
+                //    var squash = Mathf.Clamp(1f / Mathf.Sqrt(stretch), 1f - cfg.sclDistort, 1f);
+                //    // Exaggerated
+                //    //var squash = Mathf.Clamp(1f / Mathf.Pow(stretch, 0.6f), maxSquash, 1f);
+
+
+                //    var targetScale = GetDirectionalScale(dirN, stretch, squash);
+
+                //    if (cfg.noiseSclAmpl != 0f)
+                //    {
+                //        targetScale += Vector3.Scale(cfg.noiseSclFactor, GetNoiseVec(
+                //            cfg.noiseSclVec,
+                //            cfg.noiseSclAmpl * curr.noiseAmplFactor,
+                //            curr.noiseFreq,
+                //            out cfg.noiseSclVec
+                //            )); 
+                //    }
+
+
+                //    var result = Vector3.Lerp(prev.scale, targetScale, dt * cfg.sclRate);
+
+                //    //var result = Vector3.SmoothDamp(
+                //    //    prev.scale,
+                //    //    targetScale,
+                //    //    ref cfg.sclVelocity,
+                //    //    cfg.sclRate
+                //    //    );
+
+                //    if (cfg.sclPreserveVolume)
+                //    {
+                //        var stretchVolume = result.x * result.y * result.z;
+                //        var volumeCorrection = Mathf.Pow(1f / stretchVolume, OneThird);
+                //        result *= volumeCorrection;
+                //    }
+
+                //    prev.scale = result;
+
+                //    var dev = _dev;
+
+                //    dev.sclVel = vel;
+                //    dev.sclAccel = accel;
+                //    dev.sclDriverLen = driverLen;
+                //    dev.sclFactor = factor;
+                //    dev.sclStretch = stretch;
+                //    dev.sclSquash = squash;
+
+                //    return result;
+                //}
+
+        private Vector3 GetDirectionalScale(Vector3 dirN, float stretch, float squash)
         {
-            var accel = prev.cleanDeltaPos;
+            return new Vector3(
+                Mathf.Lerp(squash, stretch, Mathf.Abs(dirN.x)),
+                Mathf.Lerp(squash, stretch, Mathf.Abs(dirN.y)),
+                Mathf.Lerp(squash, stretch, Mathf.Abs(dirN.z))
+            );
+        }
 
-            var driver = Vector3.Lerp(accel, vel, _dev.devCoef_3); // cfg.sclBlend);
+        protected Vector3 GetSquashOffsetEx(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv)
+        {
+            var driver = prev.sclDriver;
 
-            var driverLen = driver.magnitude;
-
-            driverLen = Mathf.Max(0f, driverLen - devSclDeadZone);
-
-            if (driverLen == 0f)
+            if (curr.shockTime > 0f)
             {
-                var basicTargetScl = Vector3.one;
+                var shockScl = Vector3.Lerp(prev.scl, prev.sclTarget, dt * cfg.sclRate * _dev.devCoef_4);
 
-                if (cfg.noiseSclAmpl != 0f)
-                {
-                    basicTargetScl += Vector3.Scale(cfg.noiseSclFactor, GetNoiseVec(
-                        cfg.noiseSclVec,
-                        cfg.noiseSclAmpl * curr.noiseAmplFactor,
-                        curr.noiseFreq,
-                        out cfg.noiseSclVec
-                        ));
-                }
+                prev.scl = shockScl;
 
-                var staticResult = Vector3.Lerp(prev.scale, basicTargetScl, dt * cfg.sclRate);
-                //var staticResult = Vector3.SmoothDamp(
-                //    prev.scale,
-                //    basicTargetScl,
-                //    ref cfg.sclVelocity,
-                //    cfg.sclRate
-                //    );
-
-
-                prev.scale = staticResult;
-
-                return staticResult;
+                return shockScl;
             }
 
 
-            //var velN = vel.normalized;
-            //var velDelta = (vel - prev.velocity);
-
-            //// dot > 0 means acceleration,
-            //// dot < 0 means deceleration.
-            //var projDotVel = Vector3.Dot(velN, velDelta);
-
-            //if (projDotVel > 0f)
-            //    projDotVel += dt * 0.1f;
-
-            //prev.sclTotalDecel = Mathf.Clamp01(prev.sclTotalDecel - projDotVel);
-
-            /* Separate stretch & recovery speeds
-             * 
-             * float stretchSpeed = 12f;
-             * float recoverySpeed = 6f;
-             * 
-             * float speed = (targetScale.magnitude > currentScale.magnitude)
-             * ? stretchSpeed
-             * : recoverySpeed;
-             */
-
-            var dir = Vector3.Lerp(prev.sclDir, driver, dt * _dev.devCoef_2);
-
-            prev.sclDir = dir;
-
-            var dirN = dir.normalized;
-            //var velAccelFactor = Mathf.Pow(driverLen * squashStrength, 1.3f);
-            var factor = driverLen * cfg.sclStr;
-            factor *= FastExp(factor * OneThird);
-            var stretch = 1f + Mathf.Clamp(factor, 0f, cfg.sclDistort);
-            var squash = Mathf.Clamp(1f / Mathf.Sqrt(stretch), 1f - cfg.sclDistort, 1f);
-            // Exaggerated
-            //var squash = Mathf.Clamp(1f / Mathf.Pow(stretch, 0.6f), maxSquash, 1f);
+            if (curr.bleedTime > 0f)
+                driver *= 1f - (cfg.sclBleedStr * dt);
 
 
-            var targetScale = GetDirectionalScale(dirN, stretch, squash);
+            var springCoef = 1f;
+
+            var springF = springCoef * cfg.sclSpring * curr.cleanDeltaPos;
+            var dampingF = -cfg.sclDamping * dt * driver;
+#if DEBUG
+            if ((showDebug & Effect.Scl) != 0) 
+                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
+                    $"driver({driver.x:F3},{driver.y:F3},{driver.z:F3}) " +
+                    $"springF({springF.x:F3},{springF.y:F3},{springF.z:F3}), " +
+                    $"dampingF({dampingF.x:F3},{dampingF.y:F3},{dampingF.z:F3}) " +
+                    $"");
+#endif
+
+            var f = springF + dampingF;
 
             if (cfg.noiseSclAmpl != 0f)
             {
-                targetScale += Vector3.Scale(cfg.noiseSclFactor, GetNoiseVec(
+                f += Vector3.Scale(cfg.noiseSclFactor, GetNoiseVec(
                     cfg.noiseSclVec,
                     cfg.noiseSclAmpl * curr.noiseAmplFactor,
-                    curr.noiseFreq,
-                    out cfg.noiseSclVec
-                    )); 
+                    curr.noiseFreqStep,
+                    out cfg.noiseSclVec                    
+                    ));
             }
 
+            driver += f;
 
-            var result = Vector3.Lerp(prev.scale, targetScale, dt * cfg.sclRate);
+            var driverLen = driver.magnitude;
 
-            //var result = Vector3.SmoothDamp(
-            //    prev.scale,
-            //    targetScale,
-            //    ref cfg.sclVelocity,
-            //    cfg.sclRate
-            //    );
+            if (driverLen == 0f)
+            {
+                var toNormalScl = Vector3.Lerp(prev.scl, vecOne, dt * cfg.sclRate * _dev.devCoef_4);
+
+                prev.scl = toNormalScl;
+
+                return toNormalScl;
+            }
+
+            var driverN = driver / driverLen;
+
+            var factor = SmoothStepN(driverLen * _dev.devCoef_5);
+            var distort = cfg.sclDistort;
+
+            var stretch = 1f + Mathf.Clamp(factor, 0f, distort);
+            // TODO. This is for Vector3, should have a Vector2 implementation too as thighs require it.
+            var squash = 1f / Mathf.Sqrt(stretch);
+
+            var targetScl = GetDirectionalScale(driverN, stretch, squash);
+
+            var result = Vector3.Lerp(prev.scl, targetScl, dt * cfg.sclRate);
 
             if (cfg.sclPreserveVolume)
             {
-                var stretchVolume = result.x * result.y * result.z;
-                var volumeCorrection = Mathf.Pow(1f / stretchVolume, OneThird);
-                result *= volumeCorrection;
+                var vol = result.x * result.y * result.z;
+                var volCorrect = Mathf.Pow(1f / vol, OneThird);
+                result *= volCorrect;
             }
 
-            prev.scale = result;
+            prev.scl = result;
+            prev.sclTarget = targetScl;
+            prev.sclDriver = driver;
 
+#if DEBUG
             var dev = _dev;
 
-            dev.sclVel = vel;
-            dev.sclAccel = accel;
+            dev.sclDriver = driver;
+            dev.sclDriverN = driverN;
             dev.sclDriverLen = driverLen;
             dev.sclFactor = factor;
             dev.sclStretch = stretch;
             dev.sclSquash = squash;
+#endif
 
             return result;
         }
-
-        private Vector3 GetDirectionalScale(Vector3 dir, float stretch, float squash)
-        {
-            return new Vector3(
-                Mathf.Lerp(squash, stretch, Mathf.Abs(dir.x)),
-                Mathf.Lerp(squash, stretch, Mathf.Abs(dir.y)),
-                Mathf.Lerp(squash, stretch, Mathf.Abs(dir.z))
-            );
-        }
-
 
         //private bool devSclShock;
 
@@ -1128,30 +1244,30 @@ namespace AniMorph
             var isRotOffset = ((cfg.effects & Effect.RotOffset) != 0);
             var isSclOffset = ((cfg.effects & Effect.SclOffset) != 0);
 
-            cfg.posSpring = baseCfg.posSpringCfg * pluginConfig.PosSpring.Value;
-            cfg.posDamping = cfg.posSpring * (baseCfg.posDampCfg * pluginConfig.PosDamping.Value * 60f);
-            cfg.posShockThreshold = pluginConfig.PosShockThreshold.Value;
-            cfg.posShockStr = pluginConfig.PosShockStr.Value;
-            cfg.posFreezeThreshold = pluginConfig.PosFreezeThreshold.Value;
-            cfg.posFreezeLen = pluginConfig.PosFreezeLen.Value;
-            cfg.posBleedStr = pluginConfig.PosBleedStr.Value;
-            cfg.posBleedLen = pluginConfig.PosBleedLen.Value;
+            if (isPos)
+            {
+                cfg.posSpring = baseCfg.posSpringCfg * pluginConfig.PosSpring.Value;
+                cfg.posDamping = baseCfg.posDampingCfg * pluginConfig.PosDamping.Value;
+                cfg.posShockThreshold = pluginConfig.PosShockThreshold.Value;
+                cfg.posShockStr = pluginConfig.PosShockStr.Value;
+                cfg.freezeThreshold = pluginConfig.PosFreezeThreshold.Value;
+                cfg.freezeLen = pluginConfig.PosFreezeLen.Value;
+                cfg.posBleedStr = pluginConfig.PosBleedStr.Value;
+                cfg.bleedLen = pluginConfig.PosBleedLen.Value;
+            }
 
             if (isRot)
             {
-                // I'd wish to leave a note about backwardly setup algos,
-                // but the easiest way to grasp it is to read algos themselves, so there's that.
-
                 cfg.rotSpring = baseCfg.rotSpringCfg * pluginConfig.RotSpring.Value;
-                cfg.rotDamping = cfg.rotSpring * (baseCfg.rotDampCfg * pluginConfig.RotDamping.Value * 60f);
+                cfg.rotDamping = baseCfg.rotDampingCfg * pluginConfig.RotDamping.Value;
                 cfg.rotRate = pluginConfig.RotRate.Value;
             }
 
             if (isScl)
             {
-                cfg.sclStr = baseCfg.sclSpringCfg * pluginConfig.SclStr.Value;
+                cfg.sclSpring = baseCfg.sclSpringCfg * pluginConfig.SclSpring.Value;
+                cfg.sclDamping = baseCfg.sclDampingCfg * pluginConfig.SclDamping.Value;
                 cfg.sclRate = pluginConfig.SclRate.Value;
-                cfg.sclRateInv = cfg.sclRate == 0f ? 1f : 1f / cfg.sclRate;
                 cfg.sclDistort = pluginConfig.SclDistort.Value;
                 cfg.sclPreserveVolume = pluginConfig.SclPreserveVol.Value;
             }
@@ -1358,7 +1474,7 @@ namespace AniMorph
 
         internal virtual void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
         {
-            previous.OnAnimationLoopStart(animLoopFrameCountInv, dt);
+            current.OnAnimationLoopStart(animLoopFrameCountInv, dt);
         }
 
 
@@ -1450,7 +1566,7 @@ namespace AniMorph
         {
             return interp switch
             {
-                Interp.Smooth => SmoothStep(t),
+                Interp.Smooth => SmoothStepN(t),
                 Interp.Smoother => t * t * t * (10f - 15f * t + 6f * t * t),
                 Interp.Linear => t,
                 _ => Bezier(t, p1, p2),
@@ -1475,7 +1591,7 @@ namespace AniMorph
                 _ => 0f
             };
         }
-        float SmoothStep(float t) => t * t * (3f - 2f * t); 
+        float SmoothStepN(float t) => t * t * (3f - 2f * t); 
         float Bezier(float t, float p1, float p2)
         {
             var u = 1 - t;
@@ -1603,10 +1719,10 @@ namespace AniMorph
             internal float posDamping;
             internal float posShockThreshold;
             internal float posShockStr;
-            internal float posFreezeThreshold;
-            internal float posFreezeLen;
+            internal float freezeThreshold;
+            internal float freezeLen;
             internal float posBleedStr;
-            internal float posBleedLen;
+            internal float bleedLen;
             internal Vector3 posLimitPositive;
             internal Vector3 posLimitNegative;
             //internal float posDamping = 2f * Mathf.Sqrt(posSpring * mass);
@@ -1617,11 +1733,16 @@ namespace AniMorph
             internal float rotSpring;
             internal float rotDamping;
             internal float rotRate;
+            internal float rotFreezeTime = 0.1f;
 
-            internal float sclStr; 
+            internal float sclSpring;
+            internal float sclDamping;
             internal float sclRate;
-            internal float sclRateInv;
             internal float sclDistort;
+            internal float sclBleedStr = 5f;
+
+            //internal float sclStr; 
+            //internal float sclRateInv;
 
             internal bool sclPreserveVolume;
             internal Vector3 sclVelocity;
@@ -1657,6 +1778,7 @@ namespace AniMorph
 
             internal float devPosFastCoef;
 
+
         }
 
         protected class Current
@@ -1665,11 +1787,39 @@ namespace AniMorph
             internal float shockTime;
             internal float bleedTime;
             internal float noiseAmplFactor;
-            internal float noiseFreq;
+            internal float noiseFreqStep;
             internal Quaternion cleanLocalRot;
             internal Quaternion cleanRotInverse;
 
+            internal bool shock;
+            internal bool bleed;
+            internal bool freeze;
+
             internal bool animRot;
+
+            internal float avgPosLen;
+            internal float avgPosLenInv;
+
+
+            internal float rotFreezeTime;
+
+            internal Vector3 cleanDeltaPos
+            {
+                get;
+                set
+                {
+                    field = value;
+
+                    var len = value.magnitude;
+
+                    cleanDeltaPosLen = len;
+                    totalPosLen += len;
+                }
+            }
+            internal Vector3 cleanVelDelta;
+            internal float cleanDeltaPosLen;
+
+            private float totalPosLen;
 
             internal void Clear()
             {
@@ -1677,7 +1827,21 @@ namespace AniMorph
 
                 shockTime = 0f;
                 bleedTime = 0f;
+                totalPosLen = 0f;
 
+                cleanDeltaPos = Vector3.zero;
+                cleanDeltaPosLen = 0f;
+
+                cleanVelDelta = Vector3.zero;
+            }
+            internal void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
+            {
+                avgPosLen = Mathf.Lerp(avgPosLen, totalPosLen * animLoopFrameCountInv, dt * 10f);
+
+                if (avgPosLen != 0f)
+                    avgPosLenInv = 1f / avgPosLen;
+
+                totalPosLen = 0f;
             }
         }
         
@@ -1687,19 +1851,25 @@ namespace AniMorph
             internal Vector3 velocity;
             internal float velocityLen;
 
-            internal float totalPosLen;
-            internal float avgPosLen;
-            internal float avgPosLenInv;
-
             internal Vector3 torque;
+
+
+            // --- Scale ---
+
+            internal Vector3 scl;
+            internal Vector3 sclDriver;
+            internal Vector3 sclTarget;
+
+
+            //
 
             internal Vector3 position;
             internal Vector3 cleanPos;
-            internal Vector3 cleanDeltaPos;
-            internal Vector3 cleanVelDelta;
             //internal Vector3 localAdjVec;
-            internal Vector3 scale;
-            internal Vector3 sclDir;
+
+            internal Vector3 cleanDeltaPos;
+            internal float cleanDeltaPosLen;
+            internal Vector3 cleanVelDelta;
 
             internal Vector3 posOffset;
             internal Vector3 rotOffset;
@@ -1727,29 +1897,22 @@ namespace AniMorph
 
                 velocity = Vector3.zero;
                 velocityLen = 0f;
-                totalPosLen = 0f;
                 torque = Vector3.zero;
                 position = pos;
                 cleanPos = pos;
-                cleanDeltaPos = Vector3.zero;
-                cleanVelDelta = Vector3.zero;
                 posOffset = Vector3.zero;
                 rotOffset = Vector3.zero;
                 adjustedRot = bone.rotation;
-                scale = Vector3.one;
+                scl = Vector3.one;
+                sclDriver = Vector3.zero;
                 sclTotalAccel = 0f;
                 sclTotalDecel = 0f;
+
+                cleanDeltaPos = Vector3.zero;
+                cleanVelDelta = Vector3.zero;
+                cleanDeltaPosLen = 0f;
             }
 
-            internal void OnAnimationLoopStart(float animLoopFrameCountInv, float dt)
-            {
-                avgPosLen = Mathf.Lerp(avgPosLen, totalPosLen * animLoopFrameCountInv, dt * 10f);
-
-                if (avgPosLen != 0f)
-                    avgPosLenInv = 1f / avgPosLen;
-
-                totalPosLen = 0f;
-            }
         }
 
         private class DebugValues
@@ -1762,11 +1925,13 @@ namespace AniMorph
             internal float devCoef_1 = 20f;
             internal float devCoef_2 = 1f;
             internal float devCoef_3 = 1f;
+            internal float devCoef_4 = 1f;
+            internal float devCoef_5 = 1f;
 
             internal Vector3 devRotApp = Vector3.one;
 
-            internal Vector3 sclAccel;
-            internal Vector3 sclVel;
+            internal Vector3 sclDriverN;
+            internal Vector3 sclDriver;
             internal float sclDriverLen;
             internal float sclFactor;
             internal float sclStretch;

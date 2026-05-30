@@ -46,7 +46,7 @@ namespace AniMorph
 
             float dotUp, float dotR, float dotFwd, 
 
-            float dt, float dtInv, float animLenInv, 
+            float dt, float dtInv, float animLen, float animLenInv, 
 
             Vector3 posOffset, Vector3 posOffsetRot, Vector3 rotOffset, Vector3 sclOffset
             )
@@ -57,6 +57,8 @@ namespace AniMorph
             ref var cfg = ref config;
             ref var curr = ref current;
             ref var prev = ref previous;
+
+            var effects = cfg.effects;
 
 
             // --- Inherit offsets ---
@@ -88,33 +90,31 @@ namespace AniMorph
                 sclOffset = Vector3.one;
 
 
-
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * prev.avgPosLen * 15f));
-            curr.noiseFreq = cfg.noiseFreq * animLenInv * dt;
+            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * curr.avgPosLen * 15f));
+            curr.noiseFreqStep = cfg.noiseFreq * animLenInv * dt;
 
 
             // --- Update Offsets ---
 
-            var effects = cfg.effects;
-
-            var slavePosOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv, out var velocity);
+            UpdatePosTracking(ref prev, ref curr);
+            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv, animLen);
 
             if ((effects & Effect.Pos) != 0)
-                posOffset += slavePosOffset;
+                posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
 
             if ((effects & Effect.Rot) != 0)
-                rotOffset += GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+                rotOffset += GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLen, animLenInv);
             else
                 // Required for correct application of local position.
                 curr.cleanLocalRot = GetCleanLocalRot(ref prev);
 
             if ((effects & Effect.Scl) != 0)
-                sclOffset = GetSquashOffset(ref cfg, ref curr, ref prev, velocity, dt);
+                sclOffset = GetSquashOffsetEx(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Tether) != 0)
-                rotOffset += tether.GetTetheringOffset(velocity, dt);
+                rotOffset += tether.GetTetheringOffset(prev.velocity, dt);
             
 
             // --- Update Dots ---
@@ -162,10 +162,11 @@ namespace AniMorph
 
             // --- Prepare For Next Frame ---
 
-            prev.velocity = velocity;
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
+
+            OnPostUpdateModifier(ref prev, ref curr, dt);
         }
 
 

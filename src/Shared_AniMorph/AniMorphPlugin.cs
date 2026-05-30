@@ -157,8 +157,8 @@ namespace AniMorph
                     noiseAmplitudePos: 0.165f,
                     noiseAmplitudeRot: 1f,
 
-                    posSpring: 0.25f,
-                    posDamping: 1f,
+                    posSpring: 1,
+                    posDamping: 20,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -189,8 +189,8 @@ namespace AniMorph
                     noiseAmplitudeRot: null,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 1f,
-                    posDamping: 0.67f,
+                    posSpring: 1,
+                    posDamping: 20,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -205,7 +205,8 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
-                    sclStr: 0.35f,
+                    sclSpring: 1f,
+                    sclDamping: 0.67f,
                     sclRate: 8f,
                     sclDistortion: 0.4f,
                     sclPreserveVolume: true,
@@ -246,8 +247,8 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 1f,
-                    posDamping: 0.33f,
+                    posSpring: 1,
+                    posDamping: 20,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -268,7 +269,8 @@ namespace AniMorph
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
-                    sclStr: 0.35f,
+                    sclSpring: 1f,
+                    sclDamping: 0.67f,
                     sclRate: 8f,
                     sclDistortion: 0.4f,
                     sclPreserveVolume: true,
@@ -309,8 +311,8 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 0.33f,
-                    posDamping: 0.33f,
+                    posSpring: 1,
+                    posDamping: 20,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -322,7 +324,8 @@ namespace AniMorph
                     rotDamping: 0.33f,
                     rotRate: 1f,
 
-                    sclStr: 14f,
+                    sclSpring: 1f,
+                    sclDamping: 0.67f,
                     sclDistortion: 0.33f,
                     sclRate: 2f,
                     sclPreserveVolume: true,
@@ -419,8 +422,8 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 21f,
-                    posDamping: 0.5f,
+                    posSpring: 1,
+                    posDamping: 20,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -437,7 +440,8 @@ namespace AniMorph
                     //AngularApplicationMaster: (Axis)0,
                     //AngularApplicationSlave: Axis.X | Axis.Y | Axis.Z,
 
-                    sclStr: 30f,
+                    sclSpring: 1f,
+                    sclDamping: 0.67f,
                     sclRate: 10f,
                     sclDistortion: 0.4f,
                     sclPreserveVolume: true,
@@ -477,8 +481,8 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.125f,
                     noiseAmplitudeScl: 0f,
 
-                    posSpring: 30f,
-                    posDamping: 0.2f,
+                    posSpring: 1,
+                    posDamping: 20,
                     posShockStr: 1f,
                     posShockThreshold: 0.15f,
                     posFreezeThreshold: 0.25f,
@@ -490,7 +494,8 @@ namespace AniMorph
                     rotDamping: null,
                     rotRate: null,
 
-                    sclStr: 40f,
+                    sclSpring: 1f,
+                    sclDamping: 0.67f,
                     sclRate: 8f,
                     sclDistortion: 0.5f,
                     sclPreserveVolume: true,
@@ -645,7 +650,7 @@ namespace AniMorph
         {
             private const float _ceil =
 #if DEBUG
-                2f
+                3f
 #else
                 1f
 #endif
@@ -664,7 +669,7 @@ namespace AniMorph
                 //Axis noiseSclAxes,
 
                 float posSpring,
-                float posDamping,
+                int posDamping,
                 float posShockStr,
                 float posShockThreshold,
                 float posFreezeThreshold,
@@ -682,7 +687,8 @@ namespace AniMorph
                 float? rotDamping = null,
                 float? rotRate = null,
 
-                float? sclStr = null,
+                float? sclSpring = null,
+                float? sclDamping = null,
                 float? sclRate = null,
                 float? sclDistortion = null,
                 bool? sclPreserveVolume = null,
@@ -736,7 +742,7 @@ namespace AniMorph
 
 
                 var isRotation = rotSpring != null && rotDamping != null && rotRate != null;
-                var isScl = sclStr != null && sclDistortion != null && sclRate != null && sclPreserveVolume != null;
+                var isScl = sclSpring != null && sclDamping != null && sclDistortion != null && sclRate != null && sclPreserveVolume != null;
                 var isTether = tetherMultiplier != null && tetherFrequency != null && tetherDamping != null && tetherMaxDeg != null;
                 var isPosOffset = posOffsetPitchFaceDown != null && posOffsetPitchUpsideDown != null && posOffsetRoll != null;
                 var isRotOffset = rotOffsetRollDeg != null && rotOffsetRollFaceUpFactor != null;
@@ -745,17 +751,20 @@ namespace AniMorph
                 if (noiseAmplitudePos != null)
                 {
                     NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", (float)noiseAmplitudePos,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), 
+                        new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
                 }
                 if (noiseAmplitudeRot != null)
                 {
                     NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", (float)noiseAmplitudeRot,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), 
+                        new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
                 }
                 if (noiseAmplitudeScl != null)
                 {
                     NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", (float)noiseAmplitudeScl,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
+                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), 
+                        new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
                 }
 
 
@@ -772,10 +781,13 @@ namespace AniMorph
 
                 PosSpring = config.Bind(name, "PosSpring", posSpring,
                     new ConfigDescription("Strength of the positional lag.",
-                    new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
+                    //(0.1..5)
+                    null/*new AcceptableValueRange<float>(0.1f, 1f)*/, new ConfigurationManagerAttributes { Order = order - 15, ShowRangeAsPercent = false }));
 
                 PosDamping = config.Bind(name, "PosDamping", posDamping,
-                    new ConfigDescription("Strength of negation of the positional lag.", new AcceptableValueRange<float>(0.1f, _ceil), new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
+                    new ConfigDescription("Strength of negation of the positional lag.", 
+                    // (1..50)
+                    null/*new AcceptableValueRange<float>(0.1f, 100F)*/, new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
                 PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
                     new ConfigDescription("Shock introduces huge velocity impacts that quickly bleed out.\n" +
@@ -783,43 +795,52 @@ namespace AniMorph
                     null, new ConfigurationManagerAttributes { Order = order - 21 }));
 
                 PosShockThreshold = config.Bind(name, "PosShockThreshold", posShockThreshold,
-                    new ConfigDescription("Shock allows for extreme offsets when velocities change drastically. Set 0 to disable.", null, new ConfigurationManagerAttributes { Order = order - 22 }));
+                    new ConfigDescription("Shock allows for extreme offsets when velocities change drastically. Set 0 to disable.", null,
+                    new ConfigurationManagerAttributes { Order = order - 22 }));
 
                 PosFreezeThreshold = config.Bind(name, "PosFreezeThreshold", posFreezeThreshold,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 23, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
+                    new ConfigurationManagerAttributes { Order = order - 23, ShowRangeAsPercent = false }));
 
                 PosFreezeLen = config.Bind(name, "PosFreezeLen", posFreezeLen,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 24, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
+                    new ConfigurationManagerAttributes { Order = order - 24, ShowRangeAsPercent = false }));
 
                 // (2-3 .. 8-12)
                 PosBleedStr = config.Bind(name, "PosBleedStr", posBleedStr,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 15f), new ConfigurationManagerAttributes { Order = order - 25, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 15f), 
+                    new ConfigurationManagerAttributes { Order = order - 25, ShowRangeAsPercent = false }));
 
                 PosBleedLen = config.Bind(name, "PosBleedLen", posBleedLen,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), new ConfigurationManagerAttributes { Order = order - 26, ShowRangeAsPercent = false }));
+                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
+                    new ConfigurationManagerAttributes { Order = order - 26, ShowRangeAsPercent = false }));
 
 
                 if (isRotation)
                 {
                     RotSpring = config.Bind(name, "Rotation Spring", (float)rotSpring,
                         new ConfigDescription("The smaller the value, the greater the rotational lag.",
-                        new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
+                        null/*new AcceptableValueRange<float>(0.1f, 3f)*/, new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
 
                     RotDamping = config.Bind(name, "Rotation Damping", (float)rotDamping,
                         new ConfigDescription("The smaller the value, the lesser the negation of rotational lag.",
-                        new AcceptableValueRange<float>(0.1f, 2f), new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
+                        null/*new AcceptableValueRange<float>(0.1f, 2f)*/, new ConfigurationManagerAttributes { Order = order - 45, ShowRangeAsPercent = false }));
 
                     RotRate = config.Bind(name, "Rotation Rate", (float)rotRate,
                         new ConfigDescription("The rate of change of the rotational lag, measured in degrees per second.", // Probably
-                        new AcceptableValueRange<float>(0.1f, 10f), new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
+                        null/*new AcceptableValueRange<float>(0.1f, 10f)*/, new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
                 }
 
 
                 if (isScl)
                 {
-                    SclStr = config.Bind(name, "Scale Strength", (float)sclStr,
+                    SclSpring = config.Bind(name, "Scale Spring", (float)sclSpring,
                         new ConfigDescription("How much the velocity influences the scale.",
-                        new AcceptableValueRange<float>(0f, 50f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
+                        new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
+
+                    SclDamping = config.Bind(name, "Scale Damping", (float)sclDamping,
+                        new ConfigDescription("",
+                        new AcceptableValueRange<float>(0.1f, _ceil), new ConfigurationManagerAttributes { Order = order - 66, ShowRangeAsPercent = false }));
 
                     SclDistort = config.Bind(name, "Scale Distortion", (float)sclDistortion,
                         new ConfigDescription("How much the scale can change, 1 ± this value.",
@@ -926,7 +947,7 @@ namespace AniMorph
 
             //public ConfigEntry<float> PosGravity;
             public ConfigEntry<float> PosSpring;
-            public ConfigEntry<float> PosDamping;
+            public ConfigEntry<int> PosDamping;
             public ConfigEntry<float> PosShockStr;
             public ConfigEntry<float> PosShockThreshold;
             public ConfigEntry<float> PosFreezeThreshold;
@@ -945,7 +966,8 @@ namespace AniMorph
             //public ConfigEntry<Axis> AngularApplicationSlave;
 
 
-            public ConfigEntry<float> SclStr;
+            public ConfigEntry<float> SclSpring;
+            public ConfigEntry<float> SclDamping;
             public ConfigEntry<float> SclRate;
             public ConfigEntry<float> SclDistort;
             public ConfigEntry<bool> SclPreserveVol;

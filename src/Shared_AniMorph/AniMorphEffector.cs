@@ -887,7 +887,7 @@ namespace AniMorph
             }
 
             foreach (var effect in _effectsToUpdate)
-                effect.UpdateModifier(dt, dtInv, animLenInv);
+                effect.UpdateModifier(dt, dtInv, animLen, animLenInv);
       
 
             if (isNewAnimLoop)
@@ -1080,9 +1080,9 @@ namespace AniMorph
                 this.rotSpringCfg = rotSpringCfg;
                 this.sclSpringCfg = sclSpringCfg;
 
-                this.posDampCfg = posDampCfg;
-                this.rotDampCfg = rotDampCfg;
-                this.sclDampCfg = sclDampCfg;
+                this.posDampingCfg = posDampCfg;
+                this.rotDampingCfg = rotDampCfg;
+                this.sclDampingCfg = sclDampCfg;
 
                 this.dotFlipSign = dotFlipSign;
                 this.dotScl_pos = dotScl_pos;
@@ -1116,9 +1116,9 @@ namespace AniMorph
             internal  float rotSpringCfg;
             internal  float sclSpringCfg;
 
-            internal float posDampCfg;
-            internal float rotDampCfg;
-            internal float sclDampCfg;
+            internal float posDampingCfg;
+            internal float rotDampingCfg;
+            internal float sclDampingCfg;
 
             internal  bool dotFlipSign;
             internal  Vector3 dotScl_pos;
