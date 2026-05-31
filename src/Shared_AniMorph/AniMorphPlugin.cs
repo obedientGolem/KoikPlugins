@@ -33,8 +33,11 @@ namespace AniMorph
 #endif
             ;
         public const string Version = "0.9";
+
+        internal const float OneThird = (1f / 3f);
+        internal const float TwoThirds = (2f / 3f);
+
         internal new static ManualLogSource Logger;
-        public static readonly ClothesKind[] ClothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
 
         public static ConfigEntry<Sex> EnableSex;
         public static ConfigEntry<Scn> EnableScene;
@@ -44,12 +47,14 @@ namespace AniMorph
         public static ConfigEntry<float> DevPosFastCoef;
 
 
-        internal const float OneThird = (1f / 3f);
-        internal const float TwoThirds = (2f / 3f);
 
         public static readonly Dictionary<Body, ConfigType> ConfigDic = [];
 
-        private static readonly Effect[] _effects = Enum.GetValues(typeof(Effect)) as Effect[];
+        internal static readonly ClothesKind[] clothesKindValues = Enum.GetValues(typeof(ClothesKind)) as ClothesKind[];
+
+        internal static readonly Effect[] effectValues = Enum.GetValues(typeof(Effect)) as Effect[];
+
+        internal static readonly Axis[] axisValue = Enum.GetValues(typeof(Axis)) as Axis[];
 
 
         private float _settingChangedTimestamp;
@@ -446,11 +451,6 @@ namespace AniMorph
                     sclDistortion: 0.4f,
                     sclPreserveVolume: true,
 
-                    tetherMultiplier: -3f,
-                    tetherFrequency: 3f,
-                    tetherDamping: 0.3f,
-                    tetherMaxDeg: 30,
-
                     rotOffsetRollDeg: 20,
                     rotOffsetRollFaceUpFactor: 0.15f,
 
@@ -490,9 +490,9 @@ namespace AniMorph
                     posBleedStr: 2f,
                     posBleedLen: 0.1f,
 
-                    rotSpring: null,
-                    rotDamping: null,
-                    rotRate: null,
+                    rotSpring: 1f,
+                    rotDamping: 10f,
+                    rotRate: 3f,
 
                     sclSpring: 1f,
                     sclDamping: 0.67f,
@@ -561,7 +561,7 @@ namespace AniMorph
             {
                 var allowedEffects = kv.Value.allowedEffects;
 
-                foreach (var effect in _effects)
+                foreach (var effect in effectValues)
                 {
                     if ((allowedEffects & effect) == 0)
                     {
@@ -669,7 +669,7 @@ namespace AniMorph
                 //Axis noiseSclAxes,
 
                 float posSpring,
-                int posDamping,
+                float posDamping,
                 float posShockStr,
                 float posShockThreshold,
                 float posFreezeThreshold,
@@ -836,11 +836,11 @@ namespace AniMorph
                 {
                     SclSpring = config.Bind(name, "Scale Spring", (float)sclSpring,
                         new ConfigDescription("How much the velocity influences the scale.",
-                        new AcceptableValueRange<float>(0.1f, 1f), new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
+                        null/*new AcceptableValueRange<float>(0.1f, 1f)*/, new ConfigurationManagerAttributes { Order = order - 65, ShowRangeAsPercent = false }));
 
                     SclDamping = config.Bind(name, "Scale Damping", (float)sclDamping,
                         new ConfigDescription("",
-                        new AcceptableValueRange<float>(0.1f, _ceil), new ConfigurationManagerAttributes { Order = order - 66, ShowRangeAsPercent = false }));
+                        null/*new AcceptableValueRange<float>(0.1f, _ceil)*/, new ConfigurationManagerAttributes { Order = order - 66, ShowRangeAsPercent = false }));
 
                     SclDistort = config.Bind(name, "Scale Distortion", (float)sclDistortion,
                         new ConfigDescription("How much the scale can change, 1 ± this value.",
@@ -848,7 +848,7 @@ namespace AniMorph
 
                     SclRate = config.Bind(name, "Scale Interpolation Speed", (float)sclRate,
                         new ConfigDescription("How fast the scale offset changes.",
-                        new AcceptableValueRange<float>(0f, 10f), new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
+                        null/*new AcceptableValueRange<float>(0f, 10f)*/, new ConfigurationManagerAttributes { Order = order - 75, ShowRangeAsPercent = false }));
 
                     SclPreserveVol = config.Bind(name, "Scale Preserve Volume", (bool)sclPreserveVolume,
                         new ConfigDescription("Keep volume consistent", null, new ConfigurationManagerAttributes { Order = order - 80 }));
@@ -947,7 +947,7 @@ namespace AniMorph
 
             //public ConfigEntry<float> PosGravity;
             public ConfigEntry<float> PosSpring;
-            public ConfigEntry<int> PosDamping;
+            public ConfigEntry<float> PosDamping;
             public ConfigEntry<float> PosShockStr;
             public ConfigEntry<float> PosShockThreshold;
             public ConfigEntry<float> PosFreezeThreshold;

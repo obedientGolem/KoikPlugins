@@ -6,10 +6,11 @@
     <SharedGUID>996ce1ce-371a-48f8-807f-4e9ba8a79df2</SharedGUID>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <Import_RootNamespace>Shared_AvgDT</Import_RootNamespace>
+    <Import_RootNamespace>LBUtils</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)LBUtilsMath.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LBUtilsLateSword.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)LBUtilsPlugin.cs" />
   </ItemGroup>

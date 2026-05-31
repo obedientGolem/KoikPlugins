@@ -318,7 +318,7 @@ namespace AniMorph
                     name:           Spine2,
                     allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl,
                     noiseRotF: new Vector3(1f, 1f, TwoThirds),
-                    noiseRotCfg: 1.5f
+                    noiseRotCfg: 1f + TwoThirds
                     ),
                     [
                         new (
@@ -385,27 +385,25 @@ namespace AniMorph
                             overrideMasterIsParent: true
                             ),
                         new (
+                            // An extra layer of rotational lag/noise gives breast more chaotic, haphazard feel.
                             name:           Bust,
-                            allowedEffects: Effect.Pos | Effect.Rot,
+                            allowedEffects: Effect.Rot,
                             inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: Vector3.one,
                             posAppNegative: new Vector3(1f, 1f, 0f),
                             rotApplication: new Vector3(1f, 1f, 1f),
-                            posSpringCfg:   (1f / 6f),
-                            rotSpringCfg: 2f,
-                            noisePosCfg: 0.5f,
-                            noiseRotCfg: 0.5f
+                            noiseRotCfg: TwoThirds
                             ),
                     ]
             },
             {
                 new (
                     name:           Waist2,
-                    allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl,
+                    allowedEffects: Effect.Pos | Effect.Rot,
                     posAppPositive: Vector3.one,
                     posAppNegative: Vector3.one,
-                    posSpringCfg:   1f,
-                    posDampCfg:     1f // 1f + TwoThirds,
+                    posSpringCfg:   TwoThirds,
+                    posDampingCfg:     1f // 1f + TwoThirds,
                     ),
                     [
                         new (
@@ -413,7 +411,7 @@ namespace AniMorph
                             // so it rotates in place only, as is's the lumbar vertebrae region and they don't really bend.
                             name:           Waist1,
                             allowedEffects: Effect.Pos,
-                            inheritEffects: Effect.Pos | Effect.Rot | Effect.Scl,
+                            inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: Vector3.one,
                             posAppNegative: Vector3.one,
                             posSpringCfg:   TwoThirds,
@@ -422,19 +420,29 @@ namespace AniMorph
                             ),
                         new (
                             name:           ButtL,
-                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.Tether | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                             inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(OneThird, TwoThirds, OneThird),
                             posAppNegative: new Vector3(1f, 1f + OneThird, 1f),
-                            dotFlipSign: true
+                            dotFlipSign:    true,
+                            posSpringCfg:   1f + OneThird,
+                            posDampingCfg:  TwoThirds,
+                            rotSpringCfg:   1f + TwoThirds,
+                            rotDampingCfg:  TwoThirds,
+                            rotRateCfg:     3f
                             ),
                         new (
                             name:           ButtR,
-                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.Tether | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
+                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                             inheritEffects: Effect.Pos | Effect.Rot,
                             posAppPositive: new Vector3(1f, TwoThirds, OneThird),
                             posAppNegative: new Vector3(OneThird, 1f + OneThird, 1f),
-                            dotFlipSign: true
+                            dotFlipSign:    true,
+                            posSpringCfg:   1f + OneThird,
+                            posDampingCfg:  TwoThirds,
+                            rotSpringCfg:   1f + TwoThirds,
+                            rotDampingCfg:  TwoThirds,
+                            rotRateCfg:     3f
                             ),
                         new (
                             name:           Kokan,
@@ -443,7 +451,7 @@ namespace AniMorph
                             posAppPositive: new Vector3(1f, 1f, 1f),
                             posAppNegative: Vector3.one,
                             posSpringCfg:   1f, // TwoThirds,
-                            posDampCfg:     1f //1f + TwoThirds
+                            posDampingCfg:     1f //1f + TwoThirds
                             ),
                         new (
                             name:           Ana,
@@ -458,7 +466,7 @@ namespace AniMorph
 
                         new (
                             name:           Thigh1L,
-                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
                             inheritEffects: Effect.Pos,
                             posAppPositive: new Vector3(1f + OneThird, 1f, 1f + OneThird),
                             posAppNegative: new Vector3(TwoThirds, 1f, 1f + OneThird),
@@ -466,11 +474,12 @@ namespace AniMorph
                             dotScl_pos: new(0f, 0f, 0.0825f),
                             inheritPosF: TwoThirds,
                             overrideMasterIsParent: true,
-                            isLeft: true
+                            isLeft: true,
+                            rotApplication: new Vector3(0f, 1f, 0f)
                             ),
                         new (
                             name:           Thigh2L,
-                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
                             inheritEffects: Effect.Pos,
                             posAppPositive: new Vector3(TwoThirds, 1f, TwoThirds),
                             posAppNegative: new Vector3(TwoThirds, 1f, 1f),
@@ -478,18 +487,20 @@ namespace AniMorph
                             dotScl_pos: new(0f, 0f, 0.0375f),
                             inheritPosF: TwoThirds,
                             overrideMasterIsParent: true,
-                            isLeft: true
+                            isLeft: true,
+                            rotApplication: new Vector3(0f, 1f, 0f)
                             ),
                         new (
                             name:           Thigh3L,
-                            allowedEffects: Effect.Pos | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
+                            allowedEffects: Effect.Pos | Effect.Rot | Effect.Scl | Effect.RotOffset | Effect.SclOffset,
                             posAppPositive: new Vector3(1f, 1f, 1f),
                             posAppNegative: new Vector3(1f, 1f, 1f),
                             sclApplication: new Vector3(OneThird, 0f, OneThird),
                             dotScl_pos: new(0f, 0f, 0.0125f), //0.0625f
                             inheritPosF: OneThird,
                             overrideMasterIsParent: true,
-                            isLeft: true
+                            isLeft: true,
+                            rotApplication: new Vector3(0f, 1f, 0f)
                             ),
                         new (
                             name:           Thigh1R,
@@ -1040,12 +1051,16 @@ namespace AniMorph
                 Effect inheritEffects = Effect.None,
 
                 float posSpringCfg = 1f,
-                float rotSpringCfg = 1f,
-                float sclSpringCfg = 1f,
+                float posDampingCfg = 1f,
+                float posRateCfg = 1f,
 
-                float posDampCfg = 1f,
-                float rotDampCfg = 1f,
-                float sclDampCfg = 1f,
+                float rotSpringCfg = 1f,
+                float rotDampingCfg = 1f,
+                float rotRateCfg = 1f,
+
+                float sclSpringCfg = 1f,
+                float sclDampingCfg = 1f,
+                float sclRateCfg = 1f,
 
                 bool dotFlipSign = false,
                 Vector3 dotScl_pos = new(),
@@ -1076,16 +1091,20 @@ namespace AniMorph
                 this.rotApplication = (rotApplication == Vector3.zero) ? Vector3.one : rotApplication; 
                 this.sclApplication = (sclApplication == Vector3.zero) ? Vector3.one : sclApplication; 
 
-                this.posSpringCfg = posSpringCfg;
-                this.rotSpringCfg = rotSpringCfg;
-                this.sclSpringCfg = sclSpringCfg;
+                this.posSpringCfg   = posSpringCfg;
+                this.posDampingCfg  = posDampingCfg;
+                this.posRateCfg     = posRateCfg;
 
-                this.posDampingCfg = posDampCfg;
-                this.rotDampingCfg = rotDampCfg;
-                this.sclDampingCfg = sclDampCfg;
+                this.rotSpringCfg   = rotSpringCfg;
+                this.rotDampingCfg  = rotDampingCfg;
+                this.rotRateCfg     = rotRateCfg;
 
-                this.dotFlipSign = dotFlipSign;
-                this.dotScl_pos = dotScl_pos;
+                this.sclSpringCfg   = sclSpringCfg;
+                this.sclDampingCfg  = sclDampingCfg;
+                this.sclRateCfg     = sclRateCfg;
+
+                this.dotFlipSign    = dotFlipSign;
+                this.dotScl_pos     = dotScl_pos;
                 
                 this.isLeft = isLeft;
 
@@ -1102,6 +1121,7 @@ namespace AniMorph
                 this.overrideMasterIsParent = overrideMasterIsParent;
 
                 this.initAnimRot = initAnimRot;
+
             }
 
             internal readonly string name;
@@ -1112,13 +1132,17 @@ namespace AniMorph
             internal  Vector3 rotApplication;
             internal  Vector3 sclApplication;
 
-            internal  float posSpringCfg;
-            internal  float rotSpringCfg;
-            internal  float sclSpringCfg;
-
+            internal float posSpringCfg;
             internal float posDampingCfg;
+            internal float posRateCfg;
+
+            internal float rotSpringCfg;
             internal float rotDampingCfg;
+            internal float rotRateCfg;
+
+            internal float sclSpringCfg;
             internal float sclDampingCfg;
+            internal float sclRateCfg;
 
             internal  bool dotFlipSign;
             internal  Vector3 dotScl_pos;
@@ -1138,6 +1162,7 @@ namespace AniMorph
             internal bool? overrideMasterIsParent;
 
             internal bool initAnimRot;
+
         }
 
 

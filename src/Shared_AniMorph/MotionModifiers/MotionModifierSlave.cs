@@ -141,7 +141,6 @@ namespace AniMorph
                 );
 
             posOffset = Vector3.Scale(posOffset, posSignScale);
-            rotOffset = Vector3.Scale(rotOffset, cfg.rotApplication);
 
             var sclApp = cfg.sclApplication;
             sclOffset = new Vector3(
