@@ -1,4 +1,5 @@
 ﻿using KKABMX.Core;
+using LBUtils;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -54,7 +55,9 @@ namespace AniMorph
 
         private int _prevFrameCount;
 #if DEBUG
-        private Effect showDebug;
+        private Effect showDebug_1;
+        private Effect showDebug_2;
+        private Effect showDebug_3;
 #endif
         #endregion
 
@@ -511,7 +514,7 @@ namespace AniMorph
             var springF = springVelCoef * (-cfg.posSpring) * cleanDeltaPos;
             var dampingF = -cfg.posDamping * dt * velocity;
 
-            if ((showDebug & Effect.Pos) != 0) 
+            if ((showDebug_1 & Effect.Pos) != 0) 
                 AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
                     $"velocity({velocity.x:F3},{velocity.y:F3},{velocity.z:F3}) " +
                     $"springF({springF.x:F3},{springF.y:F3},{springF.z:F3}), " +
@@ -593,23 +596,40 @@ namespace AniMorph
                 UpdateRotCollectBaseline(state);
             }
         }
+        private Quaternion prevCleanRot = Quaternion.identity;
 
+        private bool? devOverrideDynamic = null;
+        private float devThighFactor = 1f;
+        private void DevSetDynamicOverride(bool state, bool disable)
+        {
+            if (disable)
+                devOverrideDynamic = null;
+            else
+                devOverrideDynamic = state;
+        }
         protected virtual Vector3 GetRotOffset(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv, float animLen, float animLenInv)
         {
-            var currCleanRot = transform.rotation;
-            var currLocalRot = transform.localRotation;
-            var isDynamic = currLocalRot != prev.localRot;
-                
-            if (isDynamic)
-            {
-                if (!curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
-                    UpdateAnimRot(true);
+            // After god knows how many iterations,
+            // the current sophisticated and hard to understand one works like a charm,
+            // with all the elegance and responsiveness I want from it,
+            // tried to return back to the most basic, dumbed down one but it glitches and ugly,
+            // therefore !!!We Stick With This One!!!, even though modifying it is a huge pain.
 
-                curr.cleanLocalRot = currLocalRot;
-            }
-            else
+            var currCleanRot = transform.rotation;
+
+            var currLocalRot = transform.localRotation;
+            var prevLocalRot = prev.localRot;
+
+            // We want to know if anybody has done anything to this quaternion,
+            // not just ~approx orientation comparison.
+            var isStatic = currLocalRot.x == prevLocalRot.x
+                && currLocalRot.y == prevLocalRot.y
+                && currLocalRot.z == prevLocalRot.z
+                && currLocalRot.w == prevLocalRot.w;
+
+            if (isStatic)
             {
-                if (curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv))
+                if (curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv * devThighFactor))
                     UpdateAnimRot(false);
 
                 var inverseOffset = Quaternion.Inverse(Quaternion.Euler(prev.rotOffset));
@@ -620,44 +640,53 @@ namespace AniMorph
                 //curr.cleanLocalRot = inverseOffset * currLocalRot;
                 curr.cleanLocalRot = currLocalRot * inverseOffset;
             }
-
-            var currCleanRotInverse = Quaternion.Inverse(currCleanRot);
-
-            curr.cleanRotInverse = currCleanRotInverse;
-
-            if (curr.rotFreezeTime > 0f)
+            else
             {
-                curr.rotFreezeTime -= dt;
+                if (!curr.animRot && ConsecutiveFrameCounter++ > (int)((2f / 60f) * dtInv * devThighFactor))
+                    UpdateAnimRot(true);
 
-                var prevTorque = prev.torque;
-
-                prevTorque += prevTorque * (-cfg.rotDamping * dt);
-
-                prev.torque = prevTorque;
-
-                return (curr.cleanRotInverse * prev.adjustedRot).eulerAngles;
+                curr.cleanLocalRot = currLocalRot;
             }
 
-            // Global delta between clean current rotation and rotation we setup in the previous frame.
-            var delta = currCleanRot * Quaternion.Inverse(prev.adjustedRot);
+            var currCleanRotInv = Quaternion.Inverse(currCleanRot);
 
-            var torque = Vector3.zero;
             var absAngle = 0f;
 
             if (cfg.rotAxes == Axis.None)
             {
-                torque = GetRotTorque(ref cfg, ref curr, ref prev, dt, animLen, delta, out absAngle);
+                // --- Frozen ---
 
+                if (curr.rotFreezeTime > 0f)
+                {
+                    curr.rotFreezeTime -= dt;
+
+                    var prevTorque = prev.torque;
+
+                    prevTorque += prevTorque * (-cfg.rotDamping * dt);
+
+                    prev.torque = prevTorque;
+
+                    return (currCleanRotInv * prev.adjustedRot).eulerAngles;
+                }
+
+
+                // --- Normal ---
+
+                // Global delta between clean current rotation and rotation we setup in the previous frame.
+                var delta = currCleanRot * Quaternion.Inverse(prev.adjustedRot);
+
+                var torque = GetRotTorque(ref cfg, ref curr, ref prev, dt, animLen, delta, out absAngle);
 
                 //var rot = angVelocityLen == 0f ?
                 //    prev.adjustedRot :
                 //    Quaternion.AngleAxis(angVelocityLen * dt * cfg.rotRate, angVel * (1f / angVelocityLen)) * prev.adjustedRot;
-                var adjustedRot = Quaternion.Euler(torque * (dt * config.rotRate)) * prev.adjustedRot;
+                var adjustedRot = Quaternion.Euler(torque * dt * cfg.rotRate) * prev.adjustedRot;
+
 
                 prev.adjustedRot = adjustedRot;
                 prev.torque = torque;
 
-                var result = currCleanRotInverse * adjustedRot;
+                var result = currCleanRotInv * adjustedRot;
 
                 if (absAngle > 45f)
                 {
@@ -671,33 +700,116 @@ namespace AniMorph
                 }
                 var resultEuler = result.eulerAngles;
 
+#if DEBUG
+                if ((showDebug_1 & Effect.Rot) != 0)
+                {
+                    var devAdjRotEuler = adjustedRot.eulerAngles;
+                    devAdjRotEuler = new Vector3(
+                        devAdjRotEuler.x > 180f ? devAdjRotEuler.x - 360f : devAdjRotEuler.x,
+                        devAdjRotEuler.y > 180f ? devAdjRotEuler.y - 360f : devAdjRotEuler.y,
+                        devAdjRotEuler.z > 180f ? devAdjRotEuler.z - 360f : devAdjRotEuler.z
+                        );
+
+                    var devTorque = torque * (dt * cfg.rotRate);
+                    devTorque = new Vector3(
+                        devTorque.x > 180f ? devTorque.x - 360f : devTorque.x,
+                        devTorque.y > 180f ? devTorque.y - 360f : devTorque.y,
+                        devTorque.z > 180f ? devTorque.z - 360f : devTorque.z
+                        );
+
+                    var devCleanRotEuler = currCleanRot.eulerAngles;
+                    devCleanRotEuler = new Vector3(
+                        devCleanRotEuler.x > 180f ? devCleanRotEuler.x - 360f : devCleanRotEuler.x,
+                        devCleanRotEuler.y > 180f ? devCleanRotEuler.y - 360f : devCleanRotEuler.y,
+                        devCleanRotEuler.z > 180f ? devCleanRotEuler.z - 360f : devCleanRotEuler.z
+                        );
+
+                    var devResultEuler = new Vector3(
+                        resultEuler.x > 180f ? resultEuler.x - 360f : resultEuler.x,
+                        resultEuler.y > 180f ? resultEuler.y - 360f : resultEuler.y,
+                        resultEuler.z > 180f ? resultEuler.z - 360f : resultEuler.z
+                        );
+
+                    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
+                        $"torqueF({devTorque.x:F2}, {devTorque.y:F2}, {devTorque.z:F2}) " +
+                        $"adjustedRot({devAdjRotEuler.x:F2}, {devAdjRotEuler.y:F2}, {devAdjRotEuler.z:F2}) " +
+                        $"cleanRot({devCleanRotEuler.x:F2}, {devCleanRotEuler.y:F2}, {devCleanRotEuler.z:F2}) " +
+                        $"result({devResultEuler.x:F2}, {devResultEuler.y:F2}, {devResultEuler.z:F2}) " +
+                        $"absAngle[{absAngle:F3}] " +
+                        $"");
+                }
+#endif
+
                 return resultEuler;
             }
             else
             {
+                // Global delta between clean current rotation and rotation we setup in the previous frame.
+                var delta = currCleanRot * Quaternion.Inverse(prev.adjustedRot);
+
                 foreach (var axis in axisValue)
                 {
                     if ((cfg.rotAxes & axis) != 0)
                     {
                         var idx = (int)axis >> 1;
 
-                        torque[idx] = GetAxialTorque(ref cfg, ref curr, ref prev, idx, dt, animLen, delta, out var tempAbsAngle);
-                        
-                        absAngle += tempAbsAngle;
+                        delta = GetAxialTorque(ref cfg, ref curr, ref prev, idx, dt, animLen, delta);
                     }
                 }
 
-                //absAngle *= cfg.rotActiveAxesInv;
+                var adjustedRot = delta * prev.adjustedRot;
 
-
-                var adjustedRot = prev.adjustedRot * Quaternion.Euler(torque * (dt * config.rotRate));
-
-                prev.adjustedRot = adjustedRot;
-                prev.torque = torque;
-
-                var result = currCleanRotInverse * adjustedRot;
+                var result = currCleanRotInv * adjustedRot;
 
                 var resultEuler = result.eulerAngles;
+#if DEBUG
+                if ((showDebug_1 & Effect.Rot) != 0)
+                {
+                    var devAdjRotEuler = adjustedRot.eulerAngles;
+                    devAdjRotEuler = new Vector3(
+                        devAdjRotEuler.x > 180f ? devAdjRotEuler.x - 360f : devAdjRotEuler.x,
+                        devAdjRotEuler.y > 180f ? devAdjRotEuler.y - 360f : devAdjRotEuler.y,
+                        devAdjRotEuler.z > 180f ? devAdjRotEuler.z - 360f : devAdjRotEuler.z
+                        );
+
+                    var devCleanRotEuler = currCleanRot.eulerAngles;
+                    devCleanRotEuler = new Vector3(
+                        devCleanRotEuler.x > 180f ? devCleanRotEuler.x - 360f : devCleanRotEuler.x,
+                        devCleanRotEuler.y > 180f ? devCleanRotEuler.y - 360f : devCleanRotEuler.y,
+                        devCleanRotEuler.z > 180f ? devCleanRotEuler.z - 360f : devCleanRotEuler.z
+                        );
+
+                    var devResultEuler = new Vector3(
+                        resultEuler.x > 180f ? resultEuler.x - 360f : resultEuler.x,
+                        resultEuler.y > 180f ? resultEuler.y - 360f : resultEuler.y,
+                        resultEuler.z > 180f ? resultEuler.z - 360f : resultEuler.z
+                        );
+
+                    var prevAdjRotEuler = prev.adjustedRot.eulerAngles;
+                    prevAdjRotEuler = new Vector3(
+                        prevAdjRotEuler.x > 180f ? prevAdjRotEuler.x - 360f : prevAdjRotEuler.x,
+                        prevAdjRotEuler.y > 180f ? prevAdjRotEuler.y - 360f : prevAdjRotEuler.y,
+                        prevAdjRotEuler.z > 180f ? prevAdjRotEuler.z - 360f : prevAdjRotEuler.z
+                        );
+
+                    var deltaEuler = delta.eulerAngles;
+                    deltaEuler = new Vector3(
+                        deltaEuler.x > 180f ? deltaEuler.x - 360f : deltaEuler.x,
+                        deltaEuler.y > 180f ? deltaEuler.y - 360f : deltaEuler.y,
+                        deltaEuler.z > 180f ? deltaEuler.z - 360f : deltaEuler.z
+                        );
+
+                    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
+                        $"adjustedRot({devAdjRotEuler.x:F2}, {devAdjRotEuler.y:F2}, {devAdjRotEuler.z:F2}) " +
+                        $"cleanRot({devCleanRotEuler.x:F2}, {devCleanRotEuler.y:F2}, {devCleanRotEuler.z:F2}) " +
+                        $"deltaEuler({deltaEuler.x:F2}, {deltaEuler.y:F2}, {deltaEuler.z:F2}) " +
+                        $"delta({delta.x:F2}, {delta.y:F2}, {delta.z:F2}, {delta.w:F2}) " +
+                        $"prevAdjRot({prevAdjRotEuler.x:F2}, {prevAdjRotEuler.y:F2}, {prevAdjRotEuler.z:F2}) " +
+                        $"");
+                }
+#endif
+
+                prev.adjustedRot = adjustedRot;
 
                 return resultEuler;
             }
@@ -724,7 +836,6 @@ namespace AniMorph
 
             if (!float.IsInfinity(axis.x))
             {
-
                 var deltaAngVel = axis * (angle * angleFactorInc);
 
                 //var slowLerp = 1f - FastExp(-cfg.rotSlowSmooth * dt);
@@ -733,14 +844,14 @@ namespace AniMorph
                 var slowLerp = cfg.rotSlowSmooth * dt;
                 var fastLerp = cfg.rotFastSmooth * dt;
 
-                prev.slowRotDelta = Vector3.Lerp(prev.slowRotDelta, deltaAngVel, slowLerp);
-                prev.fastRotDelta = Vector3.Lerp(prev.fastRotDelta, deltaAngVel, fastLerp);
+                prev.rotSlowDelta = Vector3.Lerp(prev.rotSlowDelta, deltaAngVel, slowLerp);
+                prev.rotFastDelta = Vector3.Lerp(prev.rotFastDelta, deltaAngVel, fastLerp);
 
                 //var highFreqDelta = prev.fastRotDelta - prev.slowRotDelta;
 
                 var targetVel = Vector3.Lerp(
-                    prev.slowRotDelta,
-                    prev.fastRotDelta,
+                    prev.rotSlowDelta,
+                    prev.rotFastDelta,
                     cfg.rotHighFreqInf
                 );
                 //accel = cfg.rotSpring * (targetVel - angVel);
@@ -773,7 +884,7 @@ namespace AniMorph
                     curr.rotFreezeTime = cfg.rotFreezeTime * animLen * freezeAngFactor;
                     //Time.timeScale = 0f;
 
-                    if ((showDebug & Effect.Rot) != 0)
+                    if ((showDebug_1 & Effect.Rot) != 0)
                         AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetRotOffset: " +
                             $"RotFreeze! " +
                             $"freezeTime[{curr.rotFreezeTime:F3} absAngle[{absAngle:F3}]");
@@ -784,15 +895,15 @@ namespace AniMorph
                 curr.highTorque = true;
             }
 
-            if ((showDebug & Effect.Rot) != 0)
-                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
-                    $"torqueDot[{torqueDot:F3}] absAngle[{absAngle:F3}] " +
-                    $"factorInc[{angleFactorInc:F3}] factorDec[{angleFactorDec:F3}]");
+            //if ((showDebug & Effect.Rot) != 0)
+            //    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
+            //        $"torqueDot[{torqueDot:F3}] absAngle[{absAngle:F3}] " +
+            //        $"factorInc[{angleFactorInc:F3}] factorDec[{angleFactorDec:F3}]");
 
             return torque;
         }
 
-        private float GetAxialTorque(ref Config cfg, ref Current curr, ref Previous prev, int idx, float dt, float animLen, Quaternion delta, out float absAngle)
+        private Quaternion GetAxialTorque(ref Config cfg, ref Current curr, ref Previous prev, int idx, float dt, float animLen, Quaternion delta) //, out float absAngle)
         {
             var axis = idx switch
             {
@@ -802,116 +913,179 @@ namespace AniMorph
                 _ => throw new NotImplementedException(nameof(idx))
             };
 
-            delta = ExtractTwist(delta, axis);
+            var twist = ExtractTwist(delta, axis);
 
-            var deltaEuler = delta.eulerAngles;
+            var swing = delta * Quaternion.Inverse(twist);
 
-            var angle = deltaEuler[idx];
+            twist.ToAngleAxis(out var angle, out var twistAxis);
 
             if (angle > 180f)
                 angle -= 360f;
 
-            absAngle = Mathf.Abs(angle);
-            var accel = 0f;
-            var torque = prev.torque[idx];
+            var absAngle = Math.Abs(angle);
+            var accel = Vector3.zero;
+            var torque = prev.axialTorque[idx];
 
-            var angleFactorDec = 1f + (absAngle * dt);
+            var angleFactorDec = 1f; // 1f + (absAngle * dt);
+            //angleFactorDec = 1f / (angleFactorDec * angleFactorDec);
 
-            angleFactorDec = 1f / (angleFactorDec * angleFactorDec);
+            var angleFactorInc = 1f; // FastExp(absAngle * dt);
 
-            var angleFactorInc = FastExp(absAngle * dt);
-
-
-            // --- Filter corruption & Apply acceleration ---
-
-            if (absAngle > 0f)
+            if (!float.IsInfinity(twistAxis.x))
             {
-                var angVel = angle * angleFactorInc;
+                var angVel = twistAxis * (angle * angleFactorInc);
 
-                //var slowLerp = 1f - FastExp(-cfg.rotSlowSmooth * dt);
-                //var fastLerp = 1f - FastExp(-cfg.rotFastSmooth * dt);
+                var slowDelta = Vector3.Lerp(prev.rotAxialSlowDelta[idx], angVel, cfg.rotSlowSmooth * dt);
+                var fastDelta = Vector3.Lerp(prev.rotAxialFastDelta[idx], angVel, cfg.rotFastSmooth * dt);
 
-                var slowLerp = cfg.rotSlowSmooth * dt;
-                var fastLerp = cfg.rotFastSmooth * dt;
+                var targetVel = Vector3.Lerp(slowDelta, fastDelta, cfg.rotHighFreqInf);
 
-                var prevSlowRotDelta = prev.slowRotDelta[idx];
-                var prevFastRotDelta = prev.fastRotDelta[idx];
-
-                prevSlowRotDelta = Mathf.Lerp(prevSlowRotDelta, angVel, slowLerp);
-                prevFastRotDelta = Mathf.Lerp(prevFastRotDelta, angVel, fastLerp);
-
-                //var highFreqDelta = prev.fastRotDelta - prev.slowRotDelta;
-
-                var targetVel = Mathf.Lerp(
-                    prevSlowRotDelta,
-                    prevFastRotDelta,
-                    cfg.rotHighFreqInf
-                );
-                //accel = cfg.rotSpring * (targetVel - angVel);
                 accel = cfg.rotSpring * targetVel;
 
-                prev.slowRotDelta[idx] = prevSlowRotDelta;
-                prev.fastRotDelta[idx] = prevFastRotDelta;
+                prev.rotAxialSlowDelta[idx] = slowDelta;
+                prev.rotAxialFastDelta[idx] = fastDelta;
             }
 
-            if (cfg.noiseRotAmpl != 0f)
-            {
-                accel += cfg.noiseRotFactor[idx] * GerPerlinNum(
-                    cfg.noiseRotVec[idx],
-                    cfg.noiseRotAmpl * curr.noiseAmplFactor,
-                    curr.noiseFreqStep,
-                    out var noiseRotNum,
-                    idx
-                    );
+            //if (noise)
 
-                cfg.noiseRotVec[idx] = noiseRotNum;
-            }
-
-            var dampingF = torque * (-cfg.rotDamping * dt * (-angleFactorDec + 2f));
+            var dampingF = torque * (-cfg.rotDamping * dt); // * (-angleFactorDec + 2f));
 
             torque += accel + dampingF;
 
-            var torqueDot = torque * prev.torque[idx];
+            prev.axialTorque[idx] = torque;
 
-            if (curr.highTorque)
+            var result =
+#if KK
+                LBUtilsMath.Normalize(swing * Quaternion.Euler(torque * (dt * cfg.rotRate)));
+#else
+                Quaternion.Normalize(swing * Quaternion.Euler(torque * (dt * cfg.rotRate)));
+#endif
+
+            if ((showDebug_2 & Effect.Rot) != 0)
             {
-                if (torqueDot < 1f)
-                {
-                    curr.highTorque = false;
-                    var freezeAngFactor = absAngle * (1f / 45f);
-                    curr.rotFreezeTime = cfg.rotFreezeTime * animLen * freezeAngFactor;
-                    //Time.timeScale = 0f;
+                var twistEuler = twist.eulerAngles;
+                var swingEuler = swing.eulerAngles;
+                var deltaEuler = delta.eulerAngles;
+                var resultEuler = result.eulerAngles;
 
-                    if ((showDebug & Effect.Rot) != 0)
-                        AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetRotOffset: " +
-                            $"RotFreeze! " +
-                            $"freezeTime[{curr.rotFreezeTime:F3} absAngle[{absAngle:F3}]");
-                }
+                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetAxialTorque: " +
+                    $"twistEuler({twistEuler.x:F2}, {twistEuler.y:F2}, {twistEuler.z:F2}) " +
+                    $"twist({twist.x:F2}, {twist.y:F2}, {twist.z:F2}, {twist.w:F2}) " +
+                    $"swingEuler({swingEuler.x:F2}, {swingEuler.y:F2}, {swingEuler.z:F2}) " +
+                    $"swing({swing.x:F2}, {swing.y:F2}, {swing.z:F2}, {swing.w:F2}) " +
+                    $"deltaEuler({deltaEuler.x:F2}, {deltaEuler.y:F2}, {deltaEuler.z:F2}) " +
+                    $"axis({axis.x:F2}, {axis.y:F2}, {axis.z:F2}) " +
+                    $"torque({torque.x:F2}, {torque.y:F2}, {torque.z:F2}) " +
+                    $"twistAxis({twistAxis.x:F2}, {twistAxis.y:F2}, {twistAxis.z:F2}) " +
+                    $"resultEuler({resultEuler.x:F2}, {resultEuler.y:F2}, {resultEuler.z:F2}) " +
+                    $"result({result.x:F2}, {result.y:F2}, {result.z:F2}, {result.w:F2}) " +
+                    $"angle[{angle:F2}] " +
+                    $"");
             }
-            else if (torqueDot > 500f)
-            {
-                curr.highTorque = true;
-            }
 
-            if ((showDebug & Effect.Rot) != 0)
-                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
-                    $"torque[{torque:F3}] " +
-                    $"torqueDot[{torqueDot:F3}] absAngle[{absAngle:F3}] " +
-                    $"factorInc[{angleFactorInc:F3}] factorDec[{angleFactorDec:F3}]");
+            return result;
 
-            return torque;
+            //// --- Filter corruption & Apply acceleration ---
+
+            //if (!isActive) return 
+
+            //if (absAngle > 0f)
+            //{
+            //    var angVel = angle * 1f;// angleFactorInc;
+
+            //    //var slowLerp = 1f - FastExp(-cfg.rotSlowSmooth * dt);
+            //    //var fastLerp = 1f - FastExp(-cfg.rotFastSmooth * dt);
+
+            //    var slowLerp = cfg.rotSlowSmooth * dt;
+            //    var fastLerp = cfg.rotFastSmooth * dt;
+
+            //    var prevSlowRotDelta = prev.rotSlowDelta[idx];
+            //    var prevFastRotDelta = prev.rotFastDelta[idx];
+
+            //    prevSlowRotDelta = Mathf.Lerp(prevSlowRotDelta, angVel, slowLerp);
+            //    prevFastRotDelta = Mathf.Lerp(prevFastRotDelta, angVel, fastLerp);
+
+            //    //var highFreqDelta = prev.fastRotDelta - prev.slowRotDelta;
+
+            //    var targetVel = Mathf.Lerp(
+            //        prevSlowRotDelta,
+            //        prevFastRotDelta,
+            //        cfg.rotHighFreqInf
+            //    );
+            //    //accel = cfg.rotSpring * (targetVel - angVel);
+            //    accel = cfg.rotSpring * targetVel;
+
+            //    prev.rotSlowDelta[idx] = prevSlowRotDelta;
+            //    prev.rotFastDelta[idx] = prevFastRotDelta;
+            //}
+
+            //if (cfg.noiseRotAmpl != 0f)
+            //{
+            //    accel += cfg.noiseRotFactor[idx] * GerPerlinNum(
+            //        cfg.noiseRotVec[idx],
+            //        cfg.noiseRotAmpl * curr.noiseAmplFactor,
+            //        curr.noiseFreqStep,
+            //        out var noiseRotNum,
+            //        idx
+            //        );
+
+            //    cfg.noiseRotVec[idx] = noiseRotNum;
+            //}
+
+            //var dampingF = torque * (-cfg.rotDamping * dt * 1f); // (-angleFactorDec + 2f));
+
+            //torque += accel + dampingF;
+
+            ////var torqueDot = torque * prev.torque[idx];
+
+            ////if (curr.highTorque)
+            ////{
+            ////    if (torqueDot < 1f)
+            ////    {
+            ////        curr.highTorque = false;
+            ////        var freezeAngFactor = absAngle * (1f / 45f);
+            ////        curr.rotFreezeTime = cfg.rotFreezeTime * animLen * freezeAngFactor;
+            ////        //Time.timeScale = 0f;
+
+            ////        if ((showDebug & Effect.Rot) != 0)
+            ////            AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetRotOffset: " +
+            ////                $"RotFreeze! " +
+            ////                $"freezeTime[{curr.rotFreezeTime:F3} absAngle[{absAngle:F3}]");
+            ////    }
+            ////}
+            ////else if (torqueDot > 500f)
+            ////{
+            ////    curr.highTorque = true;
+            ////}
+
+            ////if ((showDebug & Effect.Rot) != 0)
+            ////    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetRotOffset: " +
+            ////        $"torque[{torque:F3}] " +
+            ////        //$"torqueDot[{torqueDot:F3}] " +
+            ////        $"absAngle[{absAngle:F3}] " +
+            ////        $"factorInc[{angleFactorInc:F3}] factorDec[{angleFactorDec:F3}]");
+
+            //return torque;
+        }
+
+        /// <param name="axis">A normalized vector.</param>
+        private void SwingTwistDecomposition(Quaternion q, Vector3 axis, out Quaternion swing, out Quaternion twist)
+        {
+            twist = ExtractTwist(q, axis);
+
+            swing = q * Quaternion.Inverse(twist);
         }
 
         private Quaternion ExtractTwist(Quaternion q, Vector3 axis)
         {
             var r = new Vector3(q.x, q.y, q.z);
 
-            var projected = Vector3.Project(r, axis);
+            var proj = Vector3.Project(r, axis);
 
             var twist = new Quaternion(
-                projected.x,
-                projected.y,
-                projected.z,
+                proj.x,
+                proj.y,
+                proj.z,
                 q.w
             );
 #if KK
@@ -922,7 +1096,7 @@ namespace AniMorph
         }
 
 
-        #endregion
+#endregion
 
 
         #region Scale
@@ -1082,7 +1256,7 @@ namespace AniMorph
 
             driver += springF + dampingF;
 #if DEBUG
-            if ((showDebug & Effect.Scl) != 0)
+            if ((showDebug_1 & Effect.Scl) != 0)
                 AniMorphPlugin.Logger.LogDebug($"[{transform.name}] " +
                     $"driver({driver.x:F3},{driver.y:F3},{driver.z:F3}) " +
                     $"springF({springF.x:F3},{springF.y:F3},{springF.z:F3}), " +
@@ -1339,7 +1513,7 @@ namespace AniMorph
         {
             ConsecutiveFrameCounter = 0;
 #if DEBUG
-            AniMorphPlugin.Logger.LogWarning($"[{transform.name}] [UpdateDynamicRot] isDynamic[{dynamic}]");
+            AniMorphPlugin.Logger.LogInfo($"[{transform.name}] [UpdateDynamicRot] isDynamic[{dynamic}]");
 #endif
             if (_boneController == null)
             {
@@ -1432,26 +1606,27 @@ namespace AniMorph
 
                 cfg.rotAxes = Axis.None;
 
-                var activeAxes = 0;
                 var rotAxes = baseCfg.rotApplication;
-
-                for (var i = 0; i < 3; i++)
+                if (rotAxes != vecOne)
                 {
-                    if (rotAxes[i] == 0f) continue;
+                    var activeAxes = 0;
 
-                    activeAxes++;
-                    cfg.rotAxes |= (Axis)(1 << i);
+                    for (var i = 0; i < 3; i++)
+                    {
+                        // Deactivated axis
+                        if (rotAxes[i] == 0f) continue;
+
+                        activeAxes++;
+                        cfg.rotAxes |= (Axis)(1 << i);
+                    }
+
+                    // Can't happen, but just in case.
+                    if (activeAxes == 0)
+                        cfg.effects &= ~Effect.Rot;
+                    else
+                        cfg.rotActiveAxesInv = 1f / activeAxes;
                 }
 
-                // All axes are active.
-                if (activeAxes == 3)
-                {
-                    cfg.rotAxes = Axis.None;
-                }
-                else
-                {
-                    cfg.rotActiveAxesInv = 1f / activeAxes;
-                }
             }
 
             if (isScl)
@@ -2025,7 +2200,6 @@ namespace AniMorph
             internal float noiseAmplFactor;
             internal float noiseFreqStep;
             internal Quaternion cleanLocalRot;
-            internal Quaternion cleanRotInverse;
 
             internal bool shock;
             internal bool bleed;
@@ -2088,6 +2262,7 @@ namespace AniMorph
             internal float velocityLen;
 
             internal Vector3 torque;
+            internal Vector3[] axialTorque = new Vector3[3];
 
 
             // --- Scale ---
@@ -2118,14 +2293,19 @@ namespace AniMorph
             //internal Quaternion rotAdjustment;
             //internal Vector3 rotModifier;
             internal Quaternion adjustedRot;
+            internal bool rotOffsetIsEmpty;
             internal Vector3 localPos;
             internal Quaternion localRot;
 
-            internal float sclTotalAccel;
-            internal float sclTotalDecel;
+            //internal float sclTotalAccel;
+            //internal float sclTotalDecel;
 
-            internal Vector3 slowRotDelta;
-            internal Vector3 fastRotDelta;
+            internal Vector3 rotSlowDelta;
+            internal Vector3 rotFastDelta;
+
+            internal Vector3[] rotAxialSlowDelta = new Vector3[3];
+            internal Vector3[] rotAxialFastDelta = new Vector3[3];
+
 
             internal void Clear(Transform bone)
             {
@@ -2141,12 +2321,13 @@ namespace AniMorph
                 adjustedRot = bone.rotation;
                 scl = Vector3.one;
                 sclDriver = Vector3.zero;
-                sclTotalAccel = 0f;
-                sclTotalDecel = 0f;
+                //sclTotalAccel = 0f;
+                //sclTotalDecel = 0f;
 
                 cleanDeltaPos = Vector3.zero;
                 cleanVelDelta = Vector3.zero;
                 cleanDeltaPosLen = 0f;
+
             }
 
         }
