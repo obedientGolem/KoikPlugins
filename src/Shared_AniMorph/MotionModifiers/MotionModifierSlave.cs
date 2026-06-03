@@ -7,8 +7,9 @@ using System.Reflection;
 using System.Text;
 using UnityEngine;
 using static AniMorph.AniMorphEffector;
-using static AniMorph.MotionModifier;
 using static AniMorph.AniMorphPlugin;
+using static AniMorph.MotionModifier;
+using static Illusion.Utils;
 
 namespace AniMorph
 {
@@ -46,7 +47,7 @@ namespace AniMorph
 
             float dotUp, float dotR, float dotFwd, 
 
-            float dt, float dtInv, float animLen, float animLenInv, 
+            float dt, float dtInv, float animSpeed, float animSpeedInv, 
 
             Vector3 posOffset, Vector3 posOffsetRot, Vector3 rotOffset, Vector3 sclOffset
             )
@@ -92,29 +93,29 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * curr.avgPosLen * 15f));
-            curr.noiseFreqStep = cfg.noiseFreq * animLenInv * dt;
+            curr.noiseAmplFactor = animSpeed * Mathf.Min(1f, curr.posAvgLen * (1f + TwoThirds));
+            curr.noiseFreqStep = cfg.noiseFreq * animSpeed * dt;
 
 
             // --- Update Offsets ---
 
-            UpdatePosTracking(ref prev, ref curr);
-            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv, animLen);
+            UpdatePosTracking(ref prev, ref curr, dtInv);
+            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Pos) != 0)
-                posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+                posOffset += GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animSpeed, animSpeedInv);
 
             if ((effects & Effect.Rot) != 0)
-                rotOffset += GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLen, animLenInv);
+                rotOffset += GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animSpeed, animSpeedInv);
             else
                 // Required for correct application of local position.
-                curr.cleanLocalRot = GetCleanLocalRot(ref prev);
+                curr.rotCleanLocal = GetCleanLocalRot(ref prev);
 
             if ((effects & Effect.Scl) != 0)
                 sclOffset = GetSquashOffsetEx(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Tether) != 0)
-                rotOffset += tether.GetTetheringOffset(prev.velocity, dt);
+                rotOffset += tether.GetTetheringOffset(prev.vel, dt);
             
 
             // --- Update Dots ---
@@ -131,6 +132,7 @@ namespace AniMorph
 
             // --- Prepare Application --- 
 
+
             var posPositive = cfg.posAppPositive;
             var posNegative = cfg.posAppNegative;
 
@@ -141,6 +143,7 @@ namespace AniMorph
                 );
 
             posOffset = Vector3.Scale(posOffset, posSignScale);
+
 
             var sclApp = cfg.sclApplication;
             sclOffset = new Vector3(
@@ -154,7 +157,7 @@ namespace AniMorph
 
             var boneModifierData = abmxModifierData;
 
-            boneModifierData.PositionModifier = curr.cleanLocalRot * posOffset;
+            boneModifierData.PositionModifier = curr.rotCleanLocal * posOffset;
             boneModifierData.RotationModifier = rotOffset;
             boneModifierData.ScaleModifier = sclOffset;
 
@@ -164,6 +167,11 @@ namespace AniMorph
             prev.posOffset = posOffset;
             prev.rotOffset = rotOffset;
             prev.sclOffset = sclOffset;
+
+            if ((showDebug_3 & Effect.Pos) != 0)
+                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetPosOffset: " +
+                    $"posOffset({posOffset.x:F3},{posOffset.y:F3},{posOffset.z:F3}) " +
+                    $"");
 
             OnPostUpdateModifier(ref prev, ref curr, dt);
         }

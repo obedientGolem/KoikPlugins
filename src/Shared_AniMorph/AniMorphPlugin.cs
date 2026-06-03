@@ -165,8 +165,8 @@ namespace AniMorph
                     posSpring: 1,
                     posDamping: 20,
                     posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
+                    posShockThld: 0.15f,
+                    posFreezeThld: 0.25f,
                     posFreezeLen: 0.02f,
                     posBleedStr: 2f,
                     posBleedLen: 0.1f,
@@ -197,8 +197,8 @@ namespace AniMorph
                     posSpring: 1,
                     posDamping: 20,
                     posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
+                    posShockThld: 0.15f,
+                    posFreezeThld: 0.25f,
                     posFreezeLen: 0.05f,
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
@@ -252,11 +252,11 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 1,
-                    posDamping: 20,
+                    posSpring: 1f, // 1000
+                    posDamping: 0.75f, // 7.5
                     posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
+                    posShockThld: 0.15f,
+                    posFreezeThld: 0.25f,
                     posFreezeLen: 0.05f,
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
@@ -316,11 +316,11 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.67f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 1,
-                    posDamping: 20,
+                    posSpring: 0.67f, // 67
+                    posDamping: 0.67f, // 6.7
                     posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
+                    posShockThld: 0.15f,
+                    posFreezeThld: 0.25f,
                     posFreezeLen: 0.05f,
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
@@ -427,11 +427,11 @@ namespace AniMorph
                     noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
-                    posSpring: 1,
-                    posDamping: 20,
+                    posSpring: 0.67f,
+                    posDamping: 0.67f,
                     posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
+                    posShockThld: 0.15f,
+                    posFreezeThld: 0.25f,
                     posFreezeLen: 0.05f,
                     posBleedStr: 5f,
                     posBleedLen: 0.1f,
@@ -484,8 +484,8 @@ namespace AniMorph
                     posSpring: 1,
                     posDamping: 20,
                     posShockStr: 1f,
-                    posShockThreshold: 0.15f,
-                    posFreezeThreshold: 0.25f,
+                    posShockThld: 0.15f,
+                    posFreezeThld: 0.25f,
                     posFreezeLen: 0.02f,
                     posBleedStr: 2f,
                     posBleedLen: 0.1f,
@@ -646,6 +646,26 @@ namespace AniMorph
 #endif
         }
 
+        [Flags]
+        public enum SubEffects
+        {
+            None   = 0,
+            Shock  = 1 << 0,
+            Freeze = 1 << 1,
+            Bleed  = 1 << 2,
+        }
+
+        [Flags]
+        public enum NoiseType
+        {
+            None   = 0,
+            Pos    = 1 << 0,
+            Rot    = 1 << 1,
+            Scl    = 1 << 2,
+            Vel    = 1 << 3,
+            Torque = 1 << 4,
+        }
+
         public class ConfigType
         {
             private const float _ceil =
@@ -671,8 +691,8 @@ namespace AniMorph
                 float posSpring,
                 float posDamping,
                 float posShockStr,
-                float posShockThreshold,
-                float posFreezeThreshold,
+                float posShockThld,
+                float posFreezeThld,
                 float posFreezeLen,
                 float posBleedStr,
                 float posBleedLen,
@@ -786,19 +806,18 @@ namespace AniMorph
 
                 PosDamping = config.Bind(name, "PosDamping", posDamping,
                     new ConfigDescription("Strength of negation of the positional lag.", 
-                    // (1..50)
-                    null/*new AcceptableValueRange<float>(0.1f, 100F)*/, new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
+                    null, new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
                 PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
                     new ConfigDescription("Shock introduces huge velocity impacts that quickly bleed out.\n" +
                     "Warning: as koik animations can get rather fast (0.44sec for full cycle) at low fps (< 45) it might start to look ugly. Set to 0 to disable.", 
                     null, new ConfigurationManagerAttributes { Order = order - 21 }));
 
-                PosShockThreshold = config.Bind(name, "PosShockThreshold", posShockThreshold,
+                PosShockThld = config.Bind(name, "PosShockThreshold", posShockThld,
                     new ConfigDescription("Shock allows for extreme offsets when velocities change drastically. Set 0 to disable.", null,
                     new ConfigurationManagerAttributes { Order = order - 22 }));
 
-                PosFreezeThreshold = config.Bind(name, "PosFreezeThreshold", posFreezeThreshold,
+                PosFreezeThreshold = config.Bind(name, "PosFreezeThreshold", posFreezeThld,
                     new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
                     new ConfigurationManagerAttributes { Order = order - 23, ShowRangeAsPercent = false }));
 
@@ -819,8 +838,10 @@ namespace AniMorph
                 if (isRotation)
                 {
                     RotSpring = config.Bind(name, "Rotation Spring", (float)rotSpring,
-                        new ConfigDescription("The smaller the value, the greater the rotational lag.",
-                        null/*new AcceptableValueRange<float>(0.1f, 3f)*/, new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
+                        new ConfigDescription(
+                            "Use this unit of rotational delta for calculations.\n" +
+                            "Starts to become unpredictable and haphazard at values > 1",
+                            new AcceptableValueRange<float>(0.1f, 3f), new ConfigurationManagerAttributes { Order = order - 40, ShowRangeAsPercent = false }));
 
                     RotDamping = config.Bind(name, "Rotation Damping", (float)rotDamping,
                         new ConfigDescription("The smaller the value, the lesser the negation of rotational lag.",
@@ -949,7 +970,7 @@ namespace AniMorph
             public ConfigEntry<float> PosSpring;
             public ConfigEntry<float> PosDamping;
             public ConfigEntry<float> PosShockStr;
-            public ConfigEntry<float> PosShockThreshold;
+            public ConfigEntry<float> PosShockThld;
             public ConfigEntry<float> PosFreezeThreshold;
             public ConfigEntry<float> PosFreezeLen;
             public ConfigEntry<float> PosBleedStr;

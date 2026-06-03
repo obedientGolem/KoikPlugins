@@ -18,7 +18,7 @@ namespace IKNoise
 
         internal override void UpdateModifier(float dt, float dtInv, float animLenInv, float freqFactor, float amplFactor)
         {
-            var velLen = GetVelocityLen(dt, dtInv);
+            var velLen = GetVelocityLen(dt);
             //UpdateTorque(dt, dtInv);
 
             var velLenFactor = velLen * (1f / 0.03f);

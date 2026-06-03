@@ -25,7 +25,7 @@ namespace AniMorph
         }
 
 
-        internal override void UpdateModifier(float dt, float dtInv, float animLen, float animLenInv)
+        internal override void UpdateModifier(float dt, float dtInv, float animSpeed, float animSpeedInv)
         {
             if (!active) return;
 
@@ -42,26 +42,26 @@ namespace AniMorph
 
             // --- Update Noise Params ---
 
-            curr.noiseAmplFactor = (OneThird + Mathf.Min(TwoThirds, animLenInv * curr.avgPosLen * 15f));
-            curr.noiseFreqStep = cfg.noiseFreq * animLenInv * dt;
+            curr.noiseAmplFactor = animSpeed * Mathf.Min(1f, curr.posAvgLen * (1f + TwoThirds));
+            curr.noiseFreqStep = cfg.noiseFreq * animSpeed * dt;
 
 
             // --- Update Offsets ---
 
-            UpdatePosTracking(ref prev, ref curr);
-            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv, animLen);
+            UpdatePosTracking(ref prev, ref curr, dtInv);
+            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Pos) != 0)
-                posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLenInv);
+                posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animSpeed, animSpeedInv);
 
             if ((effects & Effect.Rot) != 0)
             {
-                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animLen, animLenInv);
+                rotOffset = GetRotOffset(ref cfg, ref curr, ref prev, dt, dtInv, animSpeed, animSpeedInv);
             }
             else
             {
-                curr.cleanLocalRot = GetCleanLocalRot(ref prev);
-                curr.cleanRotInverse = Quaternion.Inverse(transform.rotation);
+                curr.rotCleanLocal = GetCleanLocalRot(ref prev);
+                curr.rotCleanInv = Quaternion.Inverse(transform.rotation);
             }
 
             if ((effects & Effect.Scl) != 0)
@@ -86,6 +86,7 @@ namespace AniMorph
 
             // --- Prepare Application --- 
 
+
             var posPositive = cfg.posAppPositive;
             var posNegative = cfg.posAppNegative;
 
@@ -96,6 +97,7 @@ namespace AniMorph
                 );
 
             posOffset = Vector3.Scale(posOffset, posSignScale);
+
 
             var sclApp = cfg.sclApplication;
 
@@ -110,7 +112,7 @@ namespace AniMorph
 
             var boneModifierData = abmxModifierData;
 
-            boneModifierData.PositionModifier = curr.cleanLocalRot * posOffset;
+            boneModifierData.PositionModifier = curr.rotCleanLocal * posOffset;
             boneModifierData.RotationModifier = rotOffset;
             boneModifierData.ScaleModifier = sclOffset;
 
@@ -124,7 +126,7 @@ namespace AniMorph
 
             // --- Update Slaves ---
 
-            var devPosOffsetRot = curr.cleanRotInverse * posOffset;
+            var devPosOffsetRot = curr.rotCleanInv * posOffset;
             posOffset = transform.TransformDirection(posOffset);
 
             foreach (var slave in _slaves)
@@ -135,9 +137,9 @@ namespace AniMorph
                     dotR:          dotR, 
                     dotFwd:        dotFwd, 
                     dt:            dt, 
-                    dtInv:         dtInv, 
-                    animLen:       animLen,
-                    animLenInv:    animLenInv,
+                    dtInv:         dtInv,
+                    animSpeed:     animSpeed,
+                    animSpeedInv:  animSpeedInv,
                     posOffset:     posOffset,
                     posOffsetRot:  devPosOffsetRot,
                     rotOffset:     rotOffset,
