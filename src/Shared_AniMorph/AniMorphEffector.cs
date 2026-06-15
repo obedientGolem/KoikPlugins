@@ -1,6 +1,7 @@
 ﻿using ADV.Commands.Base;
 using KKABMX.Core;
 using KKAPI.Studio;
+using RootMotion.FinalIK;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -94,11 +95,15 @@ namespace AniMorph
 
         private readonly Animator _animator;
 
+        private bool _ikSecondPass;
+
         private readonly List<MotionModifierMaster> _devMasterList = [];
 
-        private float _animLenMin;
-        private float _animLenMax;
 
+
+        private readonly AniMorphBaseProcessHelper _processHelper;
+        private readonly IKSolverFullBodyBiped _ikSolver;
+        private bool _animStateChange;
         private bool HasTeleported
         {
             get
@@ -613,27 +618,6 @@ namespace AniMorph
             //}
         };
 
-        //private static readonly List<string> _bonesWithAnimRot = new()
-        //{
-        //    // Animated rotation
-        //    Bust1L,
-        //    // Animated rotation
-        //    Bust1R,
-        //    // Animated rotation
-        //    Bust, 
-        //    //BoneName.Butt,
-        //    //// Static rotation
-        //    //BoneName.Waist02,
-        //    // Animated rotation
-        //    ButtL,
-        //    // Animated rotation
-        //    ButtR,
-        //    // I think it's not.
-        //    // Animated rotation
-        //    // Kokan,
-        //    // Head,
-        //};
-
         // BodyPart + boneNames-defaultMass pairs
         private static readonly Dictionary<Body, BodyPartMeasurement> _bonesToCheckForSizeDic = new()
         {
@@ -660,14 +644,17 @@ namespace AniMorph
 
         internal AniMorphEffector(ChaControl chara)
         {
+            var fbbik = chara.objAnim.GetComponent<FullBodyBipedIK>();
+
+            if (fbbik == null) throw new NullReferenceException(nameof(fbbik));
+
             _chara = chara;
-
-            if (chara.animBody == null) throw new NullReferenceException(nameof(Animator));
-
             _animator = chara.animBody;
-
+            _ikSolver = fbbik.solver;
+            _processHelper = new(chara);
 
             Setup();
+
             OnSettingChanged();
         }
 
@@ -872,6 +859,22 @@ namespace AniMorph
             foreach (var value in _mainDic.Values)
                 value.OnUpdate();
         }
+        internal void OnLateUpdate()
+        {
+            // Called on LateUpdate by CharaController at 12200 order,
+            // just before DynamicBone update.
+
+            if (!_ikSecondPass) return;
+
+            if (_animStateChange)
+            {
+                _animStateChange = false;
+                _processHelper.OnAnimStateChange();
+            }
+
+            _processHelper.OnLateUpdate();
+            _ikSolver.Update();
+        }
 
         private void UpdateModifiers()
         {
@@ -904,6 +907,9 @@ namespace AniMorph
             var animState = _animator.GetCurrentAnimatorStateInfo(0);
 
             var animSpeed = animState.speedMultiplier;
+
+            if (animSpeed == 0f) return;
+
             var animSpeedInv = 1f / animSpeed;
             var animTime = animState.normalizedTime;
 
@@ -923,8 +929,11 @@ namespace AniMorph
                 _animLoopFrameCount = 0;
             }
 
+            // Visual – https://www.desmos.com/calculator/hpmgq5ux8y
+            var animSpeedF = 2f - (2f / (1f + (animSpeed * animSpeed)));
+
             foreach (var effect in _effectsToUpdate)
-                effect.UpdateModifier(dt, dtInv, animSpeed, animSpeedInv);
+                effect.UpdateModifier(dt, dtInv, animSpeed, animSpeedInv, animSpeedF);
       
 
             if (isNewAnimLoop)
@@ -998,6 +1007,8 @@ namespace AniMorph
 
                 kv.Value.SetMass(mass);
             }
+
+            _ikSecondPass = AniMorphPlugin.IK_SecondPass.Value;
         }
 
         internal void OnSetClothesState(ChaControl chara)
@@ -1040,7 +1051,7 @@ namespace AniMorph
 
         internal void OnSetPlay(string animName)
         {
-            _animLenMin = 0f;
+            _animStateChange = true;
         }
 
         internal void OnDisable()

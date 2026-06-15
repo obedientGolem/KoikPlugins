@@ -36,12 +36,14 @@ namespace AniMorph
 
         internal const float OneThird = (1f / 3f);
         internal const float TwoThirds = (2f / 3f);
+        internal const float OneSixth = (1f / 6f);
 
         internal new static ManualLogSource Logger;
 
         public static ConfigEntry<Sex> EnableSex;
         public static ConfigEntry<Scn> EnableScene;
         public static ConfigEntry<bool> MaleEnableDB;
+        public static ConfigEntry<bool> IK_SecondPass;
 
         public static ConfigEntry<bool> DevResetOnLag;
         public static ConfigEntry<float> DevPosFastCoef;
@@ -98,6 +100,8 @@ namespace AniMorph
 
             EnableScene = Config.Bind("", "EnableScene", Scn.Adv | Scn.Talk | Scn.HScene, new ConfigDescription("Choose none to disable", null, new ConfigurationManagerAttributes { Order = 99 }));
 
+            IK_SecondPass = Config.Bind("", "IK SecondPass", false, new ConfigDescription("", null, new ConfigurationManagerAttributes { Order = 98 }));
+
             CharacterApi.RegisterExtraBehaviour<AniMorphCharaController>(GUID);
 
             BindConfig();
@@ -131,6 +135,8 @@ namespace AniMorph
                 _settingChangedTimestamp = 0f;
                 AniMorphCharaController.OnSettingChanged();
             }
+
+            AniMorphCharaController.OnEarlyUpdate();
         }
 
 
@@ -248,7 +254,9 @@ namespace AniMorph
                     effect: Effect.Pos | Effect.Rot | Effect.Scl,
                     disableWhenClothes: ClothesKind.None,
 
-                    noiseAmplitudePos: 0.167f,
+                    noiseType: NoiseType.Pos | NoiseType.DeltaPos | NoiseType.Velocity,
+
+                    noiseAmplitudePos: 0.33f,
                     noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
@@ -257,8 +265,8 @@ namespace AniMorph
                     posShockStr: 1f,
                     posShockThld: 0.15f,
                     posFreezeThld: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
+                    posFreezeLen: 0.167f,
+                    posBleedStr: 20f,
                     posBleedLen: 0.1f,
                     //posGravity: 0f,
 
@@ -271,6 +279,7 @@ namespace AniMorph
                     rotDamping: 0.5f,
 #endif
                     rotRate: 3f,
+                    rotMaxAngle: 30f,
                     //AngularApplicationMaster: Axis.Z,
                     //AngularApplicationSlave: Axis.X | Axis.Y,
 
@@ -312,8 +321,10 @@ namespace AniMorph
                     effect: Effect.Pos | Effect.Rot | Effect.Tether | Effect.Scl | Effect.PosOffset | Effect.RotOffset | Effect.SclOffset,
                     disableWhenClothes: ClothesKind.Top | ClothesKind.Bra,
 
-                    noiseAmplitudePos: 0.165f,
-                    noiseAmplitudeRot: 0.67f,
+                    noiseType: NoiseType.Pos | NoiseType.DeltaPos | NoiseType.Velocity,
+
+                    noiseAmplitudePos: 0.33f,
+                    noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
                     posSpring: 0.67f, // 67
@@ -423,7 +434,9 @@ namespace AniMorph
                     effect: Effect.Pos | Effect.Rot | Effect.Scl,
                     disableWhenClothes: ClothesKind.Panty,
 
-                    noiseAmplitudePos: 0.15f,
+                    noiseType: NoiseType.Pos | NoiseType.DeltaPos | NoiseType.Velocity,
+
+                    noiseAmplitudePos: 0.33f,
                     noiseAmplitudeRot: 0.33f,
                     noiseAmplitudeScl: 0.15f,
 
@@ -652,18 +665,35 @@ namespace AniMorph
             None   = 0,
             Shock  = 1 << 0,
             Freeze = 1 << 1,
-            Bleed  = 1 << 2,
+            Slow   = 1 << 2,
+            Bleed  = 1 << 3,
         }
 
         [Flags]
         public enum NoiseType
         {
-            None   = 0,
-            Pos    = 1 << 0,
-            Rot    = 1 << 1,
-            Scl    = 1 << 2,
-            Vel    = 1 << 3,
-            Torque = 1 << 4,
+            None     = 0,
+
+            // Add flat Perlin noise into Position offset calculations.
+            Pos      = 1 << 0,
+
+            // Add flat Perlin noise into Rotation offset calculations.
+            Rot      = 1 << 1,
+
+            // Add flat Perlin noise into Scale offset calculations.
+            Scl      = 1 << 2,
+
+            // Corrupt delta Position between frames before calculations.
+            DeltaPos = 1 << 3,
+
+            // Corrupt delta Rotation between frames before calculations.
+            DeltaRot = 1 << 4,
+
+            // Corrupt Positional Lag damping – it will become inaccurate.
+            Velocity      = 1 << 5,
+
+            // Corrupt Rotational Lag damping – it will become inaccurate.
+            Torque   = 1 << 6,
         }
 
         public class ConfigType
@@ -697,6 +727,8 @@ namespace AniMorph
                 float posBleedStr,
                 float posBleedLen,
 
+                NoiseType? noiseType = null,
+
                 float? noiseAmplitudePos = null,
                 float? noiseAmplitudeRot = null,
                 float? noiseAmplitudeScl = null,
@@ -706,6 +738,7 @@ namespace AniMorph
                 float? rotSpring = null,
                 float? rotDamping = null,
                 float? rotRate = null,
+                float? rotMaxAngle = null,
 
                 float? sclSpring = null,
                 float? sclDamping = null,
@@ -761,31 +794,39 @@ namespace AniMorph
                 //    new ConfigDescription("Adjust effects for the breast size\nUpdates after the scene change", null, new ConfigurationManagerAttributes { Order = order - 6 }));
 
 
-                var isRotation = rotSpring != null && rotDamping != null && rotRate != null;
+                var isRotation = rotSpring != null && rotDamping != null && rotRate != null && rotMaxAngle != null;
                 var isScl = sclSpring != null && sclDamping != null && sclDistortion != null && sclRate != null && sclPreserveVolume != null;
                 var isTether = tetherMultiplier != null && tetherFrequency != null && tetherDamping != null && tetherMaxDeg != null;
                 var isPosOffset = posOffsetPitchFaceDown != null && posOffsetPitchUpsideDown != null && posOffsetRoll != null;
                 var isRotOffset = rotOffsetRollDeg != null && rotOffsetRollFaceUpFactor != null;
                 var isSclOffset = sclOffsetFaceUp != null && sclOffsetFaceUpPerpAxesFactor != null && sclOffsetFaceDown != null && sclOffsetFaceDownPerpAxesFactor != null;
 
-                if (noiseAmplitudePos != null)
+                if (noiseType != null)
                 {
-                    NoiseAmplitudePos = config.Bind(name, "NoiseAmplitudePos", (float)noiseAmplitudePos,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), 
-                        new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
+                    NoiseType = config.Bind(name, "Noise Type", (NoiseType)noiseType,
+                        new ConfigDescription("", null,
+                        new ConfigurationManagerAttributes { Order = order - 7, ShowRangeAsPercent = false }));
+
+                    if (noiseAmplitudePos != null)
+                    {
+                        NoiseAmplitudePos = config.Bind(name, "Noise Amplitude Pos", (float)noiseAmplitudePos,
+                            new ConfigDescription("", new AcceptableValueRange<float>(0f, 1f),
+                            new ConfigurationManagerAttributes { Order = order - 8, ShowRangeAsPercent = false }));
+                    }
+                    if (noiseAmplitudeRot != null)
+                    {
+                        NoiseAmplitudeRot = config.Bind(name, "Noise Amplitude Rot", (float)noiseAmplitudeRot,
+                            new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil),
+                            new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
+                    }
+                    if (noiseAmplitudeScl != null)
+                    {
+                        NoiseAmplitudeScl = config.Bind(name, "Noise Amplitude Scl", (float)noiseAmplitudeScl,
+                            new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil),
+                            new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
+                    }
                 }
-                if (noiseAmplitudeRot != null)
-                {
-                    NoiseAmplitudeRot = config.Bind(name, "NoiseAmplitudeRot", (float)noiseAmplitudeRot,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), 
-                        new ConfigurationManagerAttributes { Order = order - 9, ShowRangeAsPercent = false }));
-                }
-                if (noiseAmplitudeScl != null)
-                {
-                    NoiseAmplitudeScl = config.Bind(name, "NoiseAmplitudeScl", (float)noiseAmplitudeScl,
-                        new ConfigDescription("", new AcceptableValueRange<float>(0f, _ceil), 
-                        new ConfigurationManagerAttributes { Order = order - 10, ShowRangeAsPercent = false }));
-                }
+
 
 
                 //NoisePosAxes = config.Bind(name, "NoisePosAxes", noisePosAxes,
@@ -850,6 +891,10 @@ namespace AniMorph
                     RotRate = config.Bind(name, "Rotation Rate", (float)rotRate,
                         new ConfigDescription("The rate of change of the rotational lag, measured in degrees per second.", // Probably
                         null/*new AcceptableValueRange<float>(0.1f, 10f)*/, new ConfigurationManagerAttributes { Order = order - 50, ShowRangeAsPercent = false }));
+
+                    RotMaxDeg = config.Bind(name, "Rotation Max Angle", (float)rotMaxAngle,
+                        new ConfigDescription("TODO.",
+                        null/*new AcceptableValueRange<float>(0.1f, 10f)*/, new ConfigurationManagerAttributes { Order = order - 51, ShowRangeAsPercent = false }));
                 }
 
 
@@ -957,6 +1002,8 @@ namespace AniMorph
             //public ConfigEntry<bool> AdjustForSize;
             public ConfigEntry<ClothesKind> DisableWhenClothes;
 
+            public ConfigEntry<NoiseType> NoiseType;
+
             public ConfigEntry<float> NoiseAmplitudePos;
             public ConfigEntry<float> NoiseAmplitudeRot;
             public ConfigEntry<float> NoiseAmplitudeScl;
@@ -983,6 +1030,7 @@ namespace AniMorph
             public ConfigEntry<float> RotSpring;
             public ConfigEntry<float> RotDamping;
             public ConfigEntry<float> RotRate;
+            public ConfigEntry<float> RotMaxDeg;
             //public ConfigEntry<Axis> AngularApplicationMaster;
             //public ConfigEntry<Axis> AngularApplicationSlave;
 

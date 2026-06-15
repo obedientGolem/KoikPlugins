@@ -47,7 +47,7 @@ namespace AniMorph
 
             float dotUp, float dotR, float dotFwd, 
 
-            float dt, float dtInv, float animSpeed, float animSpeedInv, 
+            float dt, float dtInv, float animSpeed, float animSpeedInv, float animSpeedF,
 
             Vector3 posOffset, Vector3 posOffsetRot, Vector3 rotOffset, Vector3 sclOffset
             )

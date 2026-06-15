@@ -18,6 +18,7 @@ using static LBUtils.LBUtilsPlugin;
 
 namespace AniMorph
 {
+    [DefaultExecutionOrder(12200)]
     internal class AniMorphCharaController : CharaCustomFunctionController
     {
         public AniMorphEffector BoneEffector => boneEffector;
@@ -237,7 +238,7 @@ namespace AniMorph
             var count = 3;
             var endOfFrame = CoroutineUtils.WaitForEndOfFrame;
 
-            while (count-- > 0 || IsLagSpike)
+            while (count-- > 0 || IsLagSpike || ChaControl.animBody == null)
             {
 #if DEBUG
                 AniMorphPlugin.Logger.LogDebug($"StartCo:deltaTime[{Time.deltaTime:F3}]");
@@ -272,10 +273,10 @@ namespace AniMorph
             }
         }
 
+#if DEBUG
         protected override void Update()
         {
             base.Update();
-#if DEBUG
             //if (DevRotate) ChaControl.transform.rotation *= Quaternion.Euler(_devRotEuler * Time.deltaTime);
 
             if (DevRotateOnce)
@@ -333,18 +334,30 @@ namespace AniMorph
             {
                 alpha.rotation *= ratRotation;
             }
-#endif
+        }
 
-            boneEffector?.OnUpdate();
+#endif
+        private void LateUpdate()
+        {
+            boneEffector?.OnLateUpdate();
         }
 
         public static void OnSettingChanged()
         {
-            foreach (var instance in _instances)
+            foreach (var inst in _instances)
             {
-                instance.HandleEnable();
-                instance.boneEffector?.OnSettingChanged();
+                inst.HandleEnable();
+                inst.boneEffector?.OnSettingChanged();
             }
+        }
+
+        public static void OnEarlyUpdate()
+        {
+            // Should be called before IK returns transforms back,
+            // this class executes at 12200 which is far too late.
+
+            foreach (var inst in _instances)
+                inst.boneEffector?.OnUpdate();
         }
 
         protected override void OnReload(GameMode currentGameMode)

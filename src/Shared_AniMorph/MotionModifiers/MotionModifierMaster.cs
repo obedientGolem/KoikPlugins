@@ -25,7 +25,7 @@ namespace AniMorph
         }
 
 
-        internal override void UpdateModifier(float dt, float dtInv, float animSpeed, float animSpeedInv)
+        internal override void UpdateModifier(float dt, float dtInv, float animSpeed, float animSpeedInv, float animSpeedF)
         {
             if (!active) return;
 
@@ -140,6 +140,7 @@ namespace AniMorph
                     dtInv:         dtInv,
                     animSpeed:     animSpeed,
                     animSpeedInv:  animSpeedInv,
+                    animSpeedF:    animSpeedF,
                     posOffset:     posOffset,
                     posOffsetRot:  devPosOffsetRot,
                     rotOffset:     rotOffset,
