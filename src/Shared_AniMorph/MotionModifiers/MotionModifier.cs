@@ -1,4 +1,5 @@
-﻿using KKABMX.Core;
+﻿using ADV.Commands.Base;
+using KKABMX.Core;
 using LBUtils;
 using System;
 using System.Collections.Generic;
@@ -238,7 +239,7 @@ namespace AniMorph
             // --- Update Offsets ---
 
             UpdatePosTracking(ref prev, ref curr, dtInv);
-            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv);
+            //UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Pos) != 0)
                 posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animSpeed, animSpeedInv);
@@ -334,31 +335,39 @@ namespace AniMorph
             prev.posCleanDelta = curr.posCleanDelta;
             prev.velCleanDelta = curr.velCleanDelta;
 
-            var dtHalf = dt * 0.5f;
 
             // --- Position ---
 
-            if (curr.posFreeze)
-            {
-                if (curr.posFreezeTime < dtHalf)
-                    curr.posFreeze = false;
+            var posSubFx = curr.posSubFx;
 
-                curr.posFreezeTime -= dt;
+            if ((posSubFx & SubFx.Freeze) != 0)
+            {
+                if (curr.posTimeFreeze < dt)
+                    curr.posSubFx &= ~SubFx.Freeze;
+                else
+                    curr.posTimeFreeze -= dt;
             }
-            else if (curr.posShock)
+            else if ((posSubFx & SubFx.Slowdown) != 0)
             {
-                if (curr.posShockTime < dtHalf)
-                    curr.posShock = false;
-
-
-                curr.posShockTime -= dt;
+                if (curr.posTimeSlowdown < dt)
+                    curr.posSubFx &= ~SubFx.Slowdown;
+                else
+                    curr.posTimeSlowdown -= dt;
             }
-            else if (curr.posBleed)
+            else if ((posSubFx & SubFx.Impulse) != 0)
             {
-                if (curr.posBleedTime < dtHalf)
-                    curr.posBleed = false;
+                if (curr.posTimeImpulse < dt)
+                    curr.posSubFx &= ~SubFx.Impulse;
+                else
+                    curr.posTimeImpulse -= dt;
+            }
 
-                curr.posBleedTime -= dt;
+            if ((posSubFx & SubFx.Bleed) != 0)
+            {
+                if (curr.posTimeBleed < dt)
+                    curr.posSubFx &= ~SubFx.Bleed;
+                else
+                    curr.posTimeBleed -= dt;
             }
 
 
@@ -366,17 +375,17 @@ namespace AniMorph
 
             if (curr.rotFreeze)
             {
-                if (curr.rotFreezeTime < dtHalf)
+                if (curr.rotFreezeTime < dt)
                     curr.rotFreeze = false;
-
-                curr.rotFreezeTime -= dt;
+                else
+                    curr.rotFreezeTime -= dt;
             }
             else if (curr.rotBleed)
             {
-                if (curr.rotBleedTime < dtHalf)
+                if (curr.rotBleedTime < dt)
                     curr.rotBleed = false;
-
-                curr.rotBleedTime -= dt;
+                else
+                    curr.rotBleedTime -= dt;
             }
         }
 
@@ -474,69 +483,69 @@ namespace AniMorph
             prev.pos = currPos;
         }
 
-        protected void UpdateVelocityShock(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv)
-        {
-            // A simple velocity, based on movements of a transform without our interference.
-            var velDelta = curr.posCleanDelta - prev.posCleanDelta;
+        //protected void UpdateVelocityShock(ref Config cfg, ref Current curr, ref Previous prev, float dt, float dtInv)
+        //{
+        //    // A simple velocity, based on movements of a transform without our interference.
+        //    var velDelta = curr.posCleanDelta - prev.posCleanDelta;
 
-            curr.velCleanDelta = velDelta;
+        //    curr.velCleanDelta = velDelta;
 
-            if (curr.posFreeze || curr.posShock || curr.posBleed)
-                return;
+        //    if (curr.posFreeze || curr.posImpulse || curr.posBleed)
+        //        return;
 
 
-            // --- Shock detection --- 
+        //    // --- Shock detection --- 
 
-            var velDot = Vector3.Dot(velDelta, prev.velCleanDelta);
+        //    var velDot = Vector3.Dot(velDelta, prev.velCleanDelta);
 
-            var velDeltaLen = velDelta.magnitude * dtInv;
+        //    var velDeltaLen = velDelta.magnitude * dtInv;
 
-            var isDot = velDot < 0f;
+        //    var isDot = velDot < 0f;
 
-            if ((showDebug_2 & Effect.Pos) != 0)
-                AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – " +
-                    $"UpdateVelocityShock: " +
-                    $"velDot[{velDot:F5}] " +
-                    $"velDeltaLen[{velDeltaLen:F3}] " +
-                    $"velDot[{velDot:F3}] < 0 [{velDot < 0f}] " +
-                    $"");
-            if ((advDebug_2 & Effect.Pos) != 0 && velDot < 0f)
-                Time.timeScale = 0f;
+        //    if ((showDebug_2 & Effect.Pos) != 0)
+        //        AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – " +
+        //            $"UpdateVelocityShock: " +
+        //            $"velDot[{velDot:F5}] " +
+        //            $"velDeltaLen[{velDeltaLen:F3}] " +
+        //            $"velDot[{velDot:F3}] < 0 [{velDot < 0f}] " +
+        //            $"");
+        //    if ((advDebug_2 & Effect.Pos) != 0 && velDot < 0f)
+        //        Time.timeScale = 0f;
 
-            //if (velDeltaLen > cfg.posShockThreshold || (isDot && (velDeltaLen > cfg.posShockThreshold * OneThird)))
-            //{
-            //    //var shockPower = Mathf.Pow(Mathf.Sqrt(cleanVelDeltaSqrLen), 1.2f);
-            //    //velocity += cleanVelDelta.normalized * shockPower * shockFactor;
+        //    //if (velDeltaLen > cfg.posShockThreshold || (isDot && (velDeltaLen > cfg.posShockThreshold * OneThird)))
+        //    //{
+        //    //    //var shockPower = Mathf.Pow(Mathf.Sqrt(cleanVelDeltaSqrLen), 1.2f);
+        //    //    //velocity += cleanVelDelta.normalized * shockPower * shockFactor;
 
-            //    //prev.velocity += cleanVelDelta * cfg.posShockStr;
-            //    // Inverse target scale.
-            //    // TODO. Add pseudo vec2 option for thighs and such.
-            //    //prev.sclTarget = vecOne - (prev.sclTarget - vecOne);
+        //    //    //prev.velocity += cleanVelDelta * cfg.posShockStr;
+        //    //    // Inverse target scale.
+        //    //    // TODO. Add pseudo vec2 option for thighs and such.
+        //    //    //prev.sclTarget = vecOne - (prev.sclTarget - vecOne);
 
-            //    //var fpsFactor = dtInv * (1f / 60f);
-            //    var animFactor = animLen; // * (1f / 2.25f); // * (fpsFactor * fpsFactor);
-            //    // TODO Add slowdown instead of freeze?
-            //    curr.posBleedTime = cfg.bleedLen * animFactor;
-            //    curr.posBleed = true;
+        //    //    //var fpsFactor = dtInv * (1f / 60f);
+        //    //    var animFactor = animLen; // * (1f / 2.25f); // * (fpsFactor * fpsFactor);
+        //    //    // TODO Add slowdown instead of freeze?
+        //    //    curr.posBleedTime = cfg.bleedLen * animFactor;
+        //    //    curr.posBleed = true;
 
-            //    //if (cleanVelDeltaLen > cfg.posFreezeThreshold || isDot)
-            //    //{
-            //        curr.posShockTime = cfg.freezeLen * animFactor;
-            //    curr.posShock = true;
+        //    //    //if (cleanVelDeltaLen > cfg.posFreezeThreshold || isDot)
+        //    //    //{
+        //    //        curr.posShockTime = cfg.freezeLen * animFactor;
+        //    //    curr.posShock = true;
 
-            //        //AniMorphPlugin.Logger.LogWarning($"[{transform.name}] " +
-            //        //    $"Freeze[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
-            //        //    $"");
-            //    //}
-            //    //else
-            //    //{
+        //    //        //AniMorphPlugin.Logger.LogWarning($"[{transform.name}] " +
+        //    //        //    $"Freeze[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
+        //    //        //    $"");
+        //    //    //}
+        //    //    //else
+        //    //    //{
 
-            //    //    AniMorphPlugin.Logger.LogInfo($"[{transform.name}] " +
-            //    //        $"Shock[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
-            //    //        $"");
-            //    //}
-            //}
-        }
+        //    //    //    AniMorphPlugin.Logger.LogInfo($"[{transform.name}] " +
+        //    //    //        $"Shock[{curr.shockTime:F4}]! scaleFactor[{scaleFactor:F3}] fpsFactor[{fpsFactor}] projectDot[{projectDot < 0f}]" +
+        //    //    //        $"");
+        //    //    //}
+        //    //}
+        //}
 
 
         #endregion
@@ -549,7 +558,8 @@ namespace AniMorph
         {
             var posDeltaLen = curr.posCleanDeltaLen;
             var posDelta = curr.posCleanDelta;
-            var posDeltaClean = posDelta;
+            //var posDeltaClean = posDelta;
+            //var animFactor = curr.posAvgLen * animSpeedInv;
 
             if (cfg.noiseDeltaPosAmpl != 0f)
             {
@@ -623,6 +633,12 @@ namespace AniMorph
             velFactor = Mathf.MoveTowards(velFactor, posDeltaLenFactor, dt * (1f + velFactor));
 
             var springF = velOffset * -((cfg.velSpringBase + (cfg.velSpringScl * velFactor)) * dt);
+
+            if ((curr.posSubFx & SubFx.Impulse) != 0)
+            {
+                springF *= (1f + (curr.posTimeImpulse * cfg.posFxStrImpulse * curr.posAvgLen * (animSpeedInv * animSpeedInv)));
+            }
+
             var dampingF = prevVel * ((cfg.velDampingBase + (cfg.velDampingScl * velFactor)) * dt);
 
             if (cfg.noiseVelAmpl != 0f)
@@ -637,8 +653,6 @@ namespace AniMorph
                 _dev.q2e = euler;
             }
 
-            if (curr.posShock)
-                springF *= 1f + (curr.posAvgLen * animSpeedInv);
 
             var accel = springF - dampingF;
 
@@ -661,11 +675,6 @@ namespace AniMorph
             var vel = prevVel + accel;
 
 
-            // --- Bleed velocity ---
-
-            if (curr.posBleed)
-                vel *= Mathf.Max(0f, 1f - (cfg.posBleedStr * dt));
-
 
             //  --- Velocity Reverse ---
 
@@ -673,60 +682,131 @@ namespace AniMorph
 
             var dotIncrease = velDot > prev.velDot;
 
-            if (dotIncrease && !prev.velDotInc)
+            var cfgSubFx = cfg.posFx;
+
+            if (dotIncrease && cfgSubFx != 0 && !prev.velDotInc)
             {
-                if ((cfg.posSubEffects & SubEffects.Freeze) != 0)   
+                var animFactorSq = curr.posAvgLen * (animSpeedInv * animSpeedInv);
+
+                var isFreeze   = (cfgSubFx & SubFx.Freeze)   != 0;
+                var isSlowdown = (cfgSubFx & SubFx.Slowdown) != 0;
+                var isImpulse  = (cfgSubFx & SubFx.Impulse)  != 0;
+
+                var fxLen = cfg.posFxLen * animFactorSq;
+
+                if (isFreeze)
                 {
-                    var factor = curr.posAvgLen * animSpeedInv;
-                    curr.posFreeze = true;
-                    curr.posFreezeTime = cfg.freezeLen * factor;
-                    curr.posBleed = (cfg.posSubEffects & SubEffects.Bleed) != 0;
-                    curr.posBleedTime = cfg.bleedLen * factor;
-                    //if ((showDebug_1 & Effect.Pos) != 0)
+                    curr.posSubFx |= SubFx.Freeze;
+                    curr.posTimeFreeze = (isSlowdown || isImpulse) ? fxLen * _dev.factor_1 : fxLen;
+                }
+
+                if (isSlowdown)
+                {
+                    curr.posSubFx |= SubFx.Slowdown;
+                    curr.posTimeFreeze = (isFreeze || isImpulse) ? fxLen * _dev.factor_2 : fxLen;
+                }
+
+                if (isImpulse)
+                {
+                    curr.posSubFx |= SubFx.Impulse;
+                    curr.posTimeFreeze = (isFreeze || isSlowdown) ? fxLen * _dev.factor_3 : fxLen;
+                }
+#if DEBUG
+                if ((cfgSubFx & SubFx.Bleed) != 0)
+                {
+#endif
+                    curr.posSubFx |= SubFx.Bleed;
+                    curr.posTimeBleed = curr.posTimeImpulse + curr.posTimeSlowdown + curr.posTimeFreeze + (cfg.posFxBleedLen * animFactorSq);
+#if DEBUG
+                }
+#endif
+
+
+                if ((showDebug_2 & Effect.Pos) != 0)
                     AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetPosOffset: " +
-                        $"Freeze! " +
-                        $"freezeTime[{curr.posFreezeTime:F3}] " +
-                        //$"bleedTime[{curr.posBleedTime:F3}] " +
-                        $"posAvgLen[{curr.posAvgLen:F3}] " +
-                        $"animSpeed[{animSpeed:F3}] " +
-                        $"animSpeedInv[{animSpeedInv:F3}] " +
-                        $"vel({vel.x:F3},{vel.y:F3},{vel.z:F3}) " +
+                        $"Velocity Reverse " +
+                        $"Freeze[{isFreeze}] " +
+                        $"Slowdown[{isSlowdown}] " +
+                        $"Impulse[{isImpulse}] " +
+                        $"Bleed[{(curr.posSubFx & SubFx.Bleed) != 0}] " +
                         $"");
 
-                }
-                if ((cfg.posSubEffects & SubEffects.Shock) != 0)
-                {
-                    var factor = curr.posAvgLen * animSpeedInv;
-                    curr.posShock = true;
-                    curr.posShockTime = cfg.freezeLen * factor;
-                    curr.posBleed = (cfg.posSubEffects & SubEffects.Bleed) != 0;
-                    curr.posBleedTime = cfg.bleedLen * factor;
-                    vel += springF * (cfg.posShockStr * factor);
-
-                    AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetPosOffset: " +
-                        $"Shock! " +
-                        $"shockStr[{(cfg.posShockStr * factor):F3}] " +
-                        $"shockTime[{curr.posShockTime:F3}] " +
-                        $"bleedTime[{curr.posBleedTime:F3}] " +
-                        $"posAvgLen[{curr.posAvgLen:F3}] " +
-                        $"animSpeed[{animSpeed:F3}] " +
-                        $"animSpeedInv[{animSpeedInv:F3}] " +
-                        $"vel({vel.x:F3},{vel.y:F3},{vel.z:F3}) " +
-                        $"");
-                }
-
-                if ((advDebug_1 & Effect.Pos) != 0)
-                {
-                    Time.timeScale = 0f;
-                }
             }
 
+            var currSubFx = curr.posSubFx;
+#if DEBUG
+            if ((showDebug_2 & Effect.Pos) != 0)
+            {
+                if ((currSubFx & SubFx.Freeze) != 0)
+                {
+                    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetPosOffset: " +
+                        $"FreezeFrame " +
+                        $"time[{curr.posTimeFreeze:F3}] " +
+                        $"bleed[{curr.posTimeBleed:F3}] " +
+                        $"bleedFactor[{(1f / (1f + (curr.posTimeBleed * cfg.posFxStrBleed))):F3}] " +
+                        $"");
+                }
+                else if ((currSubFx & SubFx.Slowdown) != 0)
+                {
+                    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetPosOffset: " +
+                        $"SlowFrame " +
+                        $"time[{curr.posTimeSlowdown:F3}] " +
+                        $"factor[{(1f / (1f + (curr.posTimeSlowdown * cfg.posFxStrSlowdown))):F3}] " +
+                        $"bleed[{curr.posTimeBleed:F3}] " +
+                        $"bleedFactor[{(1f / (1f + (curr.posTimeBleed * cfg.posFxStrBleed))):F3}] " +
+                        $"");
+                }
+                else if ((currSubFx & SubFx.Impulse) != 0)
+                {
+                    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetPosOffset: " +
+                        $"ImpulseFrame " +
+                        $"time[{curr.posTimeImpulse:F3}] " +
+                        $"factor[{(1f + (curr.posTimeImpulse * cfg.posFxStrImpulse * curr.posAvgLen * animSpeedInv)):F3}] " +
+                        $"bleed[{curr.posTimeBleed:F3}] " +
+                        $"bleedFactor[{(1f / (1f + (curr.posTimeBleed * cfg.posFxStrBleed))):F3}] " +
+                        $"");
+                }
+                else if ((currSubFx & SubFx.Bleed) != 0)
+                {
+                    AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetPosOffset: " +
+                        $"BleedFrame " +
+                        $"bleed[{curr.posTimeBleed:F3}] " +
+                        $"bleedFactor[{(1f / (1f + (curr.posTimeBleed * cfg.posFxStrBleed))):F3}] " +
+                        $"");
+                }
+            }
+             
+#endif
 
-            var isFreeze = curr.posFreeze;
-            var isShock = curr.posShock;
-            var isBleed = curr.posBleed;
 
-            var result = isFreeze ? velOffset : velOffset + vel * (dt * (1f + velFactor));
+            // --- Bleed velocity ---
+
+            if ((currSubFx & SubFx.Bleed) != 0)
+                vel *= 1f / (1f + (curr.posTimeBleed * cfg.posFxStrBleed));
+
+            // TODO. Move Impulse into spring calculations.
+
+            var result =
+                (currSubFx & SubFx.Freeze) != 0   ? velOffset :
+                (currSubFx & SubFx.Slowdown) != 0 ? velOffset + vel * (dt * (1f + velFactor) * (1f / (1f + (curr.posTimeSlowdown * cfg.posFxStrSlowdown)))) :
+                                                    velOffset + vel * (dt * (1f + velFactor));
+
+
+            //var result = currSubFx switch
+            //{
+            //    var fx when (fx & SubFx.Freeze) != 0 => velOffset,
+            //    var fx when (fx & SubFx.Slowdown) != 0 => ,
+            //    var fx when (fx & SubFx.Impulse) != 0 => velOffset + vel * (dt * (1f + velFactor) * (1f + (curr.posTimeImpulse * cfg.posFxStrImpulse * curr.posAvgLen * animSpeedInv))),
+            //    _ => 
+            //};
+
+                //curr.posFreeze ? velOffset : 
+                //curr.posSlowdown ?
+                //// (dt / (dt + time * str),
+                //// 'time' can't be negative and therefore the output caps at 1.
+                //// (~0..1), visual – https://www.desmos.com/calculator/zlrglfe79g
+                //velOffset + vel * (dt * (1f + velFactor) * (1f / (1f + (curr.posTimeSlowdown * cfg.posStrSlowdown)))) :
+                //velOffset + vel * (dt * (1f + velFactor));
 
 
 
@@ -734,8 +814,8 @@ namespace AniMorph
             prev.velOffset = result;
             prev.velFactor = velFactor;
             prev.velDot = velDot;
-            prev.velDotInc = isBleed || isFreeze || dotIncrease;
-
+            prev.velDotInc = currSubFx != 0 || dotIncrease;
+#if DEBUG
             if ((showDebug_1 & Effect.Pos) != 0)
                 AniMorphPlugin.Logger.LogDebug($"[{transform.name}] – GetPosOffset: " +
                     $"velOffset({velOffset.x:F3},{velOffset.y:F3},{velOffset.z:F3}) " +
@@ -746,11 +826,12 @@ namespace AniMorph
                     $"velFactor[{(velFactor):F3}] " +
                     $"posDeltaLen[{posDeltaLen:F3}] " +
                     $"velDot[{velDot:F5}] " +
-                    $"Freeze[{isFreeze}] " +
-                    $"Bleed[{isBleed}] " +
-                    $"Shock[{isShock}] " +
+                    $"Freeze[{(currSubFx & SubFx.Freeze) != 0}] " +
+                    $"Slow[{(currSubFx & SubFx.Slowdown) != 0}] " +
+                    $"Impulse[{(currSubFx & SubFx.Impulse) != 0}] " +
+                    $"Bleed[{(currSubFx & SubFx.Bleed) != 0}] " +
                     $"");
-
+#endif
             return result;
         }
 
@@ -758,7 +839,7 @@ namespace AniMorph
         #endregion
 
 
-                #region Rotation
+        #region Rotation
 
 
         protected Quaternion GetCleanLocalRot(ref Previous prev)
@@ -1095,8 +1176,8 @@ namespace AniMorph
                     curr.rotHighTorque = false;
                     var shockFactor = absAngle * (1f / 45f);
                     curr.rotFreezeTime = cfg.rotFreezeTime * animSpeedInv * shockFactor;
-                    curr.rotFreeze = (cfg.rotSubEffects & SubEffects.Freeze) != 0;
-                    curr.rotBleed = (cfg.rotSubEffects & SubEffects.Bleed) != 0;
+                    curr.rotFreeze = (cfg.rotSubEffects & SubFx.Freeze) != 0;
+                    curr.rotBleed = (cfg.rotSubEffects & SubFx.Bleed) != 0;
 #if DEBUG
                     //if ((showDebug_1 & Effect.Rot) != 0)
                     AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetRotOffset: " +
@@ -1126,7 +1207,7 @@ namespace AniMorph
             var idx = (int)axis >> 1;
             var prevTorque = prev.torqueAxial[idx];
 
-            if (curr.posBleed)
+            if (curr.rotBleed)
                 prevTorque *= 1f - (cfg.rotBleedStr * dt);
 
             var twistAxis = axis switch
@@ -1218,8 +1299,8 @@ namespace AniMorph
                     curr.rotAxisHighTorque &= ~axis;
                     var shockAngF = absAngle * (1f / 45f);
                     curr.rotAxisFreezeTime[idx] = cfg.rotFreezeTime * animSpeedInv * shockAngF;
-                    curr.rotFreeze = (cfg.rotSubEffects & SubEffects.Freeze) != 0;
-                    curr.rotBleed = (cfg.rotSubEffects & SubEffects.Bleed) != 0;
+                    curr.rotFreeze = (cfg.rotSubEffects & SubFx.Freeze) != 0;
+                    curr.rotBleed = (cfg.rotSubEffects & SubFx.Bleed) != 0;
 #if DEBUG
                     if ((showDebug_1 & Effect.Rot) != 0)
                         AniMorphPlugin.Logger.LogInfo($"[{transform.name}] – GetRotOffset: " +
@@ -1437,18 +1518,18 @@ namespace AniMorph
         {
             var driver = prev.sclDriver;
 
-            if (curr.posShockTime > 0f)
-            {
-                var shockScl = Vector3.Lerp(prev.scl, prev.sclTarget, dt * cfg.sclRate * _dev.factor_4);
+            //if (curr.posSubFxTime > 0f)
+            //{
+            //    var shockScl = Vector3.Lerp(prev.scl, prev.sclTarget, dt * cfg.sclRate * _dev.factor_4);
 
-                prev.scl = shockScl;
+            //    prev.scl = shockScl;
 
-                return shockScl;
-            }
+            //    return shockScl;
+            //}
 
 
-            if (curr.posBleedTime > 0f)
-                driver *= 1f - (cfg.sclBleedStr * dt);
+            //if (curr.posSubBleedTime > 0f)
+            //    driver *= 1f - (cfg.sclBleedStr * dt);
 
 
             var springCoef = 1f;
@@ -1796,12 +1877,14 @@ namespace AniMorph
             cfg.velSpringScl   = cfg.velSpringBase  * baseCfg.velSpringScl;
             cfg.velDampingScl  = cfg.velDampingBase * baseCfg.velDampingScl;
             cfg.velRate        = baseCfg.velRate;
-            cfg.posShockThld = pluginConfig.PosShockThld.Value;
-            cfg.posShockStr = pluginConfig.PosShockStr.Value;
-            cfg.freezeThreshold = pluginConfig.PosFreezeThreshold.Value;
-            cfg.freezeLen = pluginConfig.PosFreezeLen.Value;
-            cfg.posBleedStr = pluginConfig.PosBleedStr.Value;
-            cfg.bleedLen = pluginConfig.PosBleedLen.Value;
+            cfg.posFx = pluginConfig.PosSubFx.Value;
+            cfg.posFxLen = pluginConfig.PosSubFxLen.Value;
+            cfg.posFxStrImpulse = pluginConfig.PosSubFxStr.Value;
+            cfg.posFxStrSlowdown = pluginConfig.PosSubFxStr.Value;
+            cfg.posFxStrBleed = pluginConfig.PosSubFxStr.Value;
+
+            // TODO. Remove this field after solid coefficient is established. 
+            cfg.posFxBleedLen = cfg.posFxLen * TwoThirds;
 
 
             if (isRot)
@@ -2351,16 +2434,16 @@ namespace AniMorph
             internal float velDampingScl;
             internal float velRate;
 
-            internal float posShockThld;
-            internal float posShockStr;
-            internal float freezeThreshold;
-            internal float freezeLen = 0.1f;
-            internal float posBleedStr;
-            internal float bleedLen;
+            internal float posFxStrImpulse;
+            internal float posFxStrSlowdown;
+            internal float posFxStrBleed;
+            internal float posFxLen;
+            internal float posFxBleedLen;
             internal Vector3 posLimitPositive;
             internal Vector3 posLimitNegative;
             //internal float posDamping = 2f * Mathf.Sqrt(posSpring * mass);
-            internal SubEffects posSubEffects;
+            internal SubFx posFx;
+
 
             internal float mass = 1f;
             internal float massInv = 1f;
@@ -2376,14 +2459,14 @@ namespace AniMorph
             internal float rotMaxCos;
             internal float rotMaxRadInv;
             //internal float rotFreezeThreshold;
-            internal SubEffects rotSubEffects;
+            internal SubFx rotSubEffects;
 
             internal float sclSpring;
             internal float sclDamping;
             internal float sclRate;
             internal float sclDistort;
             internal float sclBleedStr = 5f;
-            internal SubEffects sclSubEffects;
+            internal SubFx sclSubEffects;
 
             //internal float sclStr; 
             //internal float sclRateInv;
@@ -2430,13 +2513,13 @@ namespace AniMorph
         protected class Current
         {
 
-            internal float posShockTime;
-            internal float posBleedTime;
-            internal float posFreezeTime;
+            internal float posTimeImpulse;
+            internal float posTimeSlowdown;
+            internal float posTimeFreeze;
+            internal float posTimeBleed;
 
-            internal bool posShock;
-            internal bool posBleed;
-            internal bool posFreeze;
+            internal SubFx posSubFx;
+
 
             internal float posAvgLen;
             internal float posAvgLenInv;
@@ -2483,8 +2566,11 @@ namespace AniMorph
             {
                 rotHighTorque = false;
 
-                posShockTime = 0f;
-                posBleedTime = 0f;
+                posTimeImpulse = 0f;
+                posTimeSlowdown = 0f;
+                posTimeFreeze = 0f;
+                posTimeBleed = 0f;
+
                 posCleanDeltaTotalLen = 0f;
 
                 posCleanDelta = Vector3.zero;

@@ -170,12 +170,10 @@ namespace AniMorph
 
                     posSpring: 1,
                     posDamping: 20,
-                    posShockStr: 1f,
-                    posShockThld: 0.15f,
-                    posFreezeThld: 0.25f,
-                    posFreezeLen: 0.02f,
-                    posBleedStr: 2f,
-                    posBleedLen: 0.1f,
+
+                    posSubFx: SubFx.None,
+                    posSubFxStr: 30f,
+                    posSubFxLen: 0.22f,
 
                     rotSpring: 1f,
                     rotDamping: 0.67f,
@@ -202,13 +200,10 @@ namespace AniMorph
 
                     posSpring: 1,
                     posDamping: 20,
-                    posShockStr: 1f,
-                    posShockThld: 0.15f,
-                    posFreezeThld: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0f,
+
+                    posSubFx: SubFx.None,
+                    posSubFxStr: 30f,
+                    posSubFxLen: 0.22f,
 
                     rotSpring: null,
                     rotDamping: null,
@@ -262,13 +257,10 @@ namespace AniMorph
 
                     posSpring: 1f, // 1000
                     posDamping: 0.75f, // 7.5
-                    posShockStr: 1f,
-                    posShockThld: 0.15f,
-                    posFreezeThld: 0.25f,
-                    posFreezeLen: 0.167f,
-                    posBleedStr: 20f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0f,
+
+                    posSubFx: SubFx.None,
+                    posSubFxStr: 30f,
+                    posSubFxLen: 0.22f,
 
                     rotSpring: 0.67f,
 #if DEBUG
@@ -329,12 +321,10 @@ namespace AniMorph
 
                     posSpring: 0.67f, // 67
                     posDamping: 0.67f, // 6.7
-                    posShockStr: 1f,
-                    posShockThld: 0.15f,
-                    posFreezeThld: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
-                    posBleedLen: 0.1f,
+
+                    posSubFx: SubFx.None,
+                    posSubFxStr: 30f,
+                    posSubFxLen: 0.22f,
 
                     rotSpring: 1f,
                     rotDamping: 0.33f,
@@ -442,15 +432,10 @@ namespace AniMorph
 
                     posSpring: 0.67f,
                     posDamping: 0.67f,
-                    posShockStr: 1f,
-                    posShockThld: 0.15f,
-                    posFreezeThld: 0.25f,
-                    posFreezeLen: 0.05f,
-                    posBleedStr: 5f,
-                    posBleedLen: 0.1f,
-                    //posGravity: 0f,
-                    //LinearLimitPositive: new Vector3(1f, 1.33f, 1f),
-                    //LinearLimitNegative: new Vector3(1f, 0.67f, 1f),
+
+                    posSubFx: SubFx.None,
+                    posSubFxStr: 30f,
+                    posSubFxLen: 0.22f,
 
                     rotSpring: 1.33f,
                     rotDamping: 0.67f,
@@ -496,12 +481,10 @@ namespace AniMorph
 
                     posSpring: 1,
                     posDamping: 20,
-                    posShockStr: 1f,
-                    posShockThld: 0.15f,
-                    posFreezeThld: 0.25f,
-                    posFreezeLen: 0.02f,
-                    posBleedStr: 2f,
-                    posBleedLen: 0.1f,
+
+                    posSubFx: SubFx.None,
+                    posSubFxStr: 30f,
+                    posSubFxLen: 0.22f,
 
                     rotSpring: 1f,
                     rotDamping: 10f,
@@ -659,14 +642,15 @@ namespace AniMorph
 #endif
         }
 
+        // TODO. Should be non-flag enum after dev.
         [Flags]
-        public enum SubEffects
+        public enum SubFx
         {
-            None   = 0,
-            Shock  = 1 << 0,
-            Freeze = 1 << 1,
-            Slow   = 1 << 2,
-            Bleed  = 1 << 3,
+            None     = 0,
+            Impulse  = 1 << 0,
+            Slowdown = 1 << 1,
+            Freeze   = 1 << 2,
+            Bleed    = 1 << 3,
         }
 
         [Flags]
@@ -720,12 +704,10 @@ namespace AniMorph
 
                 float posSpring,
                 float posDamping,
-                float posShockStr,
-                float posShockThld,
-                float posFreezeThld,
-                float posFreezeLen,
-                float posBleedStr,
-                float posBleedLen,
+
+                SubFx posSubFx,
+                float posSubFxStr,
+                float posSubFxLen,
 
                 NoiseType? noiseType = null,
 
@@ -849,32 +831,18 @@ namespace AniMorph
                     new ConfigDescription("Strength of negation of the positional lag.", 
                     null, new ConfigurationManagerAttributes { Order = order - 20, ShowRangeAsPercent = false }));
 
-                PosShockStr = config.Bind(name, "PosShockStr", posShockStr,
-                    new ConfigDescription("Shock introduces huge velocity impacts that quickly bleed out.\n" +
-                    "Warning: as koik animations can get rather fast (0.44sec for full cycle) at low fps (< 45) it might start to look ugly. Set to 0 to disable.", 
-                    null, new ConfigurationManagerAttributes { Order = order - 21 }));
+                PosSubFx = config.Bind(name, "PosSubFx", posSubFx,
+                    new ConfigDescription("", null,
+                    new ConfigurationManagerAttributes { Order = order - 21 }));
 
-                PosShockThld = config.Bind(name, "PosShockThreshold", posShockThld,
-                    new ConfigDescription("Shock allows for extreme offsets when velocities change drastically. Set 0 to disable.", null,
-                    new ConfigurationManagerAttributes { Order = order - 22 }));
+                PosSubFxStr = config.Bind(name, "PosSubFxStr", posSubFxStr,
+                    new ConfigDescription("", 
+                    null, new ConfigurationManagerAttributes { Order = order - 22 }));
 
-                PosFreezeThreshold = config.Bind(name, "PosFreezeThreshold", posFreezeThld,
+
+                PosSubFxLen = config.Bind(name, "PosSubFxLen", posSubFxLen,
                     new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
                     new ConfigurationManagerAttributes { Order = order - 23, ShowRangeAsPercent = false }));
-
-                PosFreezeLen = config.Bind(name, "PosFreezeLen", posFreezeLen,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
-                    new ConfigurationManagerAttributes { Order = order - 24, ShowRangeAsPercent = false }));
-
-                // (2-3 .. 8-12)
-                PosBleedStr = config.Bind(name, "PosBleedStr", posBleedStr,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 15f), 
-                    new ConfigurationManagerAttributes { Order = order - 25, ShowRangeAsPercent = false }));
-
-                PosBleedLen = config.Bind(name, "PosBleedLen", posBleedLen,
-                    new ConfigDescription("", new AcceptableValueRange<float>(0f, 100f), 
-                    new ConfigurationManagerAttributes { Order = order - 26, ShowRangeAsPercent = false }));
-
 
                 if (isRotation)
                 {
@@ -1016,15 +984,10 @@ namespace AniMorph
             //public ConfigEntry<float> PosGravity;
             public ConfigEntry<float> PosSpring;
             public ConfigEntry<float> PosDamping;
-            public ConfigEntry<float> PosShockStr;
-            public ConfigEntry<float> PosShockThld;
-            public ConfigEntry<float> PosFreezeThreshold;
-            public ConfigEntry<float> PosFreezeLen;
-            public ConfigEntry<float> PosBleedStr;
-            public ConfigEntry<float> PosBleedLen;
-            //public ConfigEntry<float> LinearMass;
-            //public ConfigEntry<Vector3> LinearLimitPositive;
-            //public ConfigEntry<Vector3> LinearLimitNegative;
+
+            public ConfigEntry<SubFx> PosSubFx;
+            public ConfigEntry<float> PosSubFxStr;
+            public ConfigEntry<float> PosSubFxLen;
 
 
             public ConfigEntry<float> RotSpring;

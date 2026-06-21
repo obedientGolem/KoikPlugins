@@ -908,9 +908,7 @@ namespace AniMorph
 
             var animSpeed = animState.speedMultiplier;
 
-            if (animSpeed == 0f) return;
-
-            var animSpeedInv = 1f / animSpeed;
+            var animSpeedInv = animSpeed < 1f ? 1f : 1f / animSpeed;
             var animTime = animState.normalizedTime;
 
             var animTimeF = animTime - (int)animTime;

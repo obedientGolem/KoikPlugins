@@ -49,7 +49,7 @@ namespace AniMorph
             // --- Update Offsets ---
 
             UpdatePosTracking(ref prev, ref curr, dtInv);
-            UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv);
+            //UpdateVelocityShock(ref cfg, ref curr, ref prev, dt, dtInv);
 
             if ((effects & Effect.Pos) != 0)
                 posOffset = GetPosOffset(ref cfg, ref curr, ref prev, dt, dtInv, animSpeed, animSpeedInv);

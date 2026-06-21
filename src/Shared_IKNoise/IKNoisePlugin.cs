@@ -37,12 +37,12 @@ namespace IKNoise
             ".vr" +
 #endif
             "";
-        public const string Name = "IKNoise" +
+        public const string Name = "IKNoise " +
 #if VR
-            " [VR]" +
+            "[VR]" +
 #endif
 #if DEBUG
-            " [Debug]"
+            "[Debug]"
 #endif
             ;
         public const string Version = "1.0.0";
@@ -140,7 +140,7 @@ namespace IKNoise
 
             BindConfig();
 
-            Config.SettingChanged += (_, _1) => _settingChangedTimestamp = Time.time + (1f / 3f);
+            Config.SettingChanged += (_, _1) => _settingChangedTimestamp = Time.time + OneThird;
 
             IKNoiseHooks.TryEnable();
 
